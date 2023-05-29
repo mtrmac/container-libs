@@ -35,6 +35,7 @@ import (
 	"go.podman.io/image/v5/types"
 	"go.podman.io/storage/pkg/fileutils"
 	"go.podman.io/storage/pkg/homedir"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -86,8 +87,19 @@ type extensionSignatureList struct {
 	Signatures []extensionSignature `json:"signatures"`
 }
 
-// bearerToken records a cached token we can use to authenticate.
+// bearerToken records a cached token we can use to authenticate, or a pending process to obtain one.
+//
+// The goroutine obtaining the token holds lock to block concurrent token requests, and fills the structure (err and possibly the other fields)
+// before releasing the lock.
+// Other goroutines obtain lock to block on the token request, if any; and then inspect err to see if the token is usable.
+// If it is not, they try to get a new one.
 type bearerToken struct {
+	// lock is held while obtaining the token. Potentially nested inside dockerClient.tokenCacheLock.
+	// This is a counting semaphore only because we need a cancellable lock operation.
+	lock *semaphore.Weighted
+
+	// The following fields can only be accessed with lock held.
+	err            error // nil if the token was successfully obtained (but may be expired); an error if the next lock holder _must_ obtain a new token.
 	token          string
 	expirationTime time.Time
 }
@@ -756,31 +768,53 @@ func (c *dockerClient) obtainBearerToken(ctx context.Context, challenge challeng
 		scopes = append(scopes, *extraScope)
 	}
 
-	var token *bearerToken
-	var inCache bool
-	func() { // A scope for defer
+	token, newEntry, err := func() (*bearerToken, bool, error) { // A scope for defer
 		c.tokenCacheLock.Lock()
 		defer c.tokenCacheLock.Unlock()
-		token, inCache = c.tokenCache[cacheKey]
-	}()
-	if !inCache || time.Now().After(token.expirationTime) {
-		token = &bearerToken{}
-
-		var err error
-		if c.auth.IdentityToken != "" {
-			err = c.getBearerTokenOAuth2(ctx, token, challenge, scopes)
+		token, ok := c.tokenCache[cacheKey]
+		if ok {
+			return token, false, nil
 		} else {
-			err = c.getBearerToken(ctx, token, challenge, scopes)
+			token = &bearerToken{
+				lock: semaphore.NewWeighted(1),
+			}
+			// If this is a new *bearerToken, lock the entry before adding it to the cache, so that any other goroutine that finds
+			// this entry blocks until we obtain the token for the first time, and does not see an empty object
+			// (and does not try to obtain the token itself when we are going to do so).
+			if err := token.lock.Acquire(ctx, 1); err != nil {
+				// We do not block on this Acquire, so we don’t really expect to fail here — but if ctx is canceled,
+				// there is no point in trying to continue anyway.
+				return nil, false, err
+			}
+			c.tokenCache[cacheKey] = token
+			return token, true, nil
 		}
-		if err != nil {
+	}()
+	if err != nil {
+		return "", err
+	}
+	if !newEntry {
+		// If this is an existing *bearerToken, obtain the lock only after releasing c.tokenCacheLock,
+		// so that users of other cacheKey values are not blocked for the whole duration of our HTTP roundtrip.
+		if err := token.lock.Acquire(ctx, 1); err != nil {
 			return "", err
 		}
+	}
 
-		func() { // A scope for defer
-			c.tokenCacheLock.Lock()
-			defer c.tokenCacheLock.Unlock()
-			c.tokenCache[cacheKey] = token
-		}()
+	defer token.lock.Release(1)
+
+	if !newEntry && token.err == nil && !time.Now().After(token.expirationTime) {
+		return token.token, nil // We have a usable token already.
+	}
+
+	if c.auth.IdentityToken != "" {
+		err = c.getBearerTokenOAuth2(ctx, token, challenge, scopes)
+	} else {
+		err = c.getBearerToken(ctx, token, challenge, scopes)
+	}
+	token.err = err
+	if token.err != nil {
+		return "", token.err
 	}
 	return token.token, nil
 }
