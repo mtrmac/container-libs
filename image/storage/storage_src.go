@@ -297,11 +297,14 @@ func (s *storageImageSource) LayerInfosForCopy(ctx context.Context, instanceDige
 	}
 
 	uncompressedLayerType := ""
+	gzipCompressedLayerType := ""
 	switch manifestType {
 	case imgspecv1.MediaTypeImageManifest:
 		uncompressedLayerType = imgspecv1.MediaTypeImageLayer
+		gzipCompressedLayerType = imgspecv1.MediaTypeImageLayerGzip
 	case manifest.DockerV2Schema1MediaType, manifest.DockerV2Schema1SignedMediaType, manifest.DockerV2Schema2MediaType:
 		uncompressedLayerType = manifest.DockerV2SchemaLayerMediaTypeUncompressed
+		gzipCompressedLayerType = manifest.DockerV2Schema2LayerMediaType
 	}
 
 	physicalBlobInfos := []layerForCopy{} // Built reversed
@@ -349,7 +352,7 @@ func (s *storageImageSource) LayerInfosForCopy(ctx context.Context, instanceDige
 	}
 	slices.Reverse(physicalBlobInfos)
 
-	res, err := buildLayerInfosForCopy(man.LayerInfos(), physicalBlobInfos)
+	res, err := buildLayerInfosForCopy(man.LayerInfos(), physicalBlobInfos, gzipCompressedLayerType)
 	if err != nil {
 		return nil, fmt.Errorf("creating LayerInfosForCopy of image %q: %w", s.image.ID, err)
 	}
@@ -365,9 +368,9 @@ type layerForCopy struct {
 
 // buildLayerInfosForCopy builds a LayerInfosForCopy return value based on manifestInfos from the original manifest,
 // but using layer data which we can actually produce — physicalInfos for non-empty layers,
-// and image.GzippedEmptyLayer for empty ones.
+// and image.GzippedEmptyLayer with gzipCompressedLayerType for empty ones.
 // (This is split basically only to allow easily unit-testing the part that has no dependencies on the external environment.)
-func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []layerForCopy) ([]types.BlobInfo, error) {
+func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []layerForCopy, gzipCompressedLayerType string) ([]types.BlobInfo, error) {
 	nextPhysical := 0
 	res := make([]types.BlobInfo, len(manifestInfos))
 	for i, mi := range manifestInfos {
@@ -377,7 +380,7 @@ func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []
 				Size:        int64(len(image.GzippedEmptyLayer)),
 				URLs:        mi.URLs,
 				Annotations: mi.Annotations,
-				MediaType:   mi.MediaType,
+				MediaType:   gzipCompressedLayerType,
 			}
 		} else {
 			if nextPhysical >= len(physicalInfos) {
