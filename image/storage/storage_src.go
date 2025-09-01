@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"sync"
@@ -26,6 +27,7 @@ import (
 	"go.podman.io/image/v5/types"
 	"go.podman.io/storage"
 	"go.podman.io/storage/pkg/archive"
+	"go.podman.io/storage/pkg/chunked/toc"
 	"go.podman.io/storage/pkg/ioutils"
 )
 
@@ -371,20 +373,34 @@ func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []
 	for i, mi := range manifestInfos {
 		if mi.EmptyLayer {
 			res[i] = types.BlobInfo{
-				Digest:    image.GzippedEmptyLayerDigest,
-				Size:      int64(len(image.GzippedEmptyLayer)),
-				MediaType: mi.MediaType,
+				Digest:      image.GzippedEmptyLayerDigest,
+				Size:        int64(len(image.GzippedEmptyLayer)),
+				URLs:        mi.URLs,
+				Annotations: mi.Annotations,
+				MediaType:   mi.MediaType,
 			}
 		} else {
 			if nextPhysical >= len(physicalInfos) {
 				return nil, fmt.Errorf("expected more than %d physical layers to exist", len(physicalInfos))
 			}
 			res[i] = types.BlobInfo{
-				Digest:    physicalInfos[nextPhysical].digest,
-				Size:      physicalInfos[nextPhysical].size,
-				MediaType: physicalInfos[nextPhysical].mediaType,
-			} // FIXME? Should we preserve more data in manifestInfos? Notably the current approach correctly removes zstd:chunked metadata annotations.
+				Digest:      physicalInfos[nextPhysical].digest,
+				Size:        physicalInfos[nextPhysical].size,
+				URLs:        mi.URLs,
+				Annotations: mi.Annotations,
+				MediaType:   physicalInfos[nextPhysical].mediaType,
+			}
 			nextPhysical++
+		}
+		// We have changed the compression format, so strip compression-related annotations.
+		if res[i].Annotations != nil {
+			maps.DeleteFunc(res[i].Annotations, func(key string, _ string) bool {
+				_, ok := toc.ChunkedAnnotations[key]
+				return ok
+			})
+			if len(res[i].Annotations) == 0 {
+				res[i].Annotations = nil
+			}
 		}
 	}
 	if nextPhysical != len(physicalInfos) {
