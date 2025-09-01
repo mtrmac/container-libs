@@ -302,7 +302,7 @@ func (s *storageImageSource) LayerInfosForCopy(ctx context.Context, instanceDige
 		uncompressedLayerType = manifest.DockerV2SchemaLayerMediaTypeUncompressed
 	}
 
-	physicalBlobInfos := []types.BlobInfo{} // Built reversed
+	physicalBlobInfos := []layerForCopy{} // Built reversed
 	layerID := s.image.TopLayer
 	for layerID != "" {
 		layer, err := s.imageRef.transport.store.Layer(layerID)
@@ -337,12 +337,12 @@ func (s *storageImageSource) LayerInfosForCopy(ctx context.Context, instanceDige
 		s.getBlobMutex.Lock()
 		s.getBlobMutexProtected.digestToLayerID[blobDigest] = layer.ID
 		s.getBlobMutex.Unlock()
-		blobInfo := types.BlobInfo{
-			Digest:    blobDigest,
-			Size:      size,
-			MediaType: uncompressedLayerType,
+		layerInfo := layerForCopy{
+			digest:    blobDigest,
+			size:      size,
+			mediaType: uncompressedLayerType,
 		}
-		physicalBlobInfos = append(physicalBlobInfos, blobInfo)
+		physicalBlobInfos = append(physicalBlobInfos, layerInfo)
 		layerID = layer.Parent
 	}
 	slices.Reverse(physicalBlobInfos)
@@ -354,11 +354,18 @@ func (s *storageImageSource) LayerInfosForCopy(ctx context.Context, instanceDige
 	return res, nil
 }
 
+// layerForCopy is information about a physical layer, an edit to be made by buildLayerInfosForCopy.
+type layerForCopy struct {
+	digest    digest.Digest
+	size      int64
+	mediaType string
+}
+
 // buildLayerInfosForCopy builds a LayerInfosForCopy return value based on manifestInfos from the original manifest,
 // but using layer data which we can actually produce — physicalInfos for non-empty layers,
 // and image.GzippedEmptyLayer for empty ones.
 // (This is split basically only to allow easily unit-testing the part that has no dependencies on the external environment.)
-func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []types.BlobInfo) ([]types.BlobInfo, error) {
+func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []layerForCopy) ([]types.BlobInfo, error) {
 	nextPhysical := 0
 	res := make([]types.BlobInfo, len(manifestInfos))
 	for i, mi := range manifestInfos {
@@ -372,7 +379,11 @@ func buildLayerInfosForCopy(manifestInfos []manifest.LayerInfo, physicalInfos []
 			if nextPhysical >= len(physicalInfos) {
 				return nil, fmt.Errorf("expected more than %d physical layers to exist", len(physicalInfos))
 			}
-			res[i] = physicalInfos[nextPhysical] // FIXME? Should we preserve more data in manifestInfos? Notably the current approach correctly removes zstd:chunked metadata annotations.
+			res[i] = types.BlobInfo{
+				Digest:    physicalInfos[nextPhysical].digest,
+				Size:      physicalInfos[nextPhysical].size,
+				MediaType: physicalInfos[nextPhysical].mediaType,
+			} // FIXME? Should we preserve more data in manifestInfos? Notably the current approach correctly removes zstd:chunked metadata annotations.
 			nextPhysical++
 		}
 	}

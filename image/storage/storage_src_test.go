@@ -17,9 +17,9 @@ func TestBuildLayerInfosForCopy(t *testing.T) {
 		{BlobInfo: types.BlobInfo{Digest: "sha256:1bbf5d58d24c47512e234a5623474acf65ae00d4d1414272a893204f44cc680c", Size: -1}, EmptyLayer: false},
 		{BlobInfo: types.BlobInfo{Digest: "sha256:5555555555555555555555555555555555555555555555555555555555555555", Size: -1}, EmptyLayer: true},
 	}
-	physicalInfos := []types.BlobInfo{
-		{Digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111", Size: 111, MediaType: manifest.DockerV2Schema2LayerMediaType},
-		{Digest: "sha256:2222222222222222222222222222222222222222222222222222222222222222", Size: 222, MediaType: manifest.DockerV2Schema2LayerMediaType},
+	physicalInfos := []layerForCopy{
+		{digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111", size: 111, mediaType: manifest.DockerV2Schema2LayerMediaType},
+		{digest: "sha256:2222222222222222222222222222222222222222222222222222222222222222", size: 222, mediaType: manifest.DockerV2Schema2LayerMediaType},
 	}
 
 	// Success
