@@ -94,11 +94,11 @@ func (r *Runtime) Search(ctx context.Context, term string, options *SearchOption
 	// that we cannot use the reference parser from the containers/image
 	// library as the search term may container arbitrary input such as
 	// wildcards.  See bugzilla.redhat.com/show_bug.cgi?id=1846629.
-	spl := strings.SplitN(term, "/", 2)
+	perhapsRegistry, perhapsTerm, ok := strings.Cut(term, "/")
 	switch {
-	case len(spl) > 1:
-		searchRegistries = []string{spl[0]}
-		term = spl[1]
+	case ok:
+		searchRegistries = []string{perhapsRegistry}
+		term = perhapsTerm
 	case len(options.Registries) > 0:
 		searchRegistries = options.Registries
 	default:

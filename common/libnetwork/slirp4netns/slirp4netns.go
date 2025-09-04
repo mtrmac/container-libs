@@ -124,11 +124,10 @@ func parseNetworkOptions(config *config.Config, extraOptions []string) (*network
 		enableIPv6:          true,
 	}
 	for _, o := range options {
-		parts := strings.SplitN(o, "=", 2)
-		if len(parts) < 2 {
+		option, value, ok := strings.Cut(o, "=")
+		if !ok {
 			return nil, fmt.Errorf("unknown option for slirp4netns: %q", o)
 		}
-		option, value := parts[0], parts[1]
 		switch option {
 		case "cidr":
 			ipv4, _, err := net.ParseCIDR(value)

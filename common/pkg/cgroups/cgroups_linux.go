@@ -197,10 +197,9 @@ func getCgroupPathForCurrentProcess() (string, error) {
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		text := s.Text()
-		procEntries := strings.SplitN(text, "::", 2)
 		// set process cgroupPath only if entry is valid
-		if len(procEntries) > 1 {
-			cgroupPath = procEntries[1]
+		if _, p, ok := strings.Cut(text, "::"); ok {
+			cgroupPath = p
 		}
 	}
 	if err := s.Err(); err != nil {
@@ -279,9 +278,9 @@ func readFileByKeyAsUint64(path, key string) (uint64, error) {
 		return 0, err
 	}
 	for _, line := range strings.Split(string(content), "\n") {
-		fields := strings.SplitN(line, " ", 2)
-		if fields[0] == key {
-			v := cleanString(fields[1])
+		k, v, _ := strings.Cut(line, " ")
+		if k == key {
+			v := cleanString(v)
 			if v == "max" {
 				return math.MaxUint64, nil
 			}

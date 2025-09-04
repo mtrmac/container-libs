@@ -178,8 +178,8 @@ func getRuntimeConfig(netns, conName, conID, networkName string, ports []cniPort
 
 	// Propagate environment CNI_ARGS
 	for _, kvpairs := range strings.Split(os.Getenv("CNI_ARGS"), ";") {
-		if keyval := strings.SplitN(kvpairs, "=", 2); len(keyval) == 2 {
-			rt.Args = append(rt.Args, [2]string{keyval[0], keyval[1]})
+		if key, val, ok := strings.Cut(kvpairs, "="); ok {
+			rt.Args = append(rt.Args, [2]string{key, val})
 		}
 	}
 

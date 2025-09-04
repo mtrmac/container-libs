@@ -1158,17 +1158,17 @@ func (c *Config) ImageCopyTmpDir() (string, error) {
 // setupEnv sets the environment variables for the engine.
 func (c *Config) setupEnv() error {
 	for _, env := range c.Engine.Env.Get() {
-		splitEnv := strings.SplitN(env, "=", 2)
-		if len(splitEnv) != 2 {
+		key, value, ok := strings.Cut(env, "=")
+		if !ok {
 			logrus.Warnf("invalid environment variable for engine %s, valid configuration is KEY=value pair", env)
 			continue
 		}
 		// skip if the env is already defined
-		if _, ok := os.LookupEnv(splitEnv[0]); ok {
-			logrus.Debugf("environment variable %s is already defined, skip the settings from containers.conf", splitEnv[0])
+		if _, ok := os.LookupEnv(key); ok {
+			logrus.Debugf("environment variable %s is already defined, skip the settings from containers.conf", key)
 			continue
 		}
-		if err := os.Setenv(splitEnv[0], splitEnv[1]); err != nil {
+		if err := os.Setenv(key, value); err != nil {
 			return err
 		}
 	}
