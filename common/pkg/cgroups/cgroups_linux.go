@@ -111,7 +111,7 @@ func getAvailableControllers(exclude map[string]controllerHandler, cgroup2 bool)
 		if err != nil {
 			return nil, fmt.Errorf("failed while reading controllers for cgroup v2: %w", err)
 		}
-		for _, controllerName := range strings.Fields(string(controllersFileBytes)) {
+		for controllerName := range strings.FieldsSeq(string(controllersFileBytes)) {
 			c := controller{
 				name:    controllerName,
 				symlink: false,
