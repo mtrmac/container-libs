@@ -762,8 +762,8 @@ func (c *Config) CheckCgroupsAndAdjustConfig() {
 		}
 	} else {
 		for part := range strings.SplitSeq(session, ",") {
-			if strings.HasPrefix(part, "unix:path=") {
-				err := fileutils.Exists(strings.TrimPrefix(part, "unix:path="))
+			if path, ok := strings.CutPrefix(part, "unix:path="); ok {
+				err := fileutils.Exists(path)
 				hasSession = err == nil
 				break
 			}
@@ -1202,7 +1202,7 @@ func (e eventsLogMaxSize) MarshalText() ([]byte, error) {
 		v := []byte{}
 		return v, nil
 	}
-	return []byte(fmt.Sprintf("%d", e)), nil
+	return fmt.Appendf(nil, "%d", e), nil
 }
 
 func ValidateImageVolumeMode(mode string) error {

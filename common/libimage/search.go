@@ -203,15 +203,9 @@ func (r *Runtime) searchImageInRegistry(ctx context.Context, term, registry stri
 	// limit is the number of results to output
 	// if the total number of results is less than the limit, output all
 	// if the limit has been set by the user, output those number of queries
-	limit = searchMaxQueries
-	if len(results) < limit {
-		limit = len(results)
-	}
+	limit = min(len(results), searchMaxQueries)
 	if options.Limit != 0 {
-		limit = len(results)
-		if options.Limit < len(results) {
-			limit = options.Limit
-		}
+		limit = min(len(results), options.Limit)
 	}
 
 	paramsArr := []SearchResult{}
@@ -264,15 +258,9 @@ func searchRepositoryTags(ctx context.Context, sys *types.SystemContext, registr
 	if err != nil {
 		return nil, fmt.Errorf("getting repository tags: %v", err)
 	}
-	limit := searchMaxQueries
-	if len(tags) < limit {
-		limit = len(tags)
-	}
+	limit := min(len(tags), searchMaxQueries)
 	if options.Limit != 0 {
-		limit = len(tags)
-		if options.Limit < limit {
-			limit = options.Limit
-		}
+		limit = min(len(tags), options.Limit)
 	}
 	paramsArr := []SearchResult{}
 	for i := range limit {
