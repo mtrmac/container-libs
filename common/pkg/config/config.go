@@ -761,7 +761,7 @@ func (c *Config) CheckCgroupsAndAdjustConfig() {
 			}
 		}
 	} else {
-		for _, part := range strings.Split(session, ",") {
+		for part := range strings.SplitSeq(session, ",") {
 			if strings.HasPrefix(part, "unix:path=") {
 				err := fileutils.Exists(strings.TrimPrefix(part, "unix:path="))
 				hasSession = err == nil

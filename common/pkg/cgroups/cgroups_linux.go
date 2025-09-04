@@ -277,7 +277,7 @@ func readFileByKeyAsUint64(path, key string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	for _, line := range strings.Split(string(content), "\n") {
+	for line := range strings.SplitSeq(string(content), "\n") {
 		k, v, _ := strings.Cut(line, " ")
 		if k == key {
 			v := cleanString(v)
@@ -683,7 +683,7 @@ func readAcctList(ctr *CgroupControl, name string) ([]uint64, error) {
 		return nil, err
 	}
 	r := []uint64{}
-	for _, s := range strings.Split(string(data), " ") {
+	for s := range strings.SplitSeq(string(data), " ") {
 		s = cleanString(s)
 		if s == "" {
 			break
@@ -873,7 +873,7 @@ func rmDirRecursively(path string) error {
 		}
 		// kill all the processes that are still part of the cgroup
 		if procs, err := os.ReadFile(filepath.Join(path, "cgroup.procs")); err == nil {
-			for _, pidS := range strings.Split(string(procs), "\n") {
+			for pidS := range strings.SplitSeq(string(procs), "\n") {
 				if pid, err := strconv.Atoi(pidS); err == nil {
 					_ = unix.Kill(pid, signal)
 				}

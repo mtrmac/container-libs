@@ -72,11 +72,8 @@ func TestRunFailedStart(t *testing.T) {
 
 func parseEnvironment(input string) (env map[string]string, err error) {
 	env = map[string]string{}
-	lines := strings.Split(input, "\n")
-	for i, line := range lines {
-		if line == "" && i == len(lines)-1 {
-			continue // no content after the terminal newline
-		}
+	input = strings.TrimSuffix(input, "\n") // strip the terminal newline, if any
+	for line := range strings.SplitSeq(input, "\n") {
 		key, value, ok := strings.Cut(line, "=")
 		if !ok {
 			return env, fmt.Errorf("no = in environment line: %q", line)

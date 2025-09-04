@@ -638,8 +638,7 @@ func setupRootlessPortMappingViaSlirp(ports []types.PortMapping, cmd *exec.Cmd, 
 	// for each port we want to add we need to open a connection to the slirp4netns control socket
 	// and send the add_hostfwd command.
 	for _, port := range ports {
-		protocols := strings.Split(port.Protocol, ",")
-		for _, protocol := range protocols {
+		for protocol := range strings.SplitSeq(port.Protocol, ",") {
 			hostIP := port.HostIP
 			if hostIP == "" {
 				hostIP = "0.0.0.0"
