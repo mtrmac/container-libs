@@ -96,7 +96,7 @@ func truncateWithLength(source string, length int) string {
 //	3) --format 'table {{.ID}}' # includes headers
 func Headers(object any, overrides map[string]string) []map[string]string {
 	value := reflect.ValueOf(object)
-	if value.Kind() == reflect.Ptr {
+	if value.Kind() == reflect.Pointer {
 		value = value.Elem()
 	}
 
