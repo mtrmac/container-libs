@@ -23,3 +23,9 @@ func TestPRSignedBaseLayerIsRunningImageAllowed(t *testing.T) {
 	res, err := pr.isRunningImageAllowed(context.Background(), nil)
 	assertRunningRejectedPolicyRequirement(t, res, err)
 }
+
+func TestPRSignedBaseLayerVerifiesSignatures(t *testing.T) {
+	pr, err := NewPRSignedBaseLayer(NewPRMMatchRepository())
+	require.NoError(t, err)
+	require.False(t, pr.verifiesSignatures())
+}

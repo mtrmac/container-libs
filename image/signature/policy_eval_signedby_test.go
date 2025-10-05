@@ -286,3 +286,9 @@ func TestPRSignedByIsRunningImageAllowed(t *testing.T) {
 	allowed, err = pr.isRunningImageAllowed(context.Background(), image)
 	assertRunningAllowed(t, allowed, err)
 }
+
+func TestPRSignedByVerifiesSignatures(t *testing.T) {
+	pr, err := NewPRSignedByKeyPath(SBKeyTypeGPGKeys, "fixtures/public-key.gpg", NewPRMMatchExact())
+	require.NoError(t, err)
+	require.True(t, pr.verifiesSignatures())
+}

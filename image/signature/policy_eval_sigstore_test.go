@@ -1053,3 +1053,12 @@ func TestPRSigstoreSignedIsRunningImageAllowed(t *testing.T) {
 	allowed, err = pr.isRunningImageAllowed(context.Background(), image)
 	assertRunningRejectedPolicyRequirement(t, allowed, err)
 }
+
+func TestPRSigstoreSignedVerifiesSignatures(t *testing.T) {
+	pr, err := NewPRSigstoreSigned(
+		PRSigstoreSignedWithKeyPath("fixtures/cosign.pub"),
+		PRSigstoreSignedWithSignedIdentity(NewPRMMatchRepository()),
+	)
+	require.NoError(t, err)
+	require.True(t, pr.verifiesSignatures())
+}
