@@ -41,7 +41,7 @@ install.tools: .install.gitvalidation .install.golangci-lint .install.md2man
 
 .PHONY: git-validation
 git-validation: .install.gitvalidation
-	git-validation -q -run DCO,short-subject,dangling-whitespace -range "$(EPOCH_TEST_COMMIT)..HEAD"
+	GIT_CHECK_EXCLUDE="./vendor" git-validation -q -run DCO,short-subject,dangling-whitespace -range "$(EPOCH_TEST_COMMIT)..HEAD"
 
 .PHONY: lint
 lint: .install.golangci-lint
