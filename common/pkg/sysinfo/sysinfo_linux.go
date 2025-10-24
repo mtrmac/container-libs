@@ -9,7 +9,7 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/sirupsen/logrus"
-	"go.podman.io/common/pkg/cgroupv2"
+	cgroupv2 "go.podman.io/common/pkg/cgroups"
 	"go.podman.io/storage/pkg/fileutils"
 	"golang.org/x/sys/unix"
 )
@@ -229,7 +229,7 @@ func checkCgroupCpusetInfo(cgMounts map[string]string, quiet bool) cgroupCpusetI
 
 // checkCgroupPids reads the pids information from the pids cgroup mount point.
 func checkCgroupPids(cgMounts map[string]string, quiet bool) cgroupPids {
-	cgroup2, err := cgroupv2.Enabled()
+	cgroup2, err := cgroupv2.IsCgroup2UnifiedMode()
 	if err != nil {
 		logrus.Errorf("Failed to check cgroups version: %v", err)
 		return cgroupPids{}
