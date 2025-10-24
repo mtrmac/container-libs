@@ -86,7 +86,7 @@ func init() {
 }
 
 // getAvailableControllers get the available controllers.
-func getAvailableControllers(exclude map[string]controllerHandler) ([]controller, error) {
+func getAvailableControllers() ([]controller, error) {
 	controllers := []controller{}
 	controllersFile := filepath.Join(cgroupRoot, "cgroup.controllers")
 
@@ -116,7 +116,7 @@ func getAvailableControllers(exclude map[string]controllerHandler) ([]controller
 
 // AvailableControllers get string:bool map of all the available controllers.
 func AvailableControllers(exclude map[string]controllerHandler) ([]string, error) {
-	availableControllers, err := getAvailableControllers(exclude)
+	availableControllers, err := getAvailableControllers()
 	if err != nil {
 		return nil, err
 	}
@@ -126,31 +126,6 @@ func AvailableControllers(exclude map[string]controllerHandler) ([]string, error
 	}
 
 	return controllerList, nil
-}
-
-func cgroupV1GetAllSubsystems() ([]string, error) {
-	f, err := os.Open("/proc/cgroups")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	subsystems := []string{}
-
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		text := s.Text()
-		if text[0] != '#' {
-			parts := strings.Fields(text)
-			if len(parts) >= 4 && parts[3] != "0" {
-				subsystems = append(subsystems, parts[0])
-			}
-		}
-	}
-	if err := s.Err(); err != nil {
-		return nil, err
-	}
-	return subsystems, nil
 }
 
 func getCgroupPathForCurrentProcess() (string, error) {
@@ -443,23 +418,6 @@ func readCgroup2MapFile(ctr *CgroupControl, name string) (map[string][]string, e
 	return readCgroupMapPath(p)
 }
 
-func (c *CgroupControl) createCgroupDirectory(controller string) (bool, error) {
-	cPath := c.getCgroupv1Path(controller)
-	err := fileutils.Exists(cPath)
-	if err == nil {
-		return false, nil
-	}
-
-	if !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-
-	if err := os.MkdirAll(cPath, 0o755); err != nil {
-		return false, fmt.Errorf("creating cgroup for %s: %w", controller, err)
-	}
-	return true, nil
-}
-
 var TestMode bool
 
 func createCgroupv2Path(path string) (deferredError error) {
@@ -539,32 +497,6 @@ func createCgroupv2Path(path string) (deferredError error) {
 
 func cleanString(s string) string {
 	return strings.Trim(s, "\n")
-}
-
-func readAcct(ctr *CgroupControl, name string) (uint64, error) {
-	p := filepath.Join(ctr.getCgroupv1Path(CPUAcct), name)
-	return readFileAsUint64(p)
-}
-
-func readAcctList(ctr *CgroupControl, name string) ([]uint64, error) {
-	p := filepath.Join(ctr.getCgroupv1Path(CPUAcct), name)
-	data, err := os.ReadFile(p)
-	if err != nil {
-		return nil, err
-	}
-	r := []uint64{}
-	for s := range strings.SplitSeq(string(data), " ") {
-		s = cleanString(s)
-		if s == "" {
-			break
-		}
-		v, err := strconv.ParseUint(s, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parsing %s: %w", s, err)
-		}
-		r = append(r, v)
-	}
-	return r, nil
 }
 
 func cpusetCopyFromParent(path string, cgroupv2 bool) error {
