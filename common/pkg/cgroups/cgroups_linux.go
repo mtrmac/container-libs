@@ -20,7 +20,6 @@ import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/godbus/dbus/v5"
 	"github.com/opencontainers/cgroups"
-	"github.com/opencontainers/cgroups/fs2"
 	"go.podman.io/storage/pkg/fileutils"
 	"go.podman.io/storage/pkg/unshare"
 	"golang.org/x/sys/unix"
@@ -333,12 +332,6 @@ func (c *CgroupControl) Update(resources *cgroups.Resources) error {
 		}
 	}
 	return nil
-}
-
-// AddPid moves the specified pid to the cgroup.
-func (c *CgroupControl) AddPid(pid int) error {
-	path := filepath.Join(cgroupRoot, c.config.Path)
-	return fs2.CreateCgroupPath(path, c.config)
 }
 
 // Stat returns usage statistics for the cgroup.
