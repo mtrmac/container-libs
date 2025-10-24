@@ -27,11 +27,6 @@ func (c *linuxPidHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) erro
 	return man.Set(res)
 }
 
-// Create the cgroup.
-func (c *linuxPidHandler) Create(ctr *CgroupControl) (bool, error) {
-	return false, nil
-}
-
 // Destroy the cgroup.
 func (c *linuxPidHandler) Destroy(ctr *CgroupControl) error {
 	return rmDirRecursively(ctr.getCgroupv1Path(Pids))

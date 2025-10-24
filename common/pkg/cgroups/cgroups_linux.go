@@ -51,7 +51,6 @@ type controller struct {
 }
 
 type controllerHandler interface {
-	Create(*CgroupControl) (bool, error)
 	Apply(*CgroupControl, *cgroups.Resources) error
 	Destroy(*CgroupControl) error
 	Stat(*CgroupControl, *cgroups.Stats) error
@@ -170,15 +169,6 @@ func (c *CgroupControl) initialize() (err error) {
 	}()
 	if err := createCgroupv2Path(filepath.Join(cgroupRoot, c.config.Path)); err != nil {
 		return fmt.Errorf("creating cgroup path %s: %w", c.config.Path, err)
-	}
-	for name, handler := range handlers {
-		created, err := handler.Create(c)
-		if err != nil {
-			return err
-		}
-		if created {
-			createdSoFar[name] = handler
-		}
 	}
 	return nil
 }

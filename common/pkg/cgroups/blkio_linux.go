@@ -29,11 +29,6 @@ func (c *linuxBlkioHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) er
 	return man.Set(res)
 }
 
-// Create the cgroup.
-func (c *linuxBlkioHandler) Create(ctr *CgroupControl) (bool, error) {
-	return false, nil
-}
-
 // Destroy the cgroup.
 func (c *linuxBlkioHandler) Destroy(ctr *CgroupControl) error {
 	return rmDirRecursively(ctr.getCgroupv1Path(Blkio))

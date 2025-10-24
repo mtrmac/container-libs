@@ -27,11 +27,6 @@ func (c *linuxMemHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) erro
 	return man.Set(res)
 }
 
-// Create the cgroup.
-func (c *linuxMemHandler) Create(ctr *CgroupControl) (bool, error) {
-	return false, nil
-}
-
 // Destroy the cgroup.
 func (c *linuxMemHandler) Destroy(ctr *CgroupControl) error {
 	return rmDirRecursively(ctr.getCgroupv1Path(Memory))
