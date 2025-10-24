@@ -28,11 +28,6 @@ func (c *linuxCPUHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) erro
 	return man.Set(res)
 }
 
-// Destroy the cgroup.
-func (c *linuxCPUHandler) Destroy(ctr *CgroupControl) error {
-	return rmDirRecursively(ctr.getCgroupv1Path(CPU))
-}
-
 // Stat fills a metrics structure with usage stats for the controller.
 func (c *linuxCPUHandler) Stat(ctr *CgroupControl, m *cgroups.Stats) error {
 	cpu := cgroups.CpuStats{}

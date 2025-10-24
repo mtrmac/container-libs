@@ -21,7 +21,6 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
-	"github.com/sirupsen/logrus"
 	"go.podman.io/storage/pkg/fileutils"
 	"go.podman.io/storage/pkg/unshare"
 	"golang.org/x/sys/unix"
@@ -52,7 +51,6 @@ type controller struct {
 
 type controllerHandler interface {
 	Apply(*CgroupControl, *cgroups.Resources) error
-	Destroy(*CgroupControl) error
 	Stat(*CgroupControl, *cgroups.Stats) error
 }
 
@@ -150,23 +148,8 @@ func getCgroupPathForCurrentProcess() (string, error) {
 	return cgroupPath, nil
 }
 
-// getCgroupv1Path is a helper function to get the cgroup v1 path.
-func (c *CgroupControl) getCgroupv1Path(name string) string {
-	return filepath.Join(cgroupRoot, name, c.config.Path)
-}
-
 // initialize initializes the specified hierarchy.
 func (c *CgroupControl) initialize() (err error) {
-	createdSoFar := map[string]controllerHandler{}
-	defer func() {
-		if err != nil {
-			for name, ctr := range createdSoFar {
-				if err := ctr.Destroy(c); err != nil {
-					logrus.Warningf("error cleaning up controller %s for %s", name, c.config.Path)
-				}
-			}
-		}
-	}()
 	if err := createCgroupv2Path(filepath.Join(cgroupRoot, c.config.Path)); err != nil {
 		return fmt.Errorf("creating cgroup path %s: %w", c.config.Path, err)
 	}

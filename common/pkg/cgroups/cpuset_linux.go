@@ -33,11 +33,6 @@ func (c *linuxCpusetHandler) Create(ctr *CgroupControl) (bool, error) {
 	return true, cpusetCopyFromParent(path, true)
 }
 
-// Destroy the cgroup.
-func (c *linuxCpusetHandler) Destroy(ctr *CgroupControl) error {
-	return rmDirRecursively(ctr.getCgroupv1Path(CPUset))
-}
-
 // Stat fills a metrics structure with usage stats for the controller.
 func (c *linuxCpusetHandler) Stat(_ *CgroupControl, _ *cgroups.Stats) error {
 	return nil

@@ -27,11 +27,6 @@ func (c *linuxMemHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) erro
 	return man.Set(res)
 }
 
-// Destroy the cgroup.
-func (c *linuxMemHandler) Destroy(ctr *CgroupControl) error {
-	return rmDirRecursively(ctr.getCgroupv1Path(Memory))
-}
-
 // Stat fills a metrics structure with usage stats for the controller.
 func (c *linuxMemHandler) Stat(ctr *CgroupControl, m *cgroups.Stats) error {
 	var err error
