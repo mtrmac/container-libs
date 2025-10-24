@@ -541,15 +541,10 @@ func cpusetCopyFileFromParent(dir, file string, cgroupv2 bool) ([]byte, error) {
 
 // SystemCPUUsage returns the system usage for all the cgroups.
 func SystemCPUUsage() (uint64, error) {
-	cgroupv2, err := IsCgroup2UnifiedMode()
+	_, err := IsCgroup2UnifiedMode()
 	if err != nil {
 		return 0, err
 	}
-	if !cgroupv2 {
-		p := filepath.Join(cgroupRoot, CPUAcct, "cpuacct.usage")
-		return readFileAsUint64(p)
-	}
-
 	files, err := os.ReadDir(cgroupRoot)
 	if err != nil {
 		return 0, err
@@ -602,7 +597,7 @@ func UserConnection(uid int) (*systemdDbus.Conn, error) {
 func UserOwnsCurrentSystemdCgroup() (bool, error) {
 	uid := os.Geteuid()
 
-	cgroup2, err := IsCgroup2UnifiedMode()
+	_, err := IsCgroup2UnifiedMode()
 	if err != nil {
 		return false, err
 	}
@@ -624,20 +619,11 @@ func UserOwnsCurrentSystemdCgroup() (bool, error) {
 
 		// If we are on a cgroup v2 system and there are cgroup v1 controllers
 		// mounted, ignore them when the current process is at the root cgroup.
-		if cgroup2 && parts[1] != "" && parts[2] == "/" {
+		if parts[1] != "" && parts[2] == "/" {
 			continue
 		}
 
-		var cgroupPath string
-
-		if cgroup2 {
-			cgroupPath = filepath.Join(cgroupRoot, parts[2])
-		} else {
-			if parts[1] != "name=systemd" {
-				continue
-			}
-			cgroupPath = filepath.Join(cgroupRoot, "systemd", parts[2])
-		}
+		cgroupPath := filepath.Join(cgroupRoot, parts[2])
 
 		st, err := os.Stat(cgroupPath)
 		if err != nil {
