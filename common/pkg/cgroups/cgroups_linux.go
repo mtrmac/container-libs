@@ -41,11 +41,6 @@ type CgroupControl struct {
 	systemd bool
 }
 
-type controller struct {
-	name    string
-	symlink bool
-}
-
 type controllerHandler interface {
 	Apply(*CgroupControl, *cgroups.Resources) error
 	Stat(*CgroupControl, *cgroups.Stats) error
@@ -80,8 +75,8 @@ func init() {
 }
 
 // getAvailableControllers get the available controllers.
-func getAvailableControllers() ([]controller, error) {
-	controllers := []controller{}
+func getAvailableControllers() ([]string, error) {
+	controllers := []string{}
 	controllersFile := filepath.Join(cgroupRoot, "cgroup.controllers")
 
 	// rootless cgroupv2: check available controllers for current user, systemd or servicescope will inherit
@@ -99,27 +94,14 @@ func getAvailableControllers() ([]controller, error) {
 		return nil, fmt.Errorf("failed while reading controllers for cgroup v2: %w", err)
 	}
 	for controllerName := range strings.FieldsSeq(string(controllersFileBytes)) {
-		c := controller{
-			name:    controllerName,
-			symlink: false,
-		}
-		controllers = append(controllers, c)
+		controllers = append(controllers, controllerName)
 	}
 	return controllers, nil
 }
 
 // AvailableControllers get string:bool map of all the available controllers.
 func AvailableControllers(exclude map[string]controllerHandler) ([]string, error) {
-	availableControllers, err := getAvailableControllers()
-	if err != nil {
-		return nil, err
-	}
-	controllerList := []string{}
-	for _, controller := range availableControllers {
-		controllerList = append(controllerList, controller.name)
-	}
-
-	return controllerList, nil
+	return getAvailableControllers()
 }
 
 func getCgroupPathForCurrentProcess() (string, error) {
