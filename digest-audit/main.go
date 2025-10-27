@@ -165,15 +165,7 @@ func getParentFromStack(stack []ast.Node) ast.Node {
 // determineUse decides what to report for a digest.Digest expression
 // Returns nil if this expression should not be reported (it's part of a larger use)
 func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInfo {
-	if parent == nil {
-		// No parent, report the expression itself
-		return &useInfo{
-			node: expr,
-			name: getExprName(expr, pkg.Fset),
-			kind: determineExprKind(expr),
-		}
-	}
-
+	// Handle all known parent situations
 	switch p := parent.(type) {
 	case *ast.SelectorExpr:
 		// expr.Method or expr.Field
@@ -285,7 +277,7 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		}
 	}
 
-	// Default: report the expression itself
+	// No parent or unknown parent: report the expression itself
 	return &useInfo{
 		node: expr,
 		name: getExprName(expr, pkg.Fset),
