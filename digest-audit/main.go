@@ -32,11 +32,6 @@ func main() {
 		log.Fatalf("Error auditing digest uses: %v", err)
 	}
 
-	// Sort by location for consistent output
-	sort.Slice(uses, func(i, j int) bool {
-		return uses[i].Location < uses[j].Location
-	})
-
 	// Print results in VS Code compatible format
 	for _, use := range uses {
 		fmt.Printf("%s: %s\n", use.Location, use.Name)
@@ -106,11 +101,18 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 				if isDigestType(obj.Type()) {
 					pos := pkg.Fset.Position(ident.Pos())
 
+					// Compute relative path from the input directory
+					relPath, err := filepath.Rel(absDir, pos.Filename)
+					if err != nil {
+						// If we can't compute relative path, use absolute
+						relPath = pos.Filename
+					}
+
 					// Determine kind of use for future filtering
 					kind := determineUseKind(ident, file, pkg)
 
 					uses = append(uses, DigestUse{
-						Location: fmt.Sprintf("%s:%d:%d", pos.Filename, pos.Line, pos.Column),
+						Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
 						Name:     ident.Name,
 						Kind:     kind,
 					})
@@ -120,6 +122,11 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 			})
 		}
 	}
+
+	// Sort by location for consistent output
+	sort.Slice(uses, func(i, j int) bool {
+		return uses[i].Location < uses[j].Location
+	})
 
 	return uses, nil
 }
