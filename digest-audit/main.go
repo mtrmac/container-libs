@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/token"
 	"go/types"
 	"log"
@@ -66,7 +68,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		return nil, fmt.Errorf("failed to load packages: %w", err)
 	}
 
-	// Check for errors in loaded packages
+	// Check for errors in loaded packages - fail immediately on any errors
 	var loadErrors []string
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
@@ -75,9 +77,11 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 			}
 		}
 	}
-	// Only fail if we have errors and no packages loaded successfully
-	if len(loadErrors) > 0 && len(pkgs) == 0 {
-		return nil, fmt.Errorf("failed to load any packages:\n%s", strings.Join(loadErrors, "\n"))
+	if len(loadErrors) > 0 {
+		return nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("no packages found in %s", absDir)
 	}
 
 	var uses []DigestUse
@@ -85,7 +89,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	// Process each package
 	for _, pkg := range pkgs {
 		if pkg.Types == nil || pkg.TypesInfo == nil {
-			continue
+			return nil, fmt.Errorf("package %s missing type information", pkg.PkgPath)
 		}
 
 		// Walk AST of each file in the package
@@ -122,7 +126,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 					pos := pkg.Fset.Position(use.node.Pos())
 					relPath, err := filepath.Rel(absDir, pos.Filename)
 					if err != nil {
-						relPath = pos.Filename
+						panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
 					}
 
 					uses = append(uses, DigestUse{
@@ -165,6 +169,15 @@ func getParentFromStack(stack []ast.Node) ast.Node {
 // determineUse decides what to report for a digest.Digest expression
 // Returns nil if this expression should not be reported (it's part of a larger use)
 func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInfo {
+	// No parent case - this is expected for top-level expressions
+	if parent == nil {
+		return &useInfo{
+			node: expr,
+			kind: determineExprKind(expr),
+			name: getOriginalExprText(expr, pkg.Fset),
+		}
+	}
+
 	// Handle all known parent situations
 	switch p := parent.(type) {
 	case *ast.SelectorExpr:
@@ -212,7 +225,6 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				}
 			}
 		}
-		// expr is not an argument, might be the function being called (shouldn't happen for digest.Digest)
 
 	case *ast.AssignStmt:
 		// Assignment involving expr
@@ -223,7 +235,18 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				return nil
 			}
 		}
-		// If expr is on LHS, fall through to default handling
+		// Check if it's on LHS (being assigned to, or declared with :=)
+		for _, lhs := range p.Lhs {
+			if lhs == expr {
+				// Identifier on LHS of assignment (including := declarations)
+				// Report it - it's a digest-typed identifier being declared/assigned
+				return &useInfo{
+					node: expr,
+					kind: determineExprKind(expr),
+					name: getOriginalExprText(expr, pkg.Fset),
+				}
+			}
+		}
 
 	case *ast.ReturnStmt:
 		// Return statement with expr
@@ -241,6 +264,18 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				// expr is an initializer value
 				// Don't report - this is just initialization, not a use
 				return nil
+			}
+		}
+		// Check if it's a name being declared
+		for _, name := range p.Names {
+			if name == expr {
+				// The digest is the name being declared
+				// Report it - it's a digest-typed identifier being declared
+				return &useInfo{
+					node: expr,
+					kind: determineExprKind(expr),
+					name: getOriginalExprText(expr, pkg.Fset),
+				}
 			}
 		}
 
@@ -275,14 +310,43 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				name: getExprName(expr, pkg.Fset),
 			}
 		}
+
+	case *ast.Field:
+		// Function parameter, struct field, etc.
+		// Check if expr is one of the Names
+		for _, name := range p.Names {
+			if name == expr {
+				// This is a parameter/field name
+				// Report it - it's a digest-typed identifier being declared as parameter/field
+				return &useInfo{
+					node: expr,
+					kind: determineExprKind(expr),
+					name: getOriginalExprText(expr, pkg.Fset),
+				}
+			}
+		}
 	}
 
-	// No parent or unknown parent: report the expression itself
+	// Unhandled situation: warn and report the expression itself
+	pos := pkg.Fset.Position(expr.Pos())
+	exprText := getOriginalExprText(expr, pkg.Fset)
+	fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: unhandled digest expression %q in parent %s\n",
+		pos.Filename, pos.Line, pos.Column, exprText, fmt.Sprintf("%T", parent))
+
 	return &useInfo{
 		node: expr,
 		kind: determineExprKind(expr),
-		name: getExprName(expr, pkg.Fset),
+		name: exprText,
 	}
+}
+
+// getOriginalExprText returns the original source text of an expression
+func getOriginalExprText(expr ast.Expr, fset *token.FileSet) string {
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fset, expr); err != nil {
+		panic(fmt.Sprintf("failed to format expression: %v", err))
+	}
+	return buf.String()
 }
 
 // isTypeExpr checks if an expression is being used as a type (not a value)
