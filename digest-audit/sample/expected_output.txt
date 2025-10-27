@@ -1,15 +1,15 @@
-sample.go:11:6: d1
-sample.go:12:2: d2
-sample.go:15:2: d3
-sample.go:18:13: Algorithm
-sample.go:22:5: ==
-sample.go:27:29: d3
-sample.go:31:16: d1
-sample.go:34:2: d4
-sample.go:38:41: Encoded
-sample.go:42:5: ==
-sample.go:47:16: FromString()
-sample.go:50:14: FromString()
-sample.go:54:23: Algorithm
-sample.go:58:20: d
-sample.go:60:15: Encoded
+sample.go:11:6: identifier d1
+sample.go:12:2: identifier d2
+sample.go:15:2: identifier d3
+sample.go:18:13: selector Algorithm
+sample.go:22:5: binary-op ==
+sample.go:27:29: call-arg d3
+sample.go:31:16: call-arg d1
+sample.go:34:2: identifier d4
+sample.go:38:41: selector Encoded
+sample.go:42:5: binary-op ==
+sample.go:47:16: call-arg FromString()
+sample.go:50:14: call-arg FromString()
+sample.go:54:23: selector Algorithm
+sample.go:58:20: identifier d
+sample.go:60:15: selector Encoded
