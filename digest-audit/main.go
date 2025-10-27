@@ -21,6 +21,11 @@ type DigestUse struct {
 	Kind     string // kind of use (for future filtering)
 }
 
+// String returns a formatted string representation of the DigestUse
+func (du DigestUse) String() string {
+	return fmt.Sprintf("%s: %s %s", du.Location, du.Kind, du.Name)
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <directory>\n", os.Args[0])
@@ -35,7 +40,7 @@ func main() {
 
 	// Print results in VS Code compatible format
 	for _, use := range uses {
-		fmt.Printf("%s: %s\n", use.Location, use.Name)
+		fmt.Println(use.String())
 	}
 }
 

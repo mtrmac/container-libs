@@ -32,9 +32,7 @@ func TestSampleFile(t *testing.T) {
 	// Format actual output to match fixture format
 	var actualLines []string
 	for _, use := range uses {
-		// Location is already in the correct format: path:line:column
-		// Just append the name
-		actualLines = append(actualLines, use.Location+": "+use.Name)
+		actualLines = append(actualLines, use.String())
 	}
 
 	// Compare line by line
