@@ -59,10 +59,9 @@ go test -v
 ```
 
 The test suite includes:
-- `TestSampleFile`: Validates the tool finds all expected uses in the sample file
-- `TestVSCodeFormat`: Verifies output format compatibility
-- `TestMultipleFiles`: Integration test on a real codebase
-- `TestOutputFormat`: Ensures output can be sorted properly
+- `TestSampleFile`: A rigid fixture-based test that validates the exact output (including line and column numbers) against `sample/expected_output.txt`
+
+The test compares the actual output against a stored fixture to ensure any changes to the tool's behavior are caught immediately.
 
 ## Future Enhancements
 
