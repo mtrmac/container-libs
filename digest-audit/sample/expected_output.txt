@@ -1,13 +1,11 @@
 sample.go:11:6: d1
 sample.go:12:2: d2
 sample.go:15:2: d3
-sample.go:15:8: d1
 sample.go:18:13: Algorithm
 sample.go:22:5: ==
 sample.go:27:29: d3
 sample.go:31:16: d1
 sample.go:34:2: d4
-sample.go:35:6: d4
 sample.go:38:41: Encoded
 sample.go:42:5: ==
 sample.go:47:16: FromString()
