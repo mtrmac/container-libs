@@ -190,6 +190,16 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				name: p.Sel.Name,
 			}
 		}
+		// Check if expr is the field being selected (p.Sel)
+		if p.Sel == expr {
+			// This is a field access where the field itself is a digest
+			// Report it as a field access
+			return &useInfo{
+				node: expr,
+				kind: "field-access",
+				name: getOriginalExprText(expr, pkg.Fset),
+			}
+		}
 
 	case *ast.BinaryExpr:
 		// expr op expr2 or expr2 op expr
@@ -281,6 +291,12 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 
 	case *ast.ValueSpec:
 		// Variable declaration with initialization
+		// Check if expr is the Type (type expression in a declaration)
+		if p.Type == expr {
+			// This is a type expression (e.g., *digest.Digest in var x *digest.Digest)
+			// Don't report - this is a type declaration, not a use of a value
+			return nil
+		}
 		for _, val := range p.Values {
 			if val == expr {
 				// expr is an initializer value
@@ -335,6 +351,12 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 
 	case *ast.Field:
 		// Function parameter, struct field, etc.
+		// Check if expr is the Type (type expression in a declaration)
+		if p.Type == expr {
+			// This is a type expression (e.g., *digest.Digest as parameter type)
+			// Don't report - this is a type declaration, not a use of a value
+			return nil
+		}
 		// Check if expr is one of the Names
 		for _, name := range p.Names {
 			if name == expr {
@@ -343,6 +365,48 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				return &useInfo{
 					node: expr,
 					kind: determineExprKind(expr),
+					name: getOriginalExprText(expr, pkg.Fset),
+				}
+			}
+		}
+
+	case *ast.RangeStmt:
+		// Range over digest values
+		if p.Key == expr || p.Value == expr {
+			// This is the loop variable in a range statement
+			return &useInfo{
+				node: expr,
+				kind: "range-var",
+				name: getOriginalExprText(expr, pkg.Fset),
+			}
+		}
+
+	case *ast.StarExpr:
+		// Dereferencing a pointer: *expr
+		if p.X == expr {
+			// Report the dereference operation
+			return &useInfo{
+				node: p,
+				kind: "deref",
+				name: "*" + getExprName(expr, pkg.Fset),
+			}
+		}
+
+	case *ast.SwitchStmt:
+		// Switch statement on a digest value
+		if p.Tag == expr {
+			// Don't report - this is the switch tag, not a use
+			return nil
+		}
+
+	case *ast.CaseClause:
+		// Case clause in a switch
+		for _, caseExpr := range p.List {
+			if caseExpr == expr {
+				// This is a case value being compared
+				return &useInfo{
+					node: expr,
+					kind: "case-value",
 					name: getOriginalExprText(expr, pkg.Fset),
 				}
 			}
