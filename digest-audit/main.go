@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"log"
 	"os"
@@ -85,39 +86,100 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		// Walk AST of each file in the package
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(n ast.Node) bool {
-				// Look for identifiers
-				ident, ok := n.(*ast.Ident)
-				if !ok {
-					return true
-				}
-
-				// Get the type of this identifier
-				obj := pkg.TypesInfo.ObjectOf(ident)
-				if obj == nil {
-					return true
-				}
-
-				// Check if the type is digest.Digest
-				if isDigestType(obj.Type()) {
-					pos := pkg.Fset.Position(ident.Pos())
-
-					// Compute relative path from the input directory
-					relPath, err := filepath.Rel(absDir, pos.Filename)
-					if err != nil {
-						// If we can't compute relative path, use absolute
-						relPath = pos.Filename
+				// Look for uses of digest.Digest values
+				switch node := n.(type) {
+				case *ast.Ident:
+					// Identifier with digest.Digest type
+					if isTypeExpr(node, pkg) {
+						return true
 					}
-
-					// Determine kind of use for future filtering
-					kind := determineUseKind(ident, file, pkg)
-
-					uses = append(uses, DigestUse{
-						Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-						Name:     ident.Name,
-						Kind:     kind,
-					})
+					exprType := pkg.TypesInfo.TypeOf(node)
+					if exprType != nil && isDigestType(exprType) {
+						// Check if this identifier is being used (not just produced)
+						if !isSubexprOfOperation(node, file) {
+							pos := pkg.Fset.Position(node.Pos())
+							relPath, err := filepath.Rel(absDir, pos.Filename)
+							if err != nil {
+								relPath = pos.Filename
+							}
+							uses = append(uses, DigestUse{
+								Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+								Name:     node.Name,
+								Kind:     "identifier",
+							})
+						}
+					}
+					
+				case *ast.SelectorExpr:
+					// Method call on digest.Digest value
+					xType := pkg.TypesInfo.TypeOf(node.X)
+					if xType != nil && isDigestType(xType) {
+						pos := pkg.Fset.Position(node.Sel.Pos())
+						relPath, err := filepath.Rel(absDir, pos.Filename)
+						if err != nil {
+							relPath = pos.Filename
+						}
+						uses = append(uses, DigestUse{
+							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+							Name:     node.Sel.Name,
+							Kind:     "selector",
+						})
+					}
+					
+				case *ast.BinaryExpr:
+					// Binary operation involving digest.Digest
+					xType := pkg.TypesInfo.TypeOf(node.X)
+					yType := pkg.TypesInfo.TypeOf(node.Y)
+					if (xType != nil && isDigestType(xType)) || (yType != nil && isDigestType(yType)) {
+						pos := pkg.Fset.Position(node.Pos())
+						relPath, err := filepath.Rel(absDir, pos.Filename)
+						if err != nil {
+							relPath = pos.Filename
+						}
+						uses = append(uses, DigestUse{
+							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+							Name:     node.Op.String(),
+							Kind:     "binary-op",
+						})
+					}
+					
+				case *ast.CallExpr:
+					// Function call returning digest.Digest or taking digest.Digest as argument
+					for _, arg := range node.Args {
+						argType := pkg.TypesInfo.TypeOf(arg)
+						if argType != nil && isDigestType(argType) {
+							pos := pkg.Fset.Position(arg.Pos())
+							relPath, err := filepath.Rel(absDir, pos.Filename)
+							if err != nil {
+								relPath = pos.Filename
+							}
+							// Report the argument itself
+							name := getExprName(arg, pkg.Fset)
+							uses = append(uses, DigestUse{
+								Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+								Name:     name,
+								Kind:     "call-arg",
+							})
+						}
+					}
+					
+				case *ast.UnaryExpr:
+					// Type conversion involving digest.Digest
+					xType := pkg.TypesInfo.TypeOf(node.X)
+					if xType != nil && isDigestType(xType) {
+						pos := pkg.Fset.Position(node.Pos())
+						relPath, err := filepath.Rel(absDir, pos.Filename)
+						if err != nil {
+							relPath = pos.Filename
+						}
+						uses = append(uses, DigestUse{
+							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+							Name:     node.Op.String(),
+							Kind:     "unary-op",
+						})
+					}
 				}
-
+				
 				return true
 			})
 		}
@@ -129,6 +191,81 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	})
 
 	return uses, nil
+}
+
+// isSubexprOfOperation checks if an identifier is part of a larger operation
+// that we'll report separately (like being the receiver of a method call)
+func isSubexprOfOperation(ident *ast.Ident, file *ast.File) bool {
+	var isSubexpr bool
+	
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil || isSubexpr {
+			return false
+		}
+		
+		switch p := n.(type) {
+		case *ast.SelectorExpr:
+			// If ident is the X in X.Sel (receiver of method call), it's a subexpression
+			if p.X == ident {
+				isSubexpr = true
+				return false
+			}
+			
+		case *ast.BinaryExpr:
+			// If ident is an operand in a binary operation, it's a subexpression
+			if p.X == ident || p.Y == ident {
+				isSubexpr = true
+				return false
+			}
+			
+		case *ast.UnaryExpr:
+			// If ident is being type-converted or operated on, it's a subexpression
+			if p.X == ident {
+				isSubexpr = true
+				return false
+			}
+			
+		case *ast.CallExpr:
+			// If ident is an argument in a call, it's a subexpression
+			for _, arg := range p.Args {
+				if arg == ident {
+					isSubexpr = true
+					return false
+				}
+			}
+		}
+		
+		return true
+	})
+	
+	return isSubexpr
+}
+
+// isTypeExpr checks if an expression is being used as a type (not a value)
+func isTypeExpr(expr ast.Expr, pkg *packages.Package) bool {
+	// Check if this expression is recorded as a type use in TypesInfo
+	// TypesInfo.Uses maps identifiers to their objects, but type names
+	// are recorded differently - they map to TypeName objects
+	if ident, ok := expr.(*ast.Ident); ok {
+		if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
+			_, isTypeName := obj.(*types.TypeName)
+			return isTypeName
+		}
+		if obj := pkg.TypesInfo.Defs[ident]; obj != nil {
+			_, isTypeName := obj.(*types.TypeName)
+			return isTypeName
+		}
+	}
+
+	// Check if it's a selector expression referring to a type
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if obj := pkg.TypesInfo.Uses[sel.Sel]; obj != nil {
+			_, isTypeName := obj.(*types.TypeName)
+			return isTypeName
+		}
+	}
+
+	return false
 }
 
 // isDigestType checks if a type is github.com/opencontainers/go-digest.Digest
@@ -158,95 +295,68 @@ func isDigestType(t types.Type) bool {
 	return pkg.Path() == "github.com/opencontainers/go-digest" && obj.Name() == "Digest"
 }
 
-// determineUseKind determines the kind of use for future filtering capabilities
-// This is a placeholder implementation that can be expanded
-func determineUseKind(ident *ast.Ident, file *ast.File, pkg *packages.Package) string {
-	// For now, return a simple classification
-	// In the future, this can be expanded to distinguish between:
-	// - variable declaration
-	// - assignment/copy
-	// - method call receiver
-	// - function parameter
-	// - comparison operand
-	// - type conversion
-	// - return value
-	// etc.
-
-	// Try to determine context by looking at parent nodes
-	var parent ast.Node
-	ast.Inspect(file, func(n ast.Node) bool {
-		if n == nil {
-			return false
-		}
-
-		// Check if this node contains our identifier
-		for _, child := range childNodes(n) {
-			if child == ident {
-				parent = n
-				return false
-			}
-		}
-		return true
-	})
-
-	if parent == nil {
+// determineExprKind determines the kind of expression for future filtering capabilities
+func determineExprKind(expr ast.Expr) string {
+	switch expr.(type) {
+	case *ast.Ident:
 		return "identifier"
-	}
-
-	switch p := parent.(type) {
-	case *ast.SelectorExpr:
-		if p.X == ident {
-			return "method-receiver"
-		}
-		return "selector"
 	case *ast.CallExpr:
-		return "call-arg"
+		return "call-result"
+	case *ast.SelectorExpr:
+		return "selector"
 	case *ast.BinaryExpr:
 		return "binary-op"
-	case *ast.AssignStmt:
-		return "assignment"
-	case *ast.ValueSpec:
-		return "declaration"
-	case *ast.ReturnStmt:
-		return "return"
+	case *ast.UnaryExpr:
+		return "unary-op"
+	case *ast.ParenExpr:
+		return "paren"
+	case *ast.TypeAssertExpr:
+		return "type-assert"
+	case *ast.IndexExpr:
+		return "index"
+	case *ast.StarExpr:
+		return "deref"
+	case *ast.BasicLit:
+		return "literal"
 	default:
-		return "identifier"
+		return "expression"
 	}
 }
 
-// childNodes returns immediate child nodes of the given node
-func childNodes(n ast.Node) []ast.Node {
-	var children []ast.Node
-
-	switch node := n.(type) {
-	case *ast.SelectorExpr:
-		children = append(children, node.X, node.Sel)
+// getExprName returns a descriptive name for an expression use
+func getExprName(expr ast.Expr, fset *token.FileSet) string {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name
 	case *ast.CallExpr:
-		children = append(children, node.Fun)
-		for _, arg := range node.Args {
-			children = append(children, arg)
+		// This is a call that returns digest.Digest
+		// Get the function name being called
+		if fun, ok := e.Fun.(*ast.SelectorExpr); ok {
+			return fun.Sel.Name + "()"
+		} else if fun, ok := e.Fun.(*ast.Ident); ok {
+			return fun.Name + "()"
 		}
+		return "call()"
+	case *ast.SelectorExpr:
+		// Method call or field access
+		return e.Sel.Name
+	case *ast.BasicLit:
+		return e.Value
 	case *ast.BinaryExpr:
-		children = append(children, node.X, node.Y)
-	case *ast.AssignStmt:
-		for _, lhs := range node.Lhs {
-			children = append(children, lhs)
-		}
-		for _, rhs := range node.Rhs {
-			children = append(children, rhs)
-		}
-	case *ast.ValueSpec:
-		for _, name := range node.Names {
-			children = append(children, name)
-		}
-		for _, val := range node.Values {
-			children = append(children, val)
-		}
-	case *ast.ReturnStmt:
-		for _, res := range node.Results {
-			children = append(children, res)
-		}
+		// Binary operation involving digest.Digest
+		return e.Op.String()
+	case *ast.UnaryExpr:
+		// Unary operation
+		return e.Op.String()
+	case *ast.ParenExpr:
+		return getExprName(e.X, fset)
+	case *ast.TypeAssertExpr:
+		return "type-assert"
+	case *ast.IndexExpr:
+		return "index"
+	case *ast.StarExpr:
+		return "*"
+	default:
+		return "expr"
 	}
-
-	return children
 }
