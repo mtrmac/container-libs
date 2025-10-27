@@ -85,101 +85,48 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 
 		// Walk AST of each file in the package
 		for _, file := range pkg.Syntax {
-			ast.Inspect(file, func(n ast.Node) bool {
-				// Look for uses of digest.Digest values
-				switch node := n.(type) {
-				case *ast.Ident:
-					// Identifier with digest.Digest type
-					if isTypeExpr(node, pkg) {
-						return true
-					}
-					exprType := pkg.TypesInfo.TypeOf(node)
-					if exprType != nil && isDigestType(exprType) {
-						// Check if this identifier is being used (not just produced)
-						if !isSubexprOfOperation(node, file) {
-							pos := pkg.Fset.Position(node.Pos())
-							relPath, err := filepath.Rel(absDir, pos.Filename)
-							if err != nil {
-								relPath = pos.Filename
-							}
-							uses = append(uses, DigestUse{
-								Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-								Name:     node.Name,
-								Kind:     "identifier",
-							})
-						}
-					}
-					
-				case *ast.SelectorExpr:
-					// Method call on digest.Digest value
-					xType := pkg.TypesInfo.TypeOf(node.X)
-					if xType != nil && isDigestType(xType) {
-						pos := pkg.Fset.Position(node.Sel.Pos())
-						relPath, err := filepath.Rel(absDir, pos.Filename)
-						if err != nil {
-							relPath = pos.Filename
-						}
-						uses = append(uses, DigestUse{
-							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-							Name:     node.Sel.Name,
-							Kind:     "selector",
-						})
-					}
-					
-				case *ast.BinaryExpr:
-					// Binary operation involving digest.Digest
-					xType := pkg.TypesInfo.TypeOf(node.X)
-					yType := pkg.TypesInfo.TypeOf(node.Y)
-					if (xType != nil && isDigestType(xType)) || (yType != nil && isDigestType(yType)) {
-						pos := pkg.Fset.Position(node.Pos())
-						relPath, err := filepath.Rel(absDir, pos.Filename)
-						if err != nil {
-							relPath = pos.Filename
-						}
-						uses = append(uses, DigestUse{
-							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-							Name:     node.Op.String(),
-							Kind:     "binary-op",
-						})
-					}
-					
-				case *ast.CallExpr:
-					// Function call returning digest.Digest or taking digest.Digest as argument
-					for _, arg := range node.Args {
-						argType := pkg.TypesInfo.TypeOf(arg)
-						if argType != nil && isDigestType(argType) {
-							pos := pkg.Fset.Position(arg.Pos())
-							relPath, err := filepath.Rel(absDir, pos.Filename)
-							if err != nil {
-								relPath = pos.Filename
-							}
-							// Report the argument itself
-							name := getExprName(arg, pkg.Fset)
-							uses = append(uses, DigestUse{
-								Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-								Name:     name,
-								Kind:     "call-arg",
-							})
-						}
-					}
-					
-				case *ast.UnaryExpr:
-					// Type conversion involving digest.Digest
-					xType := pkg.TypesInfo.TypeOf(node.X)
-					if xType != nil && isDigestType(xType) {
-						pos := pkg.Fset.Position(node.Pos())
-						relPath, err := filepath.Rel(absDir, pos.Filename)
-						if err != nil {
-							relPath = pos.Filename
-						}
-						uses = append(uses, DigestUse{
-							Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-							Name:     node.Op.String(),
-							Kind:     "unary-op",
-						})
-					}
+			// Track which nodes we've already reported to avoid duplicates
+			reported := make(map[ast.Node]bool)
+
+			// Use PreorderStack to walk with parent stack tracking
+			ast.PreorderStack(file, nil, func(node ast.Node, stack []ast.Node) bool {
+				expr, ok := node.(ast.Expr)
+				if !ok {
+					return true
 				}
-				
+
+				// Skip type expressions - we only want values
+				if isTypeExpr(expr, pkg) {
+					return true
+				}
+
+				// Check if this expression has digest.Digest type
+				exprType := pkg.TypesInfo.TypeOf(expr)
+				if exprType == nil || !isDigestType(exprType) {
+					return true
+				}
+
+				// Found a digest.Digest value expression
+				// Determine if we should report it or its parent
+				parent := getParentFromStack(stack)
+				use := determineUse(expr, parent, pkg)
+
+				if use != nil && !reported[use.node] {
+					reported[use.node] = true
+
+					pos := pkg.Fset.Position(use.node.Pos())
+					relPath, err := filepath.Rel(absDir, pos.Filename)
+					if err != nil {
+						relPath = pos.Filename
+					}
+
+					uses = append(uses, DigestUse{
+						Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+						Name:     use.name,
+						Kind:     use.kind,
+					})
+				}
+
 				return true
 			})
 		}
@@ -193,52 +140,152 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	return uses, nil
 }
 
-// isSubexprOfOperation checks if an identifier is part of a larger operation
-// that we'll report separately (like being the receiver of a method call)
-func isSubexprOfOperation(ident *ast.Ident, file *ast.File) bool {
-	var isSubexpr bool
-	
-	ast.Inspect(file, func(n ast.Node) bool {
-		if n == nil || isSubexpr {
-			return false
+// useInfo describes what use to report for a digest.Digest value
+type useInfo struct {
+	node ast.Node // the node to report (position)
+	name string   // descriptive name
+	kind string   // kind of use
+}
+
+// getParentFromStack returns the immediate parent from the stack
+func getParentFromStack(stack []ast.Node) ast.Node {
+	// PreorderStack provides stack of ancestors, NOT including current node
+	// So the parent is the last element in the stack
+	if len(stack) == 0 {
+		return nil
+	}
+	return stack[len(stack)-1]
+}
+
+// determineUse decides what to report for a digest.Digest expression
+// Returns nil if this expression should not be reported (it's part of a larger use)
+func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInfo {
+	if parent == nil {
+		// No parent, report the expression itself
+		return &useInfo{
+			node: expr,
+			name: getExprName(expr, pkg.Fset),
+			kind: determineExprKind(expr),
 		}
-		
-		switch p := n.(type) {
-		case *ast.SelectorExpr:
-			// If ident is the X in X.Sel (receiver of method call), it's a subexpression
-			if p.X == ident {
-				isSubexpr = true
-				return false
+	}
+
+	switch p := parent.(type) {
+	case *ast.SelectorExpr:
+		// expr.Method or expr.Field
+		if p.X == expr {
+			// Report the selector (method/field access), not the receiver
+			return &useInfo{
+				node: p.Sel,
+				name: p.Sel.Name,
+				kind: "selector",
 			}
-			
-		case *ast.BinaryExpr:
-			// If ident is an operand in a binary operation, it's a subexpression
-			if p.X == ident || p.Y == ident {
-				isSubexpr = true
-				return false
+		}
+
+	case *ast.BinaryExpr:
+		// expr op expr2 or expr2 op expr
+		if p.X == expr || p.Y == expr {
+			// Report the binary operation
+			return &useInfo{
+				node: p,
+				name: p.Op.String(),
+				kind: "binary-op",
 			}
-			
-		case *ast.UnaryExpr:
-			// If ident is being type-converted or operated on, it's a subexpression
-			if p.X == ident {
-				isSubexpr = true
-				return false
+		}
+
+	case *ast.UnaryExpr:
+		// op expr (like &expr or string(expr))
+		if p.X == expr {
+			// Report the unary operation
+			return &useInfo{
+				node: p,
+				name: p.Op.String(),
+				kind: "unary-op",
 			}
-			
-		case *ast.CallExpr:
-			// If ident is an argument in a call, it's a subexpression
-			for _, arg := range p.Args {
-				if arg == ident {
-					isSubexpr = true
-					return false
+		}
+
+	case *ast.CallExpr:
+		// Function call with expr as argument
+		for _, arg := range p.Args {
+			if arg == expr {
+				// Report the argument
+				return &useInfo{
+					node: expr,
+					name: getExprName(expr, pkg.Fset),
+					kind: "call-arg",
 				}
 			}
 		}
-		
-		return true
-	})
-	
-	return isSubexpr
+		// expr is not an argument, might be the function being called (shouldn't happen for digest.Digest)
+
+	case *ast.AssignStmt:
+		// Assignment involving expr
+		for _, rhs := range p.Rhs {
+			if rhs == expr {
+				// expr is on right-hand side of assignment
+				// Don't report - this is just construction/initialization, not a use
+				return nil
+			}
+		}
+		// If expr is on LHS, fall through to default handling
+
+	case *ast.ReturnStmt:
+		// Return statement with expr
+		for _, result := range p.Results {
+			if result == expr {
+				// Don't report - returning a value is not a "use"
+				return nil
+			}
+		}
+
+	case *ast.ValueSpec:
+		// Variable declaration with initialization
+		for _, val := range p.Values {
+			if val == expr {
+				// expr is an initializer value
+				// Don't report - this is just initialization, not a use
+				return nil
+			}
+		}
+
+	case *ast.CompositeLit:
+		// Composite literal containing expr
+		for _, elt := range p.Elts {
+			if elt == expr {
+				return &useInfo{
+					node: expr,
+					name: getExprName(expr, pkg.Fset),
+					kind: "composite-lit",
+				}
+			}
+		}
+
+	case *ast.IndexExpr:
+		// Array/slice/map access
+		if p.Index == expr {
+			return &useInfo{
+				node: expr,
+				name: getExprName(expr, pkg.Fset),
+				kind: "index",
+			}
+		}
+
+	case *ast.KeyValueExpr:
+		// Key or value in map/struct literal
+		if p.Key == expr || p.Value == expr {
+			return &useInfo{
+				node: expr,
+				name: getExprName(expr, pkg.Fset),
+				kind: "key-value",
+			}
+		}
+	}
+
+	// Default: report the expression itself
+	return &useInfo{
+		node: expr,
+		name: getExprName(expr, pkg.Fset),
+		kind: determineExprKind(expr),
+	}
 }
 
 // isTypeExpr checks if an expression is being used as a type (not a value)
