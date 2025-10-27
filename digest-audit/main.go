@@ -35,7 +35,7 @@ func main() {
 	}
 
 	dir := os.Args[1]
-	uses, err := auditDigestUses(dir)
+	uses, _, err := auditDigestUses(dir)
 	if err != nil {
 		log.Fatalf("Error auditing digest uses: %v", err)
 	}
@@ -47,11 +47,12 @@ func main() {
 }
 
 // auditDigestUses finds all uses of digest.Digest values in the given directory
-func auditDigestUses(dir string) ([]DigestUse, error) {
+// Returns (reported uses, ignored uses, error)
+func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 	// Convert to absolute path
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
+		return nil, nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	// Configure package loading
@@ -65,7 +66,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	// Load packages - use "./..." pattern to recursively load all packages
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
-		return nil, fmt.Errorf("failed to load packages: %w", err)
+		return nil, nil, fmt.Errorf("failed to load packages: %w", err)
 	}
 
 	// Check for errors in loaded packages - fail immediately on any errors
@@ -78,24 +79,26 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		}
 	}
 	if len(loadErrors) > 0 {
-		return nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
+		return nil, nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
 	}
 	if len(pkgs) == 0 {
-		return nil, fmt.Errorf("no packages found in %s", absDir)
+		return nil, nil, fmt.Errorf("no packages found in %s", absDir)
 	}
 
 	var uses []DigestUse
+	var ignoredUses []DigestUse
 
 	// Process each package
 	for _, pkg := range pkgs {
 		if pkg.Types == nil || pkg.TypesInfo == nil {
-			return nil, fmt.Errorf("package %s missing type information", pkg.PkgPath)
+			return nil, nil, fmt.Errorf("package %s missing type information", pkg.PkgPath)
 		}
 
 		// Walk AST of each file in the package
 		for _, file := range pkg.Syntax {
 			// Track which nodes we've already reported to avoid duplicates
 			reported := make(map[ast.Node]bool)
+			ignored := make(map[ast.Node]bool)
 
 			// Use PreorderStack to walk with parent stack tracking
 			ast.PreorderStack(file, nil, func(node ast.Node, stack []ast.Node) bool {
@@ -122,18 +125,11 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 
 				if use != nil && !reported[use.node] {
 					reported[use.node] = true
-
-					pos := pkg.Fset.Position(use.node.Pos())
-					relPath, err := filepath.Rel(absDir, pos.Filename)
-					if err != nil {
-						panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
-					}
-
-					uses = append(uses, DigestUse{
-						Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-						Kind:     use.kind,
-						Name:     use.name,
-					})
+					uses = append(uses, recordUse(use.node, use.kind, use.name, pkg, absDir))
+				} else if use == nil && !ignored[expr] {
+					// This is an ignored use (construction/initialization, not a use)
+					ignored[expr] = true
+					ignoredUses = append(ignoredUses, recordUse(expr, "ignored", getOriginalExprText(expr, pkg.Fset), pkg, absDir))
 				}
 
 				return true
@@ -145,8 +141,11 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	sort.Slice(uses, func(i, j int) bool {
 		return uses[i].Location < uses[j].Location
 	})
+	sort.Slice(ignoredUses, func(i, j int) bool {
+		return ignoredUses[i].Location < ignoredUses[j].Location
+	})
 
-	return uses, nil
+	return uses, ignoredUses, nil
 }
 
 // useInfo describes what use to report for a digest.Digest value
@@ -154,6 +153,21 @@ type useInfo struct {
 	node ast.Node // the node to report (position)
 	kind string   // kind of use
 	name string   // descriptive name
+}
+
+// recordUse creates a DigestUse record for the given node
+func recordUse(node ast.Node, kind, name string, pkg *packages.Package, absDir string) DigestUse {
+	pos := pkg.Fset.Position(node.Pos())
+	relPath, err := filepath.Rel(absDir, pos.Filename)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
+	}
+
+	return DigestUse{
+		Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
+		Kind:     kind,
+		Name:     name,
+	}
 }
 
 // getParentFromStack returns the immediate parent from the stack
