@@ -32,11 +32,9 @@ func TestSampleFile(t *testing.T) {
 	// Format actual output to match fixture format
 	var actualLines []string
 	for _, use := range uses {
-		// Convert absolute path to relative path (just the filename)
-		// Expected format: sample.go:line:column: name
-		parts := strings.Split(use.Location, "/")
-		filename := parts[len(parts)-1]
-		actualLines = append(actualLines, filename+": "+use.Name)
+		// Location is already in the correct format: path:line:column
+		// Just append the name
+		actualLines = append(actualLines, use.Location+": "+use.Name)
 	}
 
 	// Compare line by line

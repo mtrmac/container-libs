@@ -1,11 +1,11 @@
-sample.go:11:6: d1
 sample.go:11:16: Digest
+sample.go:11:6: d1
 sample.go:12:2: d2
 sample.go:15:2: d3
 sample.go:15:8: d1
 sample.go:18:10: d1
-sample.go:22:5: d1
 sample.go:22:11: d2
+sample.go:22:5: d1
 sample.go:27:29: d3
 sample.go:31:16: d1
 sample.go:34:2: d4
