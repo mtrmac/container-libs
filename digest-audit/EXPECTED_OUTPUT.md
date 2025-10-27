@@ -15,30 +15,16 @@ The `sample/sample.go` file demonstrates various uses of `digest.Digest`:
 
 ## Expected Output
 
+The exact expected output is stored in `sample/expected_output.txt` and is used as a fixture for testing.
+
 When running:
 ```bash
 go run main.go sample
 ```
 
-Expected output (line numbers may vary if sample.go is modified):
-```
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:11:16: Digest
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:11:6: d1
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:12:2: d2
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:15:2: d3
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:15:8: d1
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:18:10: d1
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:22:11: d2
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:22:5: d1
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:27:29: d3
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:31:16: d1
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:34:2: d4
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:35:6: d4
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:38:20: d
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:38:29: Digest
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:40:13: d
-/Users/mitr/Go/src/container-libs/digest-audit/sample/sample.go:44:25: Digest
-```
+The output will show each use with its absolute file path, line number, column number, and identifier name.
+
+See `sample/expected_output.txt` for the precise expected output (with relative paths for portability).
 
 ## Explanation of Results
 
