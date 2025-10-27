@@ -17,8 +17,8 @@ import (
 // DigestUse represents a use of a digest.Digest value
 type DigestUse struct {
 	Location string // file:line:column format
-	Name     string // identifier name
 	Kind     string // kind of use (for future filtering)
+	Name     string // identifier name
 }
 
 // String returns a formatted string representation of the DigestUse
@@ -127,8 +127,8 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 
 					uses = append(uses, DigestUse{
 						Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-						Name:     use.name,
 						Kind:     use.kind,
+						Name:     use.name,
 					})
 				}
 
@@ -148,8 +148,8 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 // useInfo describes what use to report for a digest.Digest value
 type useInfo struct {
 	node ast.Node // the node to report (position)
-	name string   // descriptive name
 	kind string   // kind of use
+	name string   // descriptive name
 }
 
 // getParentFromStack returns the immediate parent from the stack
@@ -173,8 +173,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			// Report the selector (method/field access), not the receiver
 			return &useInfo{
 				node: p.Sel,
-				name: p.Sel.Name,
 				kind: "selector",
+				name: p.Sel.Name,
 			}
 		}
 
@@ -184,8 +184,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			// Report the binary operation
 			return &useInfo{
 				node: p,
-				name: p.Op.String(),
 				kind: "binary-op",
+				name: p.Op.String(),
 			}
 		}
 
@@ -195,8 +195,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			// Report the unary operation
 			return &useInfo{
 				node: p,
-				name: p.Op.String(),
 				kind: "unary-op",
+				name: p.Op.String(),
 			}
 		}
 
@@ -207,8 +207,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				// Report the argument
 				return &useInfo{
 					node: expr,
-					name: getExprName(expr, pkg.Fset),
 					kind: "call-arg",
+					name: getExprName(expr, pkg.Fset),
 				}
 			}
 		}
@@ -250,8 +250,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			if elt == expr {
 				return &useInfo{
 					node: expr,
-					name: getExprName(expr, pkg.Fset),
 					kind: "composite-lit",
+					name: getExprName(expr, pkg.Fset),
 				}
 			}
 		}
@@ -261,8 +261,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		if p.Index == expr {
 			return &useInfo{
 				node: expr,
-				name: getExprName(expr, pkg.Fset),
 				kind: "index",
+				name: getExprName(expr, pkg.Fset),
 			}
 		}
 
@@ -271,8 +271,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		if p.Key == expr || p.Value == expr {
 			return &useInfo{
 				node: expr,
-				name: getExprName(expr, pkg.Fset),
 				kind: "key-value",
+				name: getExprName(expr, pkg.Fset),
 			}
 		}
 	}
@@ -280,8 +280,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 	// No parent or unknown parent: report the expression itself
 	return &useInfo{
 		node: expr,
-		name: getExprName(expr, pkg.Fset),
 		kind: determineExprKind(expr),
+		name: getExprName(expr, pkg.Fset),
 	}
 }
 
