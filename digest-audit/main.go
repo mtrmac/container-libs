@@ -214,14 +214,36 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		}
 
 	case *ast.CallExpr:
-		// Function call with expr as argument
-		for _, arg := range p.Args {
+		// Function/method call or type conversion with expr as argument
+		for i, arg := range p.Args {
 			if arg == expr {
-				// Report the argument
+				// Check if this is a type conversion or a function/method call
+				funType := pkg.TypesInfo.TypeOf(p.Fun)
+				if _, isType := funType.(*types.Basic); isType {
+					// Type conversion (e.g., string(digest))
+					return &useInfo{
+						node: expr,
+						kind: "type-cast",
+						name: funType.String(),
+					}
+				}
+
+				// Check if the type is a named type (also indicates type conversion)
+				if _, isNamed := funType.(*types.Named); isNamed {
+					// Type conversion to named type
+					return &useInfo{
+						node: expr,
+						kind: "type-cast",
+						name: funType.String(),
+					}
+				}
+
+				// It's a function or method call - get parameter name
+				paramName := getParameterName(p.Fun, i, pkg)
 				return &useInfo{
 					node: expr,
 					kind: "call-arg",
-					name: getExprName(expr, pkg.Fset),
+					name: paramName,
 				}
 			}
 		}
@@ -347,6 +369,43 @@ func getOriginalExprText(expr ast.Expr, fset *token.FileSet) string {
 		panic(fmt.Sprintf("failed to format expression: %v", err))
 	}
 	return buf.String()
+}
+
+// getParameterName returns the parameter name at the given index for a function/method call
+func getParameterName(fun ast.Expr, argIndex int, pkg *packages.Package) string {
+	// Get the type of the function being called
+	funType := pkg.TypesInfo.TypeOf(fun)
+	if funType == nil {
+		return fmt.Sprintf("arg%d", argIndex)
+	}
+
+	// Extract the signature
+	var sig *types.Signature
+	switch t := funType.(type) {
+	case *types.Signature:
+		sig = t
+	default:
+		return fmt.Sprintf("arg%d", argIndex)
+	}
+
+	// Get the parameter at the given index
+	params := sig.Params()
+	if params == nil || argIndex >= params.Len() {
+		// Handle variadic functions or out of bounds
+		if sig.Variadic() && argIndex >= params.Len()-1 && params.Len() > 0 {
+			// This is a variadic argument
+			lastParam := params.At(params.Len() - 1)
+			return lastParam.Name()
+		}
+		return fmt.Sprintf("arg%d", argIndex)
+	}
+
+	param := params.At(argIndex)
+	if param.Name() == "" {
+		return fmt.Sprintf("arg%d", argIndex)
+	}
+
+	return param.Name()
 }
 
 // isTypeExpr checks if an expression is being used as a type (not a value)
