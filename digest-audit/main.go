@@ -208,21 +208,16 @@ func recordUse(use *useInfo, pkg *packages.Package, cwd string, useAbsolute bool
 	}
 }
 
-// getParentFromStack returns the immediate parent from the stack
-func getParentFromStack(stack []ast.Node) ast.Node {
-	// PreorderStack provides stack of ancestors, NOT including current node
-	// So the parent is the last element in the stack
-	if len(stack) == 0 {
-		return nil
-	}
-	return stack[len(stack)-1]
-}
-
 // determineUse decides what to report for a digest.Digest expression
 // Returns useInfo with ignored=true if this is construction/initialization, not a use
 func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useInfo {
 	// Get parent from stack
-	parent := getParentFromStack(stack)
+	// PreorderStack provides stack of ancestors, NOT including current node
+	// So the parent is the last element in the stack
+	var parent ast.Node
+	if len(stack) > 0 {
+		parent = stack[len(stack)-1]
+	}
 
 	// No parent case - this is expected for top-level expressions
 	if parent == nil {
