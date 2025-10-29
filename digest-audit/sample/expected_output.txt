@@ -13,6 +13,7 @@ sample/sample.go:24:8: ignored assign-rhs digest.FromString("test")
 sample/sample.go:26:6: ignored var-name d3
 sample/sample.go:27:2: ignored assign-lhs d3
 sample/sample.go:27:7: ignored assign-rhs d1
+sample/sample.go:29:6: ignored assign-rhs d1.Algorithm()
 sample/sample.go:29:9: selector Algorithm
 sample/sample.go:31:5: binary-op ==
 sample/sample.go:35:13: type-cast string
@@ -51,11 +52,17 @@ sample/sample.go:82:31: ignored digest-string-in-logrus d2
 sample/sample.go:84:5: ignored cmp-nil globalDigestPtr
 sample/sample.go:88:5: ignored cmp-nil globalDigestPtr
 sample/sample.go:92:6: ignored digest-validate d1
-sample/sample.go:95:20: ignored field-name d
-sample/sample.go:95:37: ignored field-name ptr
-sample/sample.go:95:41: ignored field-type *digest.Digest
-sample/sample.go:96:6: ignored assign-rhs d
-sample/sample.go:97:6: ignored assign-rhs ptr
-sample/sample.go:101:9: ignored return digest.FromString("result")
-sample/sample.go:105:9: ignored return dc.ID
-sample/sample.go:105:12: ignored field-access ID
+sample/sample.go:94:2: ignored assign-lhs alg
+sample/sample.go:94:9: ignored assign-rhs d1.Algorithm()
+sample/sample.go:94:12: selector Algorithm
+sample/sample.go:95:10: selector String
+sample/sample.go:97:34: ignored algorithm-string-in-errorf alg
+sample/sample.go:99:34: ignored algorithm-string-in-logrus alg
+sample/sample.go:102:20: ignored field-name d
+sample/sample.go:102:37: ignored field-name ptr
+sample/sample.go:102:41: ignored field-type *digest.Digest
+sample/sample.go:103:6: ignored assign-rhs d
+sample/sample.go:104:6: ignored assign-rhs ptr
+sample/sample.go:108:9: ignored return digest.FromString("result")
+sample/sample.go:112:9: ignored return dc.ID
+sample/sample.go:112:12: ignored field-access ID

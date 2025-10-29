@@ -90,6 +90,13 @@ func CoverageFunction() {
 	}
 
 	_ = d1.Validate()
+
+	alg := d1.Algorithm()
+	_ = alg.String()
+
+	_ = fmt.Errorf("algorithm: %s", alg.String())
+
+	logrus.Infof("algorithm is %s", alg.String())
 }
 
 func processDigest(d digest.Digest, ptr *digest.Digest) {
