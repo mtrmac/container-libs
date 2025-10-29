@@ -10,52 +10,52 @@ var globalDigest digest.Digest = digest.FromString("global")
 
 var globalDigestPtr *digest.Digest
 
+var globalDigestArray []digest.Digest
+
 type DigestContainer struct {
 	ID     digest.Digest
 	Backup *digest.Digest
+	List   []*digest.Digest
 }
 
 func CoverageFunction() {
 	var d1 digest.Digest = "sha256:1234567890abcdef"
-
 	d2 := digest.FromString("test")
 
 	var d3 digest.Digest
 	d3 = d1
-	_ = d3
 
-	algo := d1.Algorithm()
-	_ = algo
+	_ = d1.Algorithm()
 
 	if d1 == d2 {
 		fmt.Println("equal")
 	}
 
-	s := string(d1)
-	_ = s
+	_ = string(d1)
 
 	type MyString string
-	s2 := MyString(d2)
-	_ = s2
+	_ = MyString(d2)
 
-	processDigest(d2, nil)
+	processDigest(d3, nil)
 
-	digests := []digest.Digest{d1}
-	_ = digests
+	_ = []digest.Digest{d1}
 
-	digestKeyMap := map[digest.Digest]string{d1: "value"}
+	m := map[digest.Digest]digest.Digest{d1: d2}
+	_ = m[d2]
 
-	_ = digestKeyMap[d2]
+	for k, v := range m {
+		_ = k
+		_ = v
+	}
 
-	for _, d := range digests {
-		_ = d
+	for _, r := range d1 {
+		_ = r
 	}
 
 	ptr := &d1
-	_ = ptr
+	_ = *ptr
 
-	derefDigest := *ptr
-	_ = derefDigest
+	_ = (d1)
 
 	switch d1 {
 	case digest.FromString("test"):
