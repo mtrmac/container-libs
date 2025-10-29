@@ -285,8 +285,13 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 				}
 
 				// It's a function or method call - get parameter name
+				paramName, err := getParameterName(p.Fun, i, pkg)
+				if err != nil {
+					// Unexpected situation: fall through to unhandled case
+					// This will report it rather than ignore it
+					break
+				}
 				// This is a pure value move (passing argument to function)
-				paramName := getParameterName(p.Fun, i, pkg)
 				return &useInfo{node: expr, ignored: true, kind: "call-arg", name: paramName}
 			}
 		}
@@ -471,11 +476,11 @@ func getOriginalExprText(expr ast.Expr, fset *token.FileSet) string {
 }
 
 // getParameterName returns the parameter name at the given index for a function/method call
-func getParameterName(fun ast.Expr, argIndex int, pkg *packages.Package) string {
+func getParameterName(fun ast.Expr, argIndex int, pkg *packages.Package) (string, error) {
 	// Get the type of the function being called
 	funType := pkg.TypesInfo.TypeOf(fun)
 	if funType == nil {
-		return fmt.Sprintf("arg%d", argIndex)
+		return "", fmt.Errorf("no type info for function")
 	}
 
 	// Extract the signature
@@ -484,27 +489,36 @@ func getParameterName(fun ast.Expr, argIndex int, pkg *packages.Package) string 
 	case *types.Signature:
 		sig = t
 	default:
-		return fmt.Sprintf("arg%d", argIndex)
+		return "", fmt.Errorf("function type is not a signature: %T", funType)
 	}
 
 	// Get the parameter at the given index
 	params := sig.Params()
-	if params == nil || argIndex >= params.Len() {
-		// Handle variadic functions or out of bounds
+	if params == nil {
+		return "", fmt.Errorf("no parameters in signature")
+	}
+
+	if argIndex >= params.Len() {
+		// Handle variadic functions
 		if sig.Variadic() && argIndex >= params.Len()-1 && params.Len() > 0 {
 			// This is a variadic argument
 			lastParam := params.At(params.Len() - 1)
-			return lastParam.Name()
+			name := lastParam.Name()
+			if name == "" {
+				return fmt.Sprintf("arg%d", argIndex), nil
+			}
+			return name, nil
 		}
-		return fmt.Sprintf("arg%d", argIndex)
+		return "", fmt.Errorf("argument index %d out of bounds (params: %d)", argIndex, params.Len())
 	}
 
 	param := params.At(argIndex)
-	if param.Name() == "" {
-		return fmt.Sprintf("arg%d", argIndex)
+	name := param.Name()
+	if name == "" {
+		return fmt.Sprintf("arg%d", argIndex), nil
 	}
 
-	return param.Name()
+	return name, nil
 }
 
 // isTypeExpr checks if an expression is being used as a type (not a value)
