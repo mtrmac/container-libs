@@ -80,6 +80,16 @@ func CoverageFunction() {
 	_ = fmt.Errorf("error with digest: %s", d1.String())
 
 	logrus.Infof("digest is %s", d2.String())
+
+	if globalDigestPtr != nil {
+		fmt.Println("non-nil")
+	}
+
+	if globalDigestPtr == nil {
+		fmt.Println("nil")
+	}
+
+	_ = d1.Validate()
 }
 
 func processDigest(d digest.Digest, ptr *digest.Digest) {
