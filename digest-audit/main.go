@@ -358,8 +358,14 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 
 	case *ast.IndexExpr:
 		// Array/slice/map access
-		if p.Index == expr {
+		if p.X == expr {
+			// digestValue[something] - the digest is being indexed
 			return &useInfo{node: expr, ignored: false, kind: "index", name: getExprName(expr, pkg.Fset)}
+		}
+		if p.Index == expr {
+			// something[digestValue] - the digest is used as a key/index
+			// Report the collection name (something), not the digest value
+			return &useInfo{node: expr, ignored: false, kind: "index-key-in", name: getExprName(p.X, pkg.Fset)}
 		}
 
 	case *ast.KeyValueExpr:
