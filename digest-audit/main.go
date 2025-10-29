@@ -67,10 +67,13 @@ func main() {
 // auditDigestUses finds all uses of digest.Digest values in the given directory
 // Returns all uses (including those with Ignored=true), error
 func auditDigestUses(dir string) ([]DigestUse, error) {
-	// Convert to absolute path
-	absDir, err := filepath.Abs(dir)
+	// Determine if input path is absolute
+	inputIsAbsolute := filepath.IsAbs(dir)
+
+	// Get current working directory for relative path computation
+	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
+		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	// Configure package loading
@@ -78,7 +81,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo |
 			packages.NeedSyntax,
-		Dir: absDir,
+		Dir: dir,
 	}
 
 	// Load packages - use "./..." pattern to recursively load all packages
@@ -100,7 +103,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		return nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
 	}
 	if len(pkgs) == 0 {
-		return nil, fmt.Errorf("no packages found in %s", absDir)
+		return nil, fmt.Errorf("no packages found in %s", dir)
 	}
 
 	var uses []DigestUse
@@ -145,12 +148,12 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 				if use.ignored {
 					if !recordedIgnored[use.node] {
 						recordedIgnored[use.node] = true
-						uses = append(uses, recordUse(use, pkg, absDir))
+						uses = append(uses, recordUse(use, pkg, cwd, inputIsAbsolute))
 					}
 				} else {
 					if !recordedReported[use.node] {
 						recordedReported[use.node] = true
-						uses = append(uses, recordUse(use, pkg, absDir))
+						uses = append(uses, recordUse(use, pkg, cwd, inputIsAbsolute))
 					}
 				}
 
@@ -180,15 +183,24 @@ type useInfo struct {
 }
 
 // recordUse creates a DigestUse record from useInfo
-func recordUse(use *useInfo, pkg *packages.Package, absDir string) DigestUse {
+func recordUse(use *useInfo, pkg *packages.Package, cwd string, useAbsolute bool) DigestUse {
 	pos := pkg.Fset.Position(use.node.Pos())
-	relPath, err := filepath.Rel(absDir, pos.Filename)
-	if err != nil {
-		panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
+
+	var filePath string
+	if useAbsolute {
+		// Input was absolute, use absolute paths in output
+		filePath = pos.Filename
+	} else {
+		// Input was relative, make paths relative to CWD
+		relPath, err := filepath.Rel(cwd, pos.Filename)
+		if err != nil {
+			panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
+		}
+		filePath = relPath
 	}
 
 	return DigestUse{
-		File:    relPath,
+		File:    filePath,
 		Line:    pos.Line,
 		Column:  pos.Column,
 		Ignored: use.ignored,

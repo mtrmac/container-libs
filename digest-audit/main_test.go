@@ -9,14 +9,8 @@ import (
 )
 
 func TestSampleFile(t *testing.T) {
-	// Get absolute path to sample directory
-	samplePath, err := filepath.Abs("sample")
-	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
-	}
-
-	// Run audit on sample directory
-	uses, err := auditDigestUses(samplePath)
+	// Run audit on sample directory (use relative path)
+	uses, err := auditDigestUses("sample")
 	if err != nil {
 		t.Fatalf("Failed to audit sample: %v", err)
 	}
