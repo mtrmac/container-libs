@@ -1,45 +1,45 @@
-sample.go:9:5: ignored var-name globalDigest
-sample.go:9:34: ignored var-init digest.FromString("global")
-sample.go:11:5: ignored var-name globalDigestPtr
-sample.go:11:21: ignored var-type *digest.Digest
-sample.go:16:2: ignored field-name ID
-sample.go:17:2: ignored field-name Backup
-sample.go:17:9: ignored field-type *digest.Digest
-sample.go:18:11: ignored array-type *digest.Digest
-sample.go:22:6: ignored var-name d1
-sample.go:22:25: ignored var-init "sha256:1234567890abcdef"
-sample.go:23:2: ignored assign-lhs d2
-sample.go:23:8: ignored assign-rhs digest.FromString("test")
-sample.go:25:6: ignored var-name d3
-sample.go:26:2: ignored assign-lhs d3
-sample.go:26:7: ignored assign-rhs d1
-sample.go:28:9: selector Algorithm
-sample.go:30:5: binary-op ==
-sample.go:34:13: type-cast string
-sample.go:37:15: type-cast container-libs/digest-audit/sample.MyString
-sample.go:39:16: ignored call-arg d
-sample.go:41:22: ignored composite-lit d1
-sample.go:43:39: map-key d1
-sample.go:43:43: ignored map-value d2
-sample.go:44:6: ignored assign-rhs m[d2]
-sample.go:44:8: index d2
-sample.go:46:6: ignored range-key k
-sample.go:46:9: ignored range-value v
-sample.go:47:7: ignored assign-rhs k
-sample.go:48:7: ignored assign-rhs v
-sample.go:51:20: range-expr d1
-sample.go:55:2: ignored assign-lhs ptr
-sample.go:55:9: ignored assign-rhs &d1
-sample.go:56:6: ignored assign-rhs *ptr
-sample.go:58:6: ignored assign-rhs (d1)
-sample.go:58:7: ignored paren d1
-sample.go:60:9: switch-tag d1
-sample.go:61:7: case-value digest.FromString("test")
-sample.go:66:20: ignored field-name d
-sample.go:66:37: ignored field-name ptr
-sample.go:66:41: ignored field-type *digest.Digest
-sample.go:67:6: ignored assign-rhs d
-sample.go:68:6: ignored assign-rhs ptr
-sample.go:72:9: ignored return digest.FromString("result")
-sample.go:76:9: ignored return dc.ID
-sample.go:76:12: ignored field-access ID
+sample/sample.go:9:5: ignored var-name globalDigest
+sample/sample.go:9:34: ignored var-init digest.FromString("global")
+sample/sample.go:11:5: ignored var-name globalDigestPtr
+sample/sample.go:11:21: ignored var-type *digest.Digest
+sample/sample.go:16:2: ignored field-name ID
+sample/sample.go:17:2: ignored field-name Backup
+sample/sample.go:17:9: ignored field-type *digest.Digest
+sample/sample.go:18:11: ignored array-type *digest.Digest
+sample/sample.go:22:6: ignored var-name d1
+sample/sample.go:22:25: ignored var-init "sha256:1234567890abcdef"
+sample/sample.go:23:2: ignored assign-lhs d2
+sample/sample.go:23:8: ignored assign-rhs digest.FromString("test")
+sample/sample.go:25:6: ignored var-name d3
+sample/sample.go:26:2: ignored assign-lhs d3
+sample/sample.go:26:7: ignored assign-rhs d1
+sample/sample.go:28:9: selector Algorithm
+sample/sample.go:30:5: binary-op ==
+sample/sample.go:34:13: type-cast string
+sample/sample.go:37:15: type-cast container-libs/digest-audit/sample.MyString
+sample/sample.go:39:16: ignored call-arg d
+sample/sample.go:41:22: ignored composite-lit d1
+sample/sample.go:43:39: map-key d1
+sample/sample.go:43:43: ignored map-value d2
+sample/sample.go:44:6: ignored assign-rhs m[d2]
+sample/sample.go:44:8: index d2
+sample/sample.go:46:6: ignored range-key k
+sample/sample.go:46:9: ignored range-value v
+sample/sample.go:47:7: ignored assign-rhs k
+sample/sample.go:48:7: ignored assign-rhs v
+sample/sample.go:51:20: range-expr d1
+sample/sample.go:55:2: ignored assign-lhs ptr
+sample/sample.go:55:9: ignored assign-rhs &d1
+sample/sample.go:56:6: ignored assign-rhs *ptr
+sample/sample.go:58:6: ignored assign-rhs (d1)
+sample/sample.go:58:7: ignored paren d1
+sample/sample.go:60:9: switch-tag d1
+sample/sample.go:61:7: case-value digest.FromString("test")
+sample/sample.go:66:20: ignored field-name d
+sample/sample.go:66:37: ignored field-name ptr
+sample/sample.go:66:41: ignored field-type *digest.Digest
+sample/sample.go:67:6: ignored assign-rhs d
+sample/sample.go:68:6: ignored assign-rhs ptr
+sample/sample.go:72:9: ignored return digest.FromString("result")
+sample/sample.go:76:9: ignored return dc.ID
+sample/sample.go:76:12: ignored field-access ID
