@@ -18,23 +18,23 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const (
-	// KindIgnored is the Kind value for ignored uses (construction/initialization)
-	KindIgnored = "ignored"
-)
-
 // DigestUse represents a use of a digest.Digest value
 type DigestUse struct {
-	File   string // relative file path
-	Line   int    // line number
-	Column int    // column number
-	Kind   string // kind of use (for future filtering)
-	Name   string // identifier name
+	File    string // relative file path
+	Line    int    // line number
+	Column  int    // column number
+	Ignored bool   // true if this is construction/initialization, not a real use
+	Kind    string // kind of use (for future filtering)
+	Name    string // identifier name
 }
 
 // String returns a formatted string representation of the DigestUse
 func (du DigestUse) String() string {
-	return fmt.Sprintf("%s:%d:%d: %s %s", du.File, du.Line, du.Column, du.Kind, du.Name)
+	kind := du.Kind
+	if du.Ignored {
+		kind = "ignored " + kind
+	}
+	return fmt.Sprintf("%s:%d:%d: %s %s", du.File, du.Line, du.Column, kind, du.Name)
 }
 
 func main() {
@@ -57,7 +57,7 @@ func main() {
 	// Print results in VS Code compatible format
 	for _, use := range uses {
 		// Skip ignored uses unless -show-ignored flag is set
-		if use.Kind == KindIgnored && !showIgnored {
+		if use.Ignored && !showIgnored {
 			continue
 		}
 		fmt.Println(use.String())
@@ -65,7 +65,7 @@ func main() {
 }
 
 // auditDigestUses finds all uses of digest.Digest values in the given directory
-// Returns all uses (including those with Kind=KindIgnored), error
+// Returns all uses (including those with Ignored=true), error
 func auditDigestUses(dir string) ([]DigestUse, error) {
 	// Convert to absolute path
 	absDir, err := filepath.Abs(dir)
@@ -141,13 +141,17 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 				parent := getParentFromStack(stack)
 				use := determineUse(expr, parent, pkg)
 
-				if use != nil && !recordedReported[use.node] {
-					recordedReported[use.node] = true
-					uses = append(uses, recordUse(use.node, use.kind, use.name, pkg, absDir))
-				} else if use == nil && !recordedIgnored[expr] {
-					// This is an ignored use (construction/initialization, not a use)
-					recordedIgnored[expr] = true
-					uses = append(uses, recordUse(expr, KindIgnored, getOriginalExprText(expr, pkg.Fset), pkg, absDir))
+				// Check if we've already recorded this use
+				if use.ignored {
+					if !recordedIgnored[use.node] {
+						recordedIgnored[use.node] = true
+						uses = append(uses, recordUse(use, pkg, absDir))
+					}
+				} else {
+					if !recordedReported[use.node] {
+						recordedReported[use.node] = true
+						uses = append(uses, recordUse(use, pkg, absDir))
+					}
 				}
 
 				return true
@@ -169,25 +173,27 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 
 // useInfo describes what use to report for a digest.Digest value
 type useInfo struct {
-	node ast.Node // the node to report (position)
-	kind string   // kind of use
-	name string   // descriptive name
+	node    ast.Node // the node to report (position)
+	ignored bool     // true if this is construction/initialization, not a real use
+	kind    string   // kind of use
+	name    string   // descriptive name
 }
 
-// recordUse creates a DigestUse record for the given node
-func recordUse(node ast.Node, kind, name string, pkg *packages.Package, absDir string) DigestUse {
-	pos := pkg.Fset.Position(node.Pos())
+// recordUse creates a DigestUse record from useInfo
+func recordUse(use *useInfo, pkg *packages.Package, absDir string) DigestUse {
+	pos := pkg.Fset.Position(use.node.Pos())
 	relPath, err := filepath.Rel(absDir, pos.Filename)
 	if err != nil {
 		panic(fmt.Sprintf("failed to compute relative path for %s: %v", pos.Filename, err))
 	}
 
 	return DigestUse{
-		File:   relPath,
-		Line:   pos.Line,
-		Column: pos.Column,
-		Kind:   kind,
-		Name:   name,
+		File:    relPath,
+		Line:    pos.Line,
+		Column:  pos.Column,
+		Ignored: use.ignored,
+		Kind:    use.kind,
+		Name:    use.name,
 	}
 }
 
@@ -202,14 +208,15 @@ func getParentFromStack(stack []ast.Node) ast.Node {
 }
 
 // determineUse decides what to report for a digest.Digest expression
-// Returns nil if this expression should not be reported (it's part of a larger use)
+// Returns useInfo with ignored=true if this is construction/initialization, not a use
 func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInfo {
 	// No parent case - this is expected for top-level expressions
 	if parent == nil {
 		return &useInfo{
-			node: expr,
-			kind: determineExprKind(expr),
-			name: getOriginalExprText(expr, pkg.Fset),
+			node:    expr,
+			ignored: false,
+			kind:    determineExprKind(expr),
+			name:    getOriginalExprText(expr, pkg.Fset),
 		}
 	}
 
@@ -219,43 +226,27 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// expr.Method or expr.Field
 		if p.X == expr {
 			// Report the selector (method/field access), not the receiver
-			return &useInfo{
-				node: p.Sel,
-				kind: "selector",
-				name: p.Sel.Name,
-			}
+			return &useInfo{node: p.Sel, ignored: false, kind: "selector", name: p.Sel.Name}
 		}
 		// Check if expr is the field being selected (p.Sel)
 		if p.Sel == expr {
 			// This is a field access where the field itself is a digest
 			// Report it as a field access
-			return &useInfo{
-				node: expr,
-				kind: "field-access",
-				name: getOriginalExprText(expr, pkg.Fset),
-			}
+			return &useInfo{node: expr, ignored: false, kind: "field-access", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.BinaryExpr:
 		// expr op expr2 or expr2 op expr
 		if p.X == expr || p.Y == expr {
 			// Report the binary operation
-			return &useInfo{
-				node: p,
-				kind: "binary-op",
-				name: p.Op.String(),
-			}
+			return &useInfo{node: p, ignored: false, kind: "binary-op", name: p.Op.String()}
 		}
 
 	case *ast.UnaryExpr:
 		// op expr (like &expr or string(expr))
 		if p.X == expr {
 			// Report the unary operation
-			return &useInfo{
-				node: p,
-				kind: "unary-op",
-				name: p.Op.String(),
-			}
+			return &useInfo{node: p, ignored: false, kind: "unary-op", name: p.Op.String()}
 		}
 
 	case *ast.CallExpr:
@@ -266,30 +257,18 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				funType := pkg.TypesInfo.TypeOf(p.Fun)
 				if _, isType := funType.(*types.Basic); isType {
 					// Type conversion (e.g., string(digest))
-					return &useInfo{
-						node: expr,
-						kind: "type-cast",
-						name: funType.String(),
-					}
+					return &useInfo{node: expr, ignored: false, kind: "type-cast", name: funType.String()}
 				}
 
 				// Check if the type is a named type (also indicates type conversion)
 				if _, isNamed := funType.(*types.Named); isNamed {
 					// Type conversion to named type
-					return &useInfo{
-						node: expr,
-						kind: "type-cast",
-						name: funType.String(),
-					}
+					return &useInfo{node: expr, ignored: false, kind: "type-cast", name: funType.String()}
 				}
 
 				// It's a function or method call - get parameter name
 				paramName := getParameterName(p.Fun, i, pkg)
-				return &useInfo{
-					node: expr,
-					kind: "call-arg",
-					name: paramName,
-				}
+				return &useInfo{node: expr, ignored: false, kind: "call-arg", name: paramName}
 			}
 		}
 
@@ -298,8 +277,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		for _, rhs := range p.Rhs {
 			if rhs == expr {
 				// expr is on right-hand side of assignment
-				// Don't report - this is just construction/initialization, not a use
-				return nil
+				// This is construction/initialization, not a use
+				return &useInfo{node: expr, ignored: true, kind: "assign-rhs", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 		// Check if it's on LHS (being assigned to, or declared with :=)
@@ -307,11 +286,7 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			if lhs == expr {
 				// Identifier on LHS of assignment (including := declarations)
 				// Report it - it's a digest-typed identifier being declared/assigned
-				return &useInfo{
-					node: expr,
-					kind: determineExprKind(expr),
-					name: getOriginalExprText(expr, pkg.Fset),
-				}
+				return &useInfo{node: expr, ignored: false, kind: "assign-lhs", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -319,8 +294,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Return statement with expr
 		for _, result := range p.Results {
 			if result == expr {
-				// Don't report - returning a value is not a "use"
-				return nil
+				// Returning a value is not a "use" - it's passing ownership
+				return &useInfo{node: expr, ignored: true, kind: "return", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -329,14 +304,14 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Check if expr is the Type (type expression in a declaration)
 		if p.Type == expr {
 			// This is a type expression (e.g., *digest.Digest in var x *digest.Digest)
-			// Don't report - this is a type declaration, not a use of a value
-			return nil
+			// This is a type declaration, not a use of a value
+			return &useInfo{node: expr, ignored: true, kind: "var-type", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 		for _, val := range p.Values {
 			if val == expr {
 				// expr is an initializer value
-				// Don't report - this is just initialization, not a use
-				return nil
+				// This is initialization, not a use
+				return &useInfo{node: expr, ignored: true, kind: "var-init", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 		// Check if it's a name being declared
@@ -344,11 +319,7 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 			if name == expr {
 				// The digest is the name being declared
 				// Report it - it's a digest-typed identifier being declared
-				return &useInfo{
-					node: expr,
-					kind: determineExprKind(expr),
-					name: getOriginalExprText(expr, pkg.Fset),
-				}
+				return &useInfo{node: expr, ignored: false, kind: "var-name", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -356,32 +327,20 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Composite literal containing expr
 		for _, elt := range p.Elts {
 			if elt == expr {
-				return &useInfo{
-					node: expr,
-					kind: "composite-lit",
-					name: getExprName(expr, pkg.Fset),
-				}
+				return &useInfo{node: expr, ignored: false, kind: "composite-lit", name: getExprName(expr, pkg.Fset)}
 			}
 		}
 
 	case *ast.IndexExpr:
 		// Array/slice/map access
 		if p.Index == expr {
-			return &useInfo{
-				node: expr,
-				kind: "index",
-				name: getExprName(expr, pkg.Fset),
-			}
+			return &useInfo{node: expr, ignored: false, kind: "index", name: getExprName(expr, pkg.Fset)}
 		}
 
 	case *ast.KeyValueExpr:
 		// Key or value in map/struct literal
 		if p.Key == expr || p.Value == expr {
-			return &useInfo{
-				node: expr,
-				kind: "key-value",
-				name: getExprName(expr, pkg.Fset),
-			}
+			return &useInfo{node: expr, ignored: false, kind: "key-value", name: getExprName(expr, pkg.Fset)}
 		}
 
 	case *ast.Field:
@@ -389,19 +348,15 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Check if expr is the Type (type expression in a declaration)
 		if p.Type == expr {
 			// This is a type expression (e.g., *digest.Digest as parameter type)
-			// Don't report - this is a type declaration, not a use of a value
-			return nil
+			// This is a type declaration, not a use of a value
+			return &useInfo{node: expr, ignored: true, kind: "field-type", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 		// Check if expr is one of the Names
 		for _, name := range p.Names {
 			if name == expr {
 				// This is a parameter/field name
 				// Report it - it's a digest-typed identifier being declared as parameter/field
-				return &useInfo{
-					node: expr,
-					kind: determineExprKind(expr),
-					name: getOriginalExprText(expr, pkg.Fset),
-				}
+				return &useInfo{node: expr, ignored: false, kind: "field-name", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -409,29 +364,21 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Range over digest values
 		if p.Key == expr || p.Value == expr {
 			// This is the loop variable in a range statement
-			return &useInfo{
-				node: expr,
-				kind: "range-var",
-				name: getOriginalExprText(expr, pkg.Fset),
-			}
+			return &useInfo{node: expr, ignored: false, kind: "range-var", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.StarExpr:
 		// Dereferencing a pointer: *expr
 		if p.X == expr {
 			// Report the dereference operation
-			return &useInfo{
-				node: p,
-				kind: "deref",
-				name: "*" + getExprName(expr, pkg.Fset),
-			}
+			return &useInfo{node: p, ignored: false, kind: "deref", name: "*" + getExprName(expr, pkg.Fset)}
 		}
 
 	case *ast.SwitchStmt:
 		// Switch statement on a digest value
 		if p.Tag == expr {
-			// Don't report - this is the switch tag, not a use
-			return nil
+			// This is the switch tag, not a use
+			return &useInfo{node: expr, ignored: true, kind: "switch-tag", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.CaseClause:
@@ -439,11 +386,7 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		for _, caseExpr := range p.List {
 			if caseExpr == expr {
 				// This is a case value being compared
-				return &useInfo{
-					node: expr,
-					kind: "case-value",
-					name: getOriginalExprText(expr, pkg.Fset),
-				}
+				return &useInfo{node: expr, ignored: false, kind: "case-value", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 	}
@@ -454,11 +397,7 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 	fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: unhandled digest expression %q in parent %s\n",
 		pos.Filename, pos.Line, pos.Column, exprText, fmt.Sprintf("%T", parent))
 
-	return &useInfo{
-		node: expr,
-		kind: determineExprKind(expr),
-		name: exprText,
-	}
+	return &useInfo{node: expr, ignored: false, kind: determineExprKind(expr), name: exprText}
 }
 
 // getOriginalExprText returns the original source text of an expression
