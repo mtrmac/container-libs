@@ -88,7 +88,7 @@ func TestGenerateFixtures(t *testing.T) {
 	// Count ignored vs non-ignored
 	var ignoredCount, reportedCount int
 	for _, u := range uses {
-		if u.Kind == KindIgnored {
+		if u.Ignored {
 			ignoredCount++
 		} else {
 			reportedCount++
