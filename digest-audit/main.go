@@ -414,9 +414,10 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 				grandparent = stack[len(stack)-2]
 			}
 
-			if compositeLit, ok := grandparent.(*ast.CompositeLit); ok && compositeLit.Type != nil {
+			if compositeLit, ok := grandparent.(*ast.CompositeLit); ok {
 				// Check if the composite literal type is a struct
-				if litType := pkg.TypesInfo.TypeOf(compositeLit.Type); litType != nil {
+				litType := pkg.TypesInfo.TypeOf(compositeLit)
+				if litType != nil {
 					if _, isStruct := litType.Underlying().(*types.Struct); isStruct {
 						// Struct key (field name) is ignored
 						return &useInfo{node: expr, ignored: true, kind: "struct-key", name: getExprName(expr, pkg.Fset)}

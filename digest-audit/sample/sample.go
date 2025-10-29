@@ -48,6 +48,8 @@ func CoverageFunction() {
 
 	_ = DigestContainer{ID: d1, Backup: nil}
 
+	_ = []DigestContainer{{ID: d2, Backup: nil}}
+
 	for k, v := range m {
 		_ = k
 		_ = v
