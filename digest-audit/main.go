@@ -141,8 +141,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 
 				// Found a digest.Digest value expression
 				// Determine if we should report it or its parent
-				parent := getParentFromStack(stack)
-				use := determineUse(expr, parent, pkg)
+				use := determineUse(expr, stack, pkg)
 
 				// Check if we've already recorded this use
 				if use.ignored {
@@ -221,7 +220,10 @@ func getParentFromStack(stack []ast.Node) ast.Node {
 
 // determineUse decides what to report for a digest.Digest expression
 // Returns useInfo with ignored=true if this is construction/initialization, not a use
-func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInfo {
+func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useInfo {
+	// Get parent from stack
+	parent := getParentFromStack(stack)
+
 	// No parent case - this is expected for top-level expressions
 	if parent == nil {
 		return &useInfo{
@@ -358,11 +360,28 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 	case *ast.KeyValueExpr:
 		// Key or value in map/struct literal
 		if p.Key == expr {
-			// Key is reported (used for lookup/hashing)
+			// Check if this is in a struct literal (field name)
+			// Get grandparent (should be CompositeLit)
+			var grandparent ast.Node
+			if len(stack) >= 2 {
+				grandparent = stack[len(stack)-2]
+			}
+
+			if compositeLit, ok := grandparent.(*ast.CompositeLit); ok && compositeLit.Type != nil {
+				// Check if the composite literal type is a struct
+				if litType := pkg.TypesInfo.TypeOf(compositeLit.Type); litType != nil {
+					if _, isStruct := litType.Underlying().(*types.Struct); isStruct {
+						// Struct key (field name) is ignored
+						return &useInfo{node: expr, ignored: true, kind: "struct-key", name: getExprName(expr, pkg.Fset)}
+					}
+				}
+			}
+			// Default: map key is reported (used for hashing)
+			// This is fail-safe: if we can't determine, assume it's a use
 			return &useInfo{node: expr, ignored: false, kind: "map-key", name: getExprName(expr, pkg.Fset)}
 		}
 		if p.Value == expr {
-			// Value is ignored (pure storage)
+			// Value is ignored (pure storage) in both map and struct
 			return &useInfo{node: expr, ignored: true, kind: "map-value", name: getExprName(expr, pkg.Fset)}
 		}
 

@@ -43,6 +43,8 @@ func CoverageFunction() {
 	m := map[digest.Digest]digest.Digest{d1: d2}
 	_ = m[d2]
 
+	_ = DigestContainer{ID: d1, Backup: nil}
+
 	for k, v := range m {
 		_ = k
 		_ = v
