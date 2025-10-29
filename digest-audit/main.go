@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"go/ast"
 	"go/format"
@@ -10,7 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -18,14 +19,16 @@ import (
 
 // DigestUse represents a use of a digest.Digest value
 type DigestUse struct {
-	Location string // file:line:column format
-	Kind     string // kind of use (for future filtering)
-	Name     string // identifier name
+	File   string // relative file path
+	Line   int    // line number
+	Column int    // column number
+	Kind   string // kind of use (for future filtering)
+	Name   string // identifier name
 }
 
 // String returns a formatted string representation of the DigestUse
 func (du DigestUse) String() string {
-	return fmt.Sprintf("%s: %s %s", du.Location, du.Kind, du.Name)
+	return fmt.Sprintf("%s:%d:%d: %s %s", du.File, du.Line, du.Column, du.Kind, du.Name)
 }
 
 func main() {
@@ -137,13 +140,18 @@ func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 		}
 	}
 
-	// Sort by location for consistent output
-	sort.Slice(uses, func(i, j int) bool {
-		return uses[i].Location < uses[j].Location
-	})
-	sort.Slice(ignoredUses, func(i, j int) bool {
-		return ignoredUses[i].Location < ignoredUses[j].Location
-	})
+	// Sort by file, line, column for consistent output
+	sortUses := func(uses []DigestUse) {
+		slices.SortFunc(uses, func(a, b DigestUse) int {
+			return cmp.Or(
+				cmp.Compare(a.File, b.File),
+				cmp.Compare(a.Line, b.Line),
+				cmp.Compare(a.Column, b.Column),
+			)
+		})
+	}
+	sortUses(uses)
+	sortUses(ignoredUses)
 
 	return uses, ignoredUses, nil
 }
@@ -164,9 +172,11 @@ func recordUse(node ast.Node, kind, name string, pkg *packages.Package, absDir s
 	}
 
 	return DigestUse{
-		Location: fmt.Sprintf("%s:%d:%d", relPath, pos.Line, pos.Column),
-		Kind:     kind,
-		Name:     name,
+		File:   relPath,
+		Line:   pos.Line,
+		Column: pos.Column,
+		Kind:   kind,
+		Name:   name,
 	}
 }
 
