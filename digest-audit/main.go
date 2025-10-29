@@ -134,13 +134,13 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 					return true
 				}
 
-				// Check if this expression has digest.Digest type
+				// Check if this expression has digest.Digest or digest.Algorithm type
 				exprType := pkg.TypesInfo.TypeOf(expr)
-				if exprType == nil || !isDigestType(exprType) {
+				if exprType == nil || !(isDigestType(exprType) || isAlgorithmType(exprType)) {
 					return true
 				}
 
-				// Found a digest.Digest value expression
+				// Found a digest.Digest or digest.Algorithm value expression
 				// Determine if we should report it or its parent
 				use := determineUse(expr, stack, pkg)
 
@@ -230,11 +230,16 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 		}
 	}
 
-	// Special cases for digest.Digest
+	// Get the type of expr to apply type-specific special cases
+	exprType := pkg.TypesInfo.TypeOf(expr)
+	isDigest := isDigestType(exprType)
+	isAlgorithm := isAlgorithmType(exprType)
+
+	// Special cases for digest.Digest and digest.Algorithm
 	switch p := parent.(type) {
 	case *ast.BinaryExpr:
-		// Check for digest comparison with empty string literal or nil
-		if (p.Op == token.EQL || p.Op == token.NEQ) && (p.X == expr || p.Y == expr) {
+		// Digest-only special cases: empty string and nil comparisons
+		if isDigest && (p.Op == token.EQL || p.Op == token.NEQ) && (p.X == expr || p.Y == expr) {
 			// Check if expr itself is an empty string literal
 			if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
@@ -269,20 +274,28 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 		}
 	case *ast.SelectorExpr:
 		if p.X == expr && p.Sel != nil {
-			// Check for digest.Validate() call
-			if p.Sel.Name == "Validate" {
+			// Digest-only special case: Validate() call
+			if isDigest && p.Sel.Name == "Validate" {
 				// This is expr.Validate() - validation call, ignore it
 				return &useInfo{node: expr, ignored: true, kind: "digest-validate", name: getOriginalExprText(expr, pkg.Fset)}
 			}
-			// Check for digest.String() call inside logrus logging or fmt.Errorf
-			if p.Sel.Name == "String" {
+			// Both Digest and Algorithm: String() call inside logrus logging or fmt.Errorf
+			if (isDigest || isAlgorithm) && p.Sel.Name == "String" {
 				// This is expr.String() - check if it's inside fmt.Errorf or logrus logging
 				// Check fmt.Errorf first since it's more specific
 				if isInFmtErrorf(stack, pkg) {
-					return &useInfo{node: expr, ignored: true, kind: "digest-string-in-errorf", name: getOriginalExprText(expr, pkg.Fset)}
+					kindName := "digest-string-in-errorf"
+					if isAlgorithm {
+						kindName = "algorithm-string-in-errorf"
+					}
+					return &useInfo{node: expr, ignored: true, kind: kindName, name: getOriginalExprText(expr, pkg.Fset)}
 				}
 				if isInLogrusCall(stack, pkg) {
-					return &useInfo{node: expr, ignored: true, kind: "digest-string-in-logrus", name: getOriginalExprText(expr, pkg.Fset)}
+					kindName := "digest-string-in-logrus"
+					if isAlgorithm {
+						kindName = "algorithm-string-in-logrus"
+					}
+					return &useInfo{node: expr, ignored: true, kind: kindName, name: getOriginalExprText(expr, pkg.Fset)}
 				}
 			}
 		}
@@ -609,8 +622,8 @@ func isTypeExpr(expr ast.Expr, pkg *packages.Package) bool {
 	return false
 }
 
-// isDigestType checks if a type is github.com/opencontainers/go-digest.Digest
-func isDigestType(t types.Type) bool {
+// isType checks if a type matches the given package path and type name
+func isType(t types.Type, pkgPath, typeName string) bool {
 	// Handle pointer types
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
@@ -633,7 +646,17 @@ func isDigestType(t types.Type) bool {
 		return false
 	}
 
-	return pkg.Path() == "github.com/opencontainers/go-digest" && obj.Name() == "Digest"
+	return pkg.Path() == pkgPath && obj.Name() == typeName
+}
+
+// isDigestType checks if a type is github.com/opencontainers/go-digest.Digest
+func isDigestType(t types.Type) bool {
+	return isType(t, "github.com/opencontainers/go-digest", "Digest")
+}
+
+// isAlgorithmType checks if a type is github.com/opencontainers/go-digest.Algorithm
+func isAlgorithmType(t types.Type) bool {
+	return isType(t, "github.com/opencontainers/go-digest", "Algorithm")
 }
 
 // determineExprKind determines the kind of expression for future filtering capabilities
