@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"cmp"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/format"
@@ -15,6 +16,11 @@ import (
 	"strings"
 
 	"golang.org/x/tools/go/packages"
+)
+
+const (
+	// KindIgnored is the Kind value for ignored uses (construction/initialization)
+	KindIgnored = "ignored"
 )
 
 // DigestUse represents a use of a digest.Digest value
@@ -32,30 +38,39 @@ func (du DigestUse) String() string {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <directory>\n", os.Args[0])
+	var showIgnored bool
+	flag.BoolVar(&showIgnored, "show-ignored", false, "include ignored uses (construction/initialization) in output")
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <directory>\n", os.Args[0])
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	dir := os.Args[1]
-	uses, _, err := auditDigestUses(dir)
+	dir := flag.Arg(0)
+	uses, err := auditDigestUses(dir)
 	if err != nil {
 		log.Fatalf("Error auditing digest uses: %v", err)
 	}
 
 	// Print results in VS Code compatible format
 	for _, use := range uses {
+		// Skip ignored uses unless -show-ignored flag is set
+		if use.Kind == KindIgnored && !showIgnored {
+			continue
+		}
 		fmt.Println(use.String())
 	}
 }
 
 // auditDigestUses finds all uses of digest.Digest values in the given directory
-// Returns (reported uses, ignored uses, error)
-func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
+// Returns all uses (including those with Kind=KindIgnored), error
+func auditDigestUses(dir string) ([]DigestUse, error) {
 	// Convert to absolute path
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get absolute path: %w", err)
+		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	// Configure package loading
@@ -69,7 +84,7 @@ func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 	// Load packages - use "./..." pattern to recursively load all packages
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load packages: %w", err)
+		return nil, fmt.Errorf("failed to load packages: %w", err)
 	}
 
 	// Check for errors in loaded packages - fail immediately on any errors
@@ -82,26 +97,26 @@ func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 		}
 	}
 	if len(loadErrors) > 0 {
-		return nil, nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
+		return nil, fmt.Errorf("package loading errors:\n%s", strings.Join(loadErrors, "\n"))
 	}
 	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("no packages found in %s", absDir)
+		return nil, fmt.Errorf("no packages found in %s", absDir)
 	}
 
 	var uses []DigestUse
-	var ignoredUses []DigestUse
 
 	// Process each package
 	for _, pkg := range pkgs {
 		if pkg.Types == nil || pkg.TypesInfo == nil {
-			return nil, nil, fmt.Errorf("package %s missing type information", pkg.PkgPath)
+			return nil, fmt.Errorf("package %s missing type information", pkg.PkgPath)
 		}
 
 		// Walk AST of each file in the package
 		for _, file := range pkg.Syntax {
-			// Track which nodes we've already reported to avoid duplicates
-			reported := make(map[ast.Node]bool)
-			ignored := make(map[ast.Node]bool)
+			// Track which nodes we've already recorded to avoid duplicates
+			// Use separate maps so we don't skip a non-ignored use when an ignored one exists
+			recordedReported := make(map[ast.Node]bool)
+			recordedIgnored := make(map[ast.Node]bool)
 
 			// Use PreorderStack to walk with parent stack tracking
 			ast.PreorderStack(file, nil, func(node ast.Node, stack []ast.Node) bool {
@@ -126,13 +141,13 @@ func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 				parent := getParentFromStack(stack)
 				use := determineUse(expr, parent, pkg)
 
-				if use != nil && !reported[use.node] {
-					reported[use.node] = true
+				if use != nil && !recordedReported[use.node] {
+					recordedReported[use.node] = true
 					uses = append(uses, recordUse(use.node, use.kind, use.name, pkg, absDir))
-				} else if use == nil && !ignored[expr] {
+				} else if use == nil && !recordedIgnored[expr] {
 					// This is an ignored use (construction/initialization, not a use)
-					ignored[expr] = true
-					ignoredUses = append(ignoredUses, recordUse(expr, "ignored", getOriginalExprText(expr, pkg.Fset), pkg, absDir))
+					recordedIgnored[expr] = true
+					uses = append(uses, recordUse(expr, KindIgnored, getOriginalExprText(expr, pkg.Fset), pkg, absDir))
 				}
 
 				return true
@@ -141,19 +156,15 @@ func auditDigestUses(dir string) ([]DigestUse, []DigestUse, error) {
 	}
 
 	// Sort by file, line, column for consistent output
-	sortUses := func(uses []DigestUse) {
-		slices.SortFunc(uses, func(a, b DigestUse) int {
-			return cmp.Or(
-				cmp.Compare(a.File, b.File),
-				cmp.Compare(a.Line, b.Line),
-				cmp.Compare(a.Column, b.Column),
-			)
-		})
-	}
-	sortUses(uses)
-	sortUses(ignoredUses)
+	slices.SortFunc(uses, func(a, b DigestUse) int {
+		return cmp.Or(
+			cmp.Compare(a.File, b.File),
+			cmp.Compare(a.Line, b.Line),
+			cmp.Compare(a.Column, b.Column),
+		)
+	})
 
-	return uses, ignoredUses, nil
+	return uses, nil
 }
 
 // useInfo describes what use to report for a digest.Digest value
