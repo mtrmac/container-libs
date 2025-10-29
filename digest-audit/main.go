@@ -231,8 +231,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Check if expr is the field being selected (p.Sel)
 		if p.Sel == expr {
 			// This is a field access where the field itself is a digest
-			// Report it as a field access
-			return &useInfo{node: expr, ignored: false, kind: "field-access", name: getOriginalExprText(expr, pkg.Fset)}
+			// Pure value move (field access)
+			return &useInfo{node: expr, ignored: true, kind: "field-access", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.BinaryExpr:
@@ -243,9 +243,13 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		}
 
 	case *ast.UnaryExpr:
-		// op expr (like &expr or string(expr))
+		// op expr (like &expr)
 		if p.X == expr {
-			// Report the unary operation
+			if p.Op == token.AND {
+				// Pure value move (taking address)
+				return &useInfo{node: p, ignored: true, kind: "addr-of", name: p.Op.String()}
+			}
+			// Other unary operations are reported
 			return &useInfo{node: p, ignored: false, kind: "unary-op", name: p.Op.String()}
 		}
 
@@ -267,8 +271,9 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				}
 
 				// It's a function or method call - get parameter name
+				// This is a pure value move (passing argument to function)
 				paramName := getParameterName(p.Fun, i, pkg)
-				return &useInfo{node: expr, ignored: false, kind: "call-arg", name: paramName}
+				return &useInfo{node: expr, ignored: true, kind: "call-arg", name: paramName}
 			}
 		}
 
@@ -285,8 +290,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		for _, lhs := range p.Lhs {
 			if lhs == expr {
 				// Identifier on LHS of assignment (including := declarations)
-				// Report it - it's a digest-typed identifier being declared/assigned
-				return &useInfo{node: expr, ignored: false, kind: "assign-lhs", name: getOriginalExprText(expr, pkg.Fset)}
+				// This is a pure value move (declaration/assignment destination)
+				return &useInfo{node: expr, ignored: true, kind: "assign-lhs", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -318,8 +323,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		for _, name := range p.Names {
 			if name == expr {
 				// The digest is the name being declared
-				// Report it - it's a digest-typed identifier being declared
-				return &useInfo{node: expr, ignored: false, kind: "var-name", name: getOriginalExprText(expr, pkg.Fset)}
+				// This is a pure value move (variable declaration)
+				return &useInfo{node: expr, ignored: true, kind: "var-name", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -327,7 +332,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		// Composite literal containing expr
 		for _, elt := range p.Elts {
 			if elt == expr {
-				return &useInfo{node: expr, ignored: false, kind: "composite-lit", name: getExprName(expr, pkg.Fset)}
+				// Pure value move (element in literal)
+				return &useInfo{node: expr, ignored: true, kind: "composite-lit", name: getExprName(expr, pkg.Fset)}
 			}
 		}
 
@@ -339,8 +345,13 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 
 	case *ast.KeyValueExpr:
 		// Key or value in map/struct literal
-		if p.Key == expr || p.Value == expr {
-			return &useInfo{node: expr, ignored: false, kind: "key-value", name: getExprName(expr, pkg.Fset)}
+		if p.Key == expr {
+			// Key is reported (used for lookup/hashing)
+			return &useInfo{node: expr, ignored: false, kind: "map-key", name: getExprName(expr, pkg.Fset)}
+		}
+		if p.Value == expr {
+			// Value is ignored (pure storage)
+			return &useInfo{node: expr, ignored: true, kind: "map-value", name: getExprName(expr, pkg.Fset)}
 		}
 
 	case *ast.Field:
@@ -355,8 +366,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		for _, name := range p.Names {
 			if name == expr {
 				// This is a parameter/field name
-				// Report it - it's a digest-typed identifier being declared as parameter/field
-				return &useInfo{node: expr, ignored: false, kind: "field-name", name: getOriginalExprText(expr, pkg.Fset)}
+				// This is a pure value move (parameter/field declaration)
+				return &useInfo{node: expr, ignored: true, kind: "field-name", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
 
@@ -378,8 +389,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 	case *ast.StarExpr:
 		// Dereferencing a pointer: *expr
 		if p.X == expr {
-			// Report the dereference operation
-			return &useInfo{node: p, ignored: false, kind: "deref", name: "*" + getExprName(expr, pkg.Fset)}
+			// Pure value move (pointer dereference)
+			return &useInfo{node: p, ignored: true, kind: "deref", name: "*" + getExprName(expr, pkg.Fset)}
 		}
 
 	case *ast.SwitchStmt:
