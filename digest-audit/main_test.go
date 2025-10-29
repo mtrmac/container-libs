@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,41 +52,4 @@ func TestSampleFile(t *testing.T) {
 		t.Logf("\nFull expected output:\n%s", strings.Join(expectedLines, "\n"))
 		t.Logf("\nFull actual output:\n%s", strings.Join(actualLines, "\n"))
 	}
-}
-
-func TestGenerateFixtures(t *testing.T) {
-	t.Skip("Helper test to generate fixture files - run manually when needed")
-
-	samplePath, err := filepath.Abs("sample")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	uses, err := auditDigestUses(samplePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Write all uses (including ignored)
-	f, err := os.Create(filepath.Join("sample", "expected_output.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-
-	for _, u := range uses {
-		fmt.Fprintln(f, u.String())
-	}
-
-	// Count ignored vs non-ignored
-	var ignoredCount, reportedCount int
-	for _, u := range uses {
-		if u.Ignored {
-			ignoredCount++
-		} else {
-			reportedCount++
-		}
-	}
-
-	t.Logf("Generated %d total uses (%d reported, %d ignored)", len(uses), reportedCount, ignoredCount)
 }
