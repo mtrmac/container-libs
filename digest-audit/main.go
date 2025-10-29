@@ -361,10 +361,18 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 		}
 
 	case *ast.RangeStmt:
-		// Range over digest values
-		if p.Key == expr || p.Value == expr {
-			// This is the loop variable in a range statement
-			return &useInfo{node: expr, ignored: false, kind: "range-var", name: getOriginalExprText(expr, pkg.Fset)}
+		// Range statement
+		if p.Key == expr {
+			// Range key is ignored (iteration index/key variable)
+			return &useInfo{node: expr, ignored: true, kind: "range-key", name: getOriginalExprText(expr, pkg.Fset)}
+		}
+		if p.Value == expr {
+			// Range value is ignored (iteration value variable)
+			return &useInfo{node: expr, ignored: true, kind: "range-value", name: getOriginalExprText(expr, pkg.Fset)}
+		}
+		if p.X == expr {
+			// Range expression is reported (the collection being iterated over)
+			return &useInfo{node: expr, ignored: false, kind: "range-expr", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.StarExpr:
@@ -377,8 +385,8 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 	case *ast.SwitchStmt:
 		// Switch statement on a digest value
 		if p.Tag == expr {
-			// This is the switch tag, not a use
-			return &useInfo{node: expr, ignored: true, kind: "switch-tag", name: getOriginalExprText(expr, pkg.Fset)}
+			// This is the switch tag, a use
+			return &useInfo{node: expr, ignored: false, kind: "switch-tag", name: getOriginalExprText(expr, pkg.Fset)}
 		}
 
 	case *ast.CaseClause:
@@ -389,6 +397,17 @@ func determineUse(expr ast.Expr, parent ast.Node, pkg *packages.Package) *useInf
 				return &useInfo{node: expr, ignored: false, kind: "case-value", name: getOriginalExprText(expr, pkg.Fset)}
 			}
 		}
+
+	case *ast.ArrayType:
+		// Array or slice type declaration
+		if p.Elt == expr {
+			// This is the element type of an array/slice (e.g., []digest.Digest or []*digest.Digest)
+			return &useInfo{node: expr, ignored: true, kind: "array-type", name: getOriginalExprText(expr, pkg.Fset)}
+		}
+
+	case *ast.ParenExpr:
+		// Parenthesized expression - ignored (transparent wrapper)
+		return &useInfo{node: expr, ignored: true, kind: "paren", name: getOriginalExprText(expr, pkg.Fset)}
 	}
 
 	// Unhandled situation: warn and report the expression itself
