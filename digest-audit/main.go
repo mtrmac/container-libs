@@ -233,7 +233,7 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 	// Special cases for digest.Digest
 	switch p := parent.(type) {
 	case *ast.BinaryExpr:
-		// Check for digest comparison with empty string literal
+		// Check for digest comparison with empty string literal or nil
 		if (p.Op == token.EQL || p.Op == token.NEQ) && (p.X == expr || p.Y == expr) {
 			// Check if expr itself is an empty string literal
 			if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
@@ -242,30 +242,48 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
 				}
 			}
-			// Check if the other operand is an empty string literal
+			// Check if expr itself is nil
+			if ident, ok := expr.(*ast.Ident); ok && ident.Name == "nil" {
+				// This is nil in a comparison with digest pointer - ignore it
+				return &useInfo{node: expr, ignored: true, kind: "cmp-nil", name: getOriginalExprText(expr, pkg.Fset)}
+			}
+			// Check the other operand
 			var otherExpr ast.Expr
 			if p.X == expr {
 				otherExpr = p.Y
 			} else {
 				otherExpr = p.X
 			}
+			// Check if the other operand is an empty string literal
 			if lit, ok := otherExpr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
 					// This is a digest in comparison with empty string - ignore it
 					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
 				}
 			}
+			// Check if the other operand is nil
+			if ident, ok := otherExpr.(*ast.Ident); ok && ident.Name == "nil" {
+				// This is a digest pointer in comparison with nil - ignore it
+				return &useInfo{node: expr, ignored: true, kind: "cmp-nil", name: getOriginalExprText(expr, pkg.Fset)}
+			}
 		}
 	case *ast.SelectorExpr:
-		// Check for digest.String() call inside logrus logging or fmt.Errorf
-		if p.Sel != nil && p.Sel.Name == "String" && p.X == expr {
-			// This is expr.String() - check if it's inside fmt.Errorf or logrus logging
-			// Check fmt.Errorf first since it's more specific
-			if isInFmtErrorf(stack, pkg) {
-				return &useInfo{node: expr, ignored: true, kind: "digest-string-in-errorf", name: getOriginalExprText(expr, pkg.Fset)}
+		if p.X == expr && p.Sel != nil {
+			// Check for digest.Validate() call
+			if p.Sel.Name == "Validate" {
+				// This is expr.Validate() - validation call, ignore it
+				return &useInfo{node: expr, ignored: true, kind: "digest-validate", name: getOriginalExprText(expr, pkg.Fset)}
 			}
-			if isInLogrusCall(stack, pkg) {
-				return &useInfo{node: expr, ignored: true, kind: "digest-string-in-logrus", name: getOriginalExprText(expr, pkg.Fset)}
+			// Check for digest.String() call inside logrus logging or fmt.Errorf
+			if p.Sel.Name == "String" {
+				// This is expr.String() - check if it's inside fmt.Errorf or logrus logging
+				// Check fmt.Errorf first since it's more specific
+				if isInFmtErrorf(stack, pkg) {
+					return &useInfo{node: expr, ignored: true, kind: "digest-string-in-errorf", name: getOriginalExprText(expr, pkg.Fset)}
+				}
+				if isInLogrusCall(stack, pkg) {
+					return &useInfo{node: expr, ignored: true, kind: "digest-string-in-logrus", name: getOriginalExprText(expr, pkg.Fset)}
+				}
 			}
 		}
 	}
