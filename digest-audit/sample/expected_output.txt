@@ -1,85 +1,43 @@
-sample.go:12:6: var-name d1
-sample.go:12:25: ignored var-init "sha256:1234567890abcdef"
-sample.go:13:2: assign-lhs d2
-sample.go:13:8: ignored assign-rhs digest.FromString("test")
-sample.go:16:2: assign-lhs d3
-sample.go:16:8: ignored assign-rhs d1
-sample.go:17:6: ignored assign-rhs d3
-sample.go:20:13: selector Algorithm
-sample.go:24:5: binary-op ==
-sample.go:29:29: type-cast string
-sample.go:33:16: call-arg d
-sample.go:36:2: assign-lhs d4
-sample.go:36:8: ignored assign-rhs getDigest()
-sample.go:37:6: ignored assign-rhs d4
-sample.go:40:41: selector Encoded
-sample.go:44:5: binary-op ==
-sample.go:49:16: call-arg d
-sample.go:52:14: type-cast string
-sample.go:56:23: selector Algorithm
-sample.go:60:29: composite-lit d1
-sample.go:60:33: composite-lit d2
-sample.go:65:11: key-value d1
-sample.go:66:11: key-value d2
-sample.go:71:2: assign-lhs idx
-sample.go:71:9: ignored assign-rhs digestMap["key1"]
-sample.go:72:6: ignored assign-rhs idx
-sample.go:75:9: range-var d
-sample.go:76:15: call-arg a
-sample.go:80:2: assign-lhs dPtr
-sample.go:80:10: ignored assign-rhs &d1
-sample.go:80:10: unary-op &
-sample.go:81:2: assign-lhs derefDigest
-sample.go:81:17: ignored assign-rhs *dPtr
-sample.go:81:17: deref *dPtr
-sample.go:82:6: ignored assign-rhs derefDigest
-sample.go:85:9: ignored switch-tag d1
-sample.go:86:7: case-value digest.FromString("test")
-sample.go:88:7: case-value digest.FromString("other")
-sample.go:93:2: assign-lhs ptr
-sample.go:93:9: ignored assign-rhs &d2
-sample.go:93:9: unary-op &
-sample.go:94:6: ignored assign-rhs ptr
-sample.go:97:5: binary-op !=
-sample.go:103:20: field-name d
-sample.go:105:15: selector Encoded
-sample.go:111:9: ignored return digest.FromString("result")
-sample.go:115:23: field-name d
-sample.go:115:25: ignored field-type *digest.Digest
-sample.go:116:5: binary-op !=
-sample.go:117:15: call-arg a
-sample.go:122:5: var-name globalDigestPtr
-sample.go:122:21: ignored var-type *digest.Digest
-sample.go:125:5: var-name globalDigest
-sample.go:125:34: ignored var-init digest.FromString("global")
-sample.go:129:2: field-name ID
-sample.go:131:2: field-name Backup
-sample.go:131:9: ignored field-type *digest.Digest
-sample.go:137:9: ignored return dc.ID
-sample.go:137:12: field-access ID
-sample.go:141:21: field-name d
-sample.go:142:9: ignored switch-tag d
-sample.go:143:7: case-value digest.FromString("a")
-sample.go:152:9: ignored return digest.FromString("first")
-sample.go:152:37: ignored return digest.FromString("second")
-sample.go:157:6: var-name d
-sample.go:158:2: assign-lhs d
-sample.go:158:6: ignored assign-rhs digest.FromString("reassigned")
-sample.go:159:6: ignored assign-rhs d
-sample.go:164:9: range-var d
-sample.go:165:23: call-arg a
-sample.go:176:2: assign-lhs d1
-sample.go:176:8: ignored assign-rhs digest.FromString("one")
-sample.go:177:2: assign-lhs d2
-sample.go:177:8: ignored assign-rhs digest.FromString("two")
-sample.go:180:37: call-arg digests
-sample.go:180:41: call-arg digests
-sample.go:183:23: call-arg arg0
-sample.go:186:6: var-name ptrDigest
-sample.go:186:16: ignored var-type *digest.Digest
-sample.go:187:8: selector Validate
-sample.go:188:3: assign-lhs ptrDigest
-sample.go:188:15: ignored assign-rhs &d1
-sample.go:188:15: unary-op &
-sample.go:190:5: binary-op !=
-sample.go:191:20: call-arg d
+sample.go:9:5: var-name globalDigest
+sample.go:9:34: ignored var-init digest.FromString("global")
+sample.go:11:5: var-name globalDigestPtr
+sample.go:11:21: ignored var-type *digest.Digest
+sample.go:14:2: field-name ID
+sample.go:15:2: field-name Backup
+sample.go:15:9: ignored field-type *digest.Digest
+sample.go:19:6: var-name d1
+sample.go:19:25: ignored var-init "sha256:1234567890abcdef"
+sample.go:21:2: assign-lhs d2
+sample.go:21:8: ignored assign-rhs digest.FromString("test")
+sample.go:23:6: var-name d3
+sample.go:24:2: assign-lhs d3
+sample.go:24:7: ignored assign-rhs d1
+sample.go:25:6: ignored assign-rhs d3
+sample.go:27:13: selector Algorithm
+sample.go:30:5: binary-op ==
+sample.go:34:14: type-cast string
+sample.go:38:17: type-cast container-libs/digest-audit/sample.MyString
+sample.go:41:16: call-arg d
+sample.go:43:29: composite-lit d1
+sample.go:46:43: key-value d1
+sample.go:48:19: index d2
+sample.go:50:9: range-var d
+sample.go:51:7: ignored assign-rhs d
+sample.go:54:2: assign-lhs ptr
+sample.go:54:9: ignored assign-rhs &d1
+sample.go:54:9: unary-op &
+sample.go:55:6: ignored assign-rhs ptr
+sample.go:57:2: assign-lhs derefDigest
+sample.go:57:17: ignored assign-rhs *ptr
+sample.go:57:17: deref *ptr
+sample.go:58:6: ignored assign-rhs derefDigest
+sample.go:60:9: ignored switch-tag d1
+sample.go:61:7: case-value digest.FromString("test")
+sample.go:66:20: field-name d
+sample.go:66:37: field-name ptr
+sample.go:66:41: ignored field-type *digest.Digest
+sample.go:67:6: ignored assign-rhs d
+sample.go:68:6: ignored assign-rhs ptr
+sample.go:72:9: ignored return digest.FromString("result")
+sample.go:76:9: ignored return dc.ID
+sample.go:76:12: field-access ID
