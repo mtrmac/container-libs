@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -226,6 +227,46 @@ func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useIn
 			ignored: false,
 			kind:    determineExprKind(expr),
 			name:    getOriginalExprText(expr, pkg.Fset),
+		}
+	}
+
+	// Special cases for digest.Digest
+	switch p := parent.(type) {
+	case *ast.BinaryExpr:
+		// Check for digest comparison with empty string literal
+		if (p.Op == token.EQL || p.Op == token.NEQ) && (p.X == expr || p.Y == expr) {
+			// Check if expr itself is an empty string literal
+			if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
+					// This is the empty string in a comparison - ignore it
+					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
+				}
+			}
+			// Check if the other operand is an empty string literal
+			var otherExpr ast.Expr
+			if p.X == expr {
+				otherExpr = p.Y
+			} else {
+				otherExpr = p.X
+			}
+			if lit, ok := otherExpr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
+					// This is a digest in comparison with empty string - ignore it
+					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
+				}
+			}
+		}
+	case *ast.SelectorExpr:
+		// Check for digest.String() call inside logrus logging or fmt.Errorf
+		if p.Sel != nil && p.Sel.Name == "String" && p.X == expr {
+			// This is expr.String() - check if it's inside fmt.Errorf or logrus logging
+			// Check fmt.Errorf first since it's more specific
+			if isInFmtErrorf(stack, pkg) {
+				return &useInfo{node: expr, ignored: true, kind: "digest-string-in-errorf", name: getOriginalExprText(expr, pkg.Fset)}
+			}
+			if isInLogrusCall(stack, pkg) {
+				return &useInfo{node: expr, ignored: true, kind: "digest-string-in-logrus", name: getOriginalExprText(expr, pkg.Fset)}
+			}
 		}
 	}
 
@@ -640,4 +681,71 @@ func getExprName(expr ast.Expr, fset *token.FileSet) string {
 	default:
 		return "expr"
 	}
+}
+
+// isInLogrusCall checks if the expression is inside a logrus logging method call
+func isInLogrusCall(stack []ast.Node, pkg *packages.Package) bool {
+	for i := len(stack) - 1; i >= 0; i-- {
+		if call, ok := stack[i].(*ast.CallExpr); ok {
+			// Check if this is a selector expression (e.g., logger.Info() or logrus.Infof())
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				methodName := sel.Sel.Name
+				// Check for common logrus logging methods
+				switch methodName {
+				case "Debug", "Debugf", "Debugln",
+					"Info", "Infof", "Infoln",
+					"Warn", "Warnf", "Warnln", "Warning", "Warningf", "Warningln",
+					"Error", "Errorf", "Errorln",
+					"Fatal", "Fatalf", "Fatalln",
+					"Panic", "Panicf", "Panicln",
+					"Print", "Printf", "Println",
+					"Trace", "Tracef", "Traceln":
+					// Check if this is from the logrus package
+					// Handle both package-level calls (logrus.Infof) and method calls (logger.Info)
+					if ident, ok := sel.X.(*ast.Ident); ok {
+						// Package-level function call
+						if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
+							if pkgName, ok := obj.(*types.PkgName); ok {
+								if pkgName.Imported().Path() == "github.com/sirupsen/logrus" {
+									return true
+								}
+							}
+						}
+					}
+					// Method call on logger instance
+					if exprType := pkg.TypesInfo.TypeOf(sel.X); exprType != nil {
+						typeStr := exprType.String()
+						if strings.Contains(typeStr, "github.com/sirupsen/logrus") {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+// isInFmtErrorf checks if the expression is inside a fmt.Errorf call
+func isInFmtErrorf(stack []ast.Node, pkg *packages.Package) bool {
+	for i := len(stack) - 1; i >= 0; i-- {
+		if call, ok := stack[i].(*ast.CallExpr); ok {
+			// Check if this is fmt.Errorf
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				if sel.Sel.Name == "Errorf" {
+					// Check if the package is "fmt"
+					if ident, ok := sel.X.(*ast.Ident); ok {
+						if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
+							if pkgName, ok := obj.(*types.PkgName); ok {
+								if pkgName.Imported().Path() == "fmt" {
+									return true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
 }

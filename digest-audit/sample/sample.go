@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
 )
 
 var globalDigest digest.Digest = digest.FromString("global")
@@ -65,6 +66,18 @@ func CoverageFunction() {
 	case digest.FromString("test"):
 		fmt.Println("test")
 	}
+
+	if d1 == "" {
+		fmt.Println("empty digest")
+	}
+
+	if d2 != "" {
+		fmt.Println("non-empty digest")
+	}
+
+	_ = fmt.Errorf("error with digest: %s", d1.String())
+
+	logrus.Infof("digest is %s", d2.String())
 }
 
 func processDigest(d digest.Digest, ptr *digest.Digest) {
