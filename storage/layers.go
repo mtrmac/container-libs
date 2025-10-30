@@ -259,6 +259,11 @@ type roLayerStore interface {
 	// stopReading releases locks obtained by startReading.
 	stopReading()
 
+	// checkIdOrNameConflict checks if the id or names are already in use and returns an
+	// error in that case. As Special case if the layer already exists it returns it as
+	// well together with the error.
+	checkIdOrNameConflict(id string, names []string) (*Layer, error)
+
 	// Exists checks if a layer with the specified name or ID is known.
 	Exists(id string) bool
 
