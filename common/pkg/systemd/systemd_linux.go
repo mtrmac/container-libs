@@ -88,12 +88,14 @@ func MovePauseProcessToScope(pausePidPath string) {
 	}
 
 	if err != nil {
-		_, err2 := cgroups.IsCgroup2UnifiedMode()
+		unified, err2 := cgroups.IsCgroup2UnifiedMode()
 		if err2 != nil {
 			logrus.Warnf("Failed to detect if running with cgroup unified: %v", err)
 		}
-		if RunsOnSystemd() {
+		if RunsOnSystemd() && unified {
 			logrus.Warnf("Failed to add pause process to systemd sandbox cgroup: %v", err)
+		} else {
+			logrus.Debugf("Failed to add pause process to systemd sandbox cgroup: %v", err)
 		}
 	}
 }

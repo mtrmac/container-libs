@@ -20,11 +20,29 @@ func getPidsHandler() *linuxPidHandler {
 
 // Apply set the specified constraints.
 func (c *linuxPidHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) error {
-	man, err := fs2.NewManager(ctr.config, filepath.Join(cgroupRoot, ctr.config.Path))
-	if err != nil {
-		return err
+	if ctr.cgroup2 {
+		man, err := fs2.NewManager(ctr.config, filepath.Join(cgroupRoot, ctr.config.Path))
+		if err != nil {
+			return err
+		}
+		return man.Set(res)
 	}
-	return man.Set(res)
+
+	path := filepath.Join(cgroupRoot, Pids, ctr.config.Path)
+	return c.Pid.Set(path, res)
+}
+
+// Create the cgroup.
+func (c *linuxPidHandler) Create(ctr *CgroupControl) (bool, error) {
+	if ctr.cgroup2 {
+		return false, nil
+	}
+	return ctr.createCgroupDirectory(Pids)
+}
+
+// Destroy the cgroup.
+func (c *linuxPidHandler) Destroy(ctr *CgroupControl) error {
+	return rmDirRecursively(ctr.getCgroupv1Path(Pids))
 }
 
 // Stat fills a metrics structure with usage stats for the controller.
@@ -34,7 +52,12 @@ func (c *linuxPidHandler) Stat(ctr *CgroupControl, m *cgroups.Stats) error {
 		return nil
 	}
 
-	PIDRoot := filepath.Join(cgroupRoot, ctr.config.Path)
+	var PIDRoot string
+	if ctr.cgroup2 {
+		PIDRoot = filepath.Join(cgroupRoot, ctr.config.Path)
+	} else {
+		PIDRoot = ctr.getCgroupv1Path(Pids)
+	}
 
 	current, err := readFileAsUint64(filepath.Join(PIDRoot, "pids.current"))
 	if err != nil {

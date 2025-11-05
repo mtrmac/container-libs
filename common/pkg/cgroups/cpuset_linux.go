@@ -20,17 +20,33 @@ func getCpusetHandler() *linuxCpusetHandler {
 
 // Apply set the specified constraints.
 func (c *linuxCpusetHandler) Apply(ctr *CgroupControl, res *cgroups.Resources) error {
-	man, err := fs2.NewManager(ctr.config, filepath.Join(cgroupRoot, ctr.config.Path))
-	if err != nil {
-		return err
+	if ctr.cgroup2 {
+		man, err := fs2.NewManager(ctr.config, filepath.Join(cgroupRoot, ctr.config.Path))
+		if err != nil {
+			return err
+		}
+		return man.Set(res)
 	}
-	return man.Set(res)
+	path := filepath.Join(cgroupRoot, CPUset, ctr.config.Path)
+	return c.CPUSet.Set(path, res)
 }
 
 // Create the cgroup.
 func (c *linuxCpusetHandler) Create(ctr *CgroupControl) (bool, error) {
-	path := filepath.Join(cgroupRoot, ctr.config.Path)
-	return true, cpusetCopyFromParent(path, true)
+	if ctr.cgroup2 {
+		path := filepath.Join(cgroupRoot, ctr.config.Path)
+		return true, cpusetCopyFromParent(path, true)
+	}
+	created, err := ctr.createCgroupDirectory(CPUset)
+	if !created || err != nil {
+		return created, err
+	}
+	return true, cpusetCopyFromParent(ctr.getCgroupv1Path(CPUset), false)
+}
+
+// Destroy the cgroup.
+func (c *linuxCpusetHandler) Destroy(ctr *CgroupControl) error {
+	return rmDirRecursively(ctr.getCgroupv1Path(CPUset))
 }
 
 // Stat fills a metrics structure with usage stats for the controller.
