@@ -14,7 +14,7 @@ require (
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v28.5.1+incompatible
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v28.5.1+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.4
 	github.com/docker/go-connections v0.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
