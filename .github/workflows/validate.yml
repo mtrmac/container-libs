@@ -45,19 +45,19 @@ jobs:
         sudo apt-get -qq update
         sudo apt-get -qq install libseccomp-dev libgpgme-dev libbtrfs-dev libsubid-dev
     - name: lint-common
-      uses: golangci/golangci-lint-action@v8
+      uses: golangci/golangci-lint-action@v9
       with:
         version: "${{ env.LINT_VERSION }}"
         args: --verbose
         working-directory: ./common
     - name: lint-image
-      uses: golangci/golangci-lint-action@v8
+      uses: golangci/golangci-lint-action@v9
       with:
         version: "${{ env.LINT_VERSION }}"
         args: --verbose
         working-directory: ./image
     - name: lint-storage
-      uses: golangci/golangci-lint-action@v8
+      uses: golangci/golangci-lint-action@v9
       with:
         version: "${{ env.LINT_VERSION }}"
         args: --verbose
