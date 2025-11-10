@@ -7,7 +7,7 @@ module go.podman.io/storage
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1
-	github.com/cyphar/filepath-securejoin v0.4.1
+	github.com/cyphar/filepath-securejoin v0.6.0
 	github.com/docker/go-units v0.5.0
 	github.com/google/go-intervals v0.0.2
 	github.com/json-iterator/go v1.1.12
@@ -32,6 +32,7 @@ require (
 )
 
 require (
+	cyphar.com/go-pathrs v0.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
