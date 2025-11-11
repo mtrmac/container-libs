@@ -15,7 +15,6 @@ import (
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/credentials"
 	configtypes "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.podman.io/image/v5/docker/reference"
@@ -489,10 +488,10 @@ func TestGetCredentialsInteroperability(t *testing.T) {
 
 		// Log in. This is intended to match github.com/docker/cli/command/registry.runLogin
 		serverAddress := c.loginKey
-		if serverAddress == "" {
-			serverAddress = registry.IndexServer
+		if serverAddress == "" || serverAddress == "docker.io" { // github.com/docker/cli/internal/registry.DefaultNamespace
+			serverAddress = "https://index.docker.io/v1/" // github.com/docker/cli/internal/registry.IndexServer
 		}
-		if serverAddress != registry.IndexServer {
+		if serverAddress != "https://index.docker.io/v1/" { // github.com/docker/cli/internal/registry.IndexServer
 			serverAddress = credentials.ConvertToHostname(serverAddress)
 		}
 		configFile, err := config.Load(configDir)
@@ -514,7 +513,7 @@ func TestGetCredentialsInteroperability(t *testing.T) {
 		// Log out. This is intended to match github.com/docker/cli/command/registry.runLogout
 		var regsToLogout []string
 		if c.loginKey == "" {
-			regsToLogout = []string{registry.IndexServer}
+			regsToLogout = []string{"https://index.docker.io/v1/"} // github.com/docker/cli/internal/registry.IndexServer
 		} else {
 			hostnameAddress := credentials.ConvertToHostname(c.loginKey)
 			regsToLogout = []string{c.loginKey, hostnameAddress, "http://" + hostnameAddress, "https://" + hostnameAddress}
@@ -915,11 +914,11 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		dockerRef, err := dockerReference.ParseNormalizedNamed(c.queryRepo)
 		require.NoError(t, err)
 		dockerRef = dockerReference.TagNameOnly(dockerRef)
-		repoInfo, err := registry.ParseRepositoryInfo(dockerRef)
-		require.NoError(t, err)
-		configKey := repoInfo.Index.Name
-		if repoInfo.Index.Official {
-			configKey = registry.IndexServer
+		configKey := dockerReference.Domain(dockerRef)
+		// github.com/docker/cli/command.RetrieveAuthTokenFromImage’s getAuthConfigKey internally hard-codes
+		// these strings.
+		if configKey == "docker.io" || configKey == "index.docker.io" {
+			configKey = "https://index.docker.io/v1/" // github.com/docker/cli/command.authConfigKey
 		}
 
 		if c.otherContents {
@@ -933,7 +932,7 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// Initially, there are no credentials
 		configFile, err := config.Load(configDir)
 		require.NoError(t, err)
-		creds, err := configFile.GetCredentialsStore(configKey).Get(configKey)
+		creds, err := configFile.GetAuthConfig(configKey)
 		require.NoError(t, err)
 		assert.Equal(t, configtypes.AuthConfig{}, creds)
 
@@ -947,7 +946,7 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// We can find the credentials.
 		configFile, err = config.Load(configDir)
 		require.NoError(t, err)
-		creds, err = configFile.GetCredentialsStore(configKey).Get(configKey)
+		creds, err = configFile.GetAuthConfig(configKey)
 		require.NoError(t, err)
 		assert.Equal(t, configtypes.AuthConfig{
 			ServerAddress: configKey,
@@ -961,12 +960,12 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// We can’t find the credentials any more.
 		configFile, err = config.Load(configDir)
 		require.NoError(t, err)
-		creds, err = configFile.GetCredentialsStore(configKey).Get(configKey)
+		creds, err = configFile.GetAuthConfig(configKey)
 		require.NoError(t, err)
 		assert.Equal(t, configtypes.AuthConfig{}, creds)
 
 		if c.otherContents {
-			creds, err = configFile.GetCredentialsStore("unmodified-domain.example").Get("unmodified-domain.example")
+			creds, err = configFile.GetAuthConfig("unmodified-domain.example")
 			require.NoError(t, err)
 			assert.Equal(t, configtypes.AuthConfig{
 				ServerAddress: "unmodified-domain.example",
