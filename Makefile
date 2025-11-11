@@ -49,6 +49,12 @@ lint: .install.golangci-lint
 	@$(MAKE) -C image lint
 	@$(MAKE) -C storage lint
 
+.PHONY: fmt
+fmt: .install.golangci-lint
+	@$(MAKE) -C common fmt
+	@$(MAKE) -C image fmt
+	@$(MAKE) -C storage fmt
+
 .PHONY: vendor-in-container
 vendor-in-container:
 	podman run --privileged --rm --env HOME=/root -v `pwd`:/src -w /src golang make vendor

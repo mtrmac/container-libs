@@ -74,6 +74,10 @@ docs:
 lint:
 	golangci-lint run
 
+.PHONY: fmt
+fmt:
+	golangci-lint fmt
+
 .PHONY: validate
 validate: lint
 	./tools/validate_seccomp.sh ./pkg/seccomp

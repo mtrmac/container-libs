@@ -75,7 +75,7 @@ test:
 
 .PHONY: fmt
 fmt:
-	@gofmt -l -s -w $(SOURCE_DIRS)
+	golangci-lint fmt
 
 .PHONY: lint
 lint:
