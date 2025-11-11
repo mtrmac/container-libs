@@ -14,6 +14,7 @@ At present, this means the following repositories:
 ## Topics
 
 * [Unit Tests](#unit-tests)
+* [Go Format and lint](#go-format-and-lint)
 * [Go Dependency updates](#go-dependency-updates)
 * [Testing changes in a dependent repository](#testing-changes-in-a-dependent-repository)
 * [git bisect a change in a Go dependency](#git-bisect-a-change-in-a-go-dependency)
@@ -22,6 +23,11 @@ At present, this means the following repositories:
 
 Unit tests for Go code are added in a separate file within the same directory, named `..._test.go` (where the first part of the name is often the name of the file whose code is being tested).
 Our Go projects to not require unit tests, but contributors are strongly encouraged to unit test any code that can have a reasonable unit test written.
+
+### Go Format and lint
+
+We are using the [`gofumpt`](https://github.com/mvdan/gofumpt) formatter for our go code, you can either use it directly or format via `make fmt`.
+For linting we use [`golangci-lint`](github.com/golangci/golangci-lint), use `make validate` to run it together with some other basic commit checks.
 
 ## Go Dependency updates
 
