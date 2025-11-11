@@ -17,8 +17,10 @@ import (
 	"go.podman.io/image/v5/types"
 )
 
-var _ private.ImageSource = (*dirImageSource)(nil)
-var _ private.ImageDestination = (*dirImageDestination)(nil)
+var (
+	_ private.ImageSource      = (*dirImageSource)(nil)
+	_ private.ImageDestination = (*dirImageDestination)(nil)
+)
 
 func TestDestinationReference(t *testing.T) {
 	ref, tmpDir := refToTempDir(t)

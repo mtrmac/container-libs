@@ -9,7 +9,6 @@ import (
 )
 
 func TestList(t *testing.T) {
-
 	for _, test := range []struct {
 		path    string
 		num     int

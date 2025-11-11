@@ -229,7 +229,7 @@ func makeLayerGoroutine(dest io.Writer, uncompressedCount *int64, uncompressedDi
 
 	if err := twriter.WriteHeader(&tar.Header{
 		Name:       "/random-single-file",
-		Mode:       0600,
+		Mode:       0o600,
 		Size:       int64(len(buf)),
 		ModTime:    time.Now(),
 		AccessTime: time.Now(),
@@ -348,7 +348,8 @@ func configForLayers(t *testing.T, layers []testBlob) testBlob {
 }
 
 func createUncommittedImageDest(t *testing.T, ref types.ImageReference, cache types.BlobInfoCache,
-	layers []testBlob, config *testBlob) (types.ImageDestination, types.UnparsedImage) {
+	layers []testBlob, config *testBlob,
+) (types.ImageDestination, types.UnparsedImage) {
 	dest, err := ref.NewImageDestination(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -379,7 +380,8 @@ func createUncommittedImageDest(t *testing.T, ref types.ImageReference, cache ty
 }
 
 func createImage(t *testing.T, ref types.ImageReference, cache types.BlobInfoCache,
-	layers []testBlob, config *testBlob) {
+	layers []testBlob, config *testBlob,
+) {
 	dest, unparsedToplevel := createUncommittedImageDest(t, ref, cache, layers, config)
 	err := dest.Commit(context.Background(), unparsedToplevel)
 	require.NoError(t, err)
@@ -740,9 +742,11 @@ type unparsedImage struct {
 func (u *unparsedImage) Reference() types.ImageReference {
 	return u.imageReference
 }
+
 func (u *unparsedImage) Manifest(context.Context) ([]byte, string, error) {
 	return u.manifestBytes, u.manifestType, nil
 }
+
 func (u *unparsedImage) Signatures(context.Context) ([][]byte, error) {
 	return u.signatures, nil
 }

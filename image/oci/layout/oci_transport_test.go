@@ -135,7 +135,8 @@ func TestGetManifestDescriptor(t *testing.T) {
 		Platform: &imgspecv1.Platform{
 			Architecture: "ppc64le",
 			OS:           "linux",
-		}}, res)
+		},
+	}, res)
 
 	// Out of bounds
 	ref, err = NewIndexReference("fixtures/two_images_manifest", 6)
@@ -338,7 +339,7 @@ func refToTempOCI(t *testing.T, sourceIndex bool) (types.ImageReference, string)
 `
 	}
 
-	err := os.WriteFile(filepath.Join(tmpDir, "index.json"), []byte(m), 0644)
+	err := os.WriteFile(filepath.Join(tmpDir, "index.json"), []byte(m), 0o644)
 	require.NoError(t, err)
 	var ref types.ImageReference
 	if sourceIndex {
