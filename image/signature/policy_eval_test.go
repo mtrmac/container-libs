@@ -500,3 +500,77 @@ func assertRunningRejectedPolicyRequirement(t *testing.T, allowed bool, err erro
 	assertRunningRejected(t, allowed, err)
 	assert.IsType(t, PolicyRequirementError(""), err)
 }
+
+func TestPolicyContextRequireSignatureVerification(t *testing.T) {
+	pc, err := NewPolicyContext(&Policy{Default: PolicyRequirements{NewPRReject()}})
+	require.NoError(t, err)
+	defer func() {
+		err := pc.Destroy()
+		require.NoError(t, err)
+	}()
+
+	// Test default value is false
+	assert.False(t, pc.requireSigned)
+
+	// Test setting to true
+	pc.RequireSignatureVerification(true)
+	assert.True(t, pc.requireSigned)
+
+	// Test setting back to false
+	pc.RequireSignatureVerification(false)
+	assert.False(t, pc.requireSigned)
+}
+
+func TestPolicyContextIsRunningImageAllowedWithRequireSigned(t *testing.T) {
+	pc, err := NewPolicyContext(&Policy{
+		Default: PolicyRequirements{NewPRReject()},
+		Transports: map[string]PolicyTransportScopes{
+			"docker": {
+				"docker.io/testing/manifest:insecureOnly": {
+					NewPRInsecureAcceptAnything(),
+				},
+				"docker.io/testing/manifest:insecureWithOther": {
+					NewPRInsecureAcceptAnything(),
+					xNewPRSignedByKeyPath(SBKeyTypeGPGKeys, "fixtures/public-key.gpg", NewPRMMatchRepository()),
+				},
+				"docker.io/testing/manifest:signedOnly": {
+					xNewPRSignedByKeyPath(SBKeyTypeGPGKeys, "fixtures/public-key.gpg", NewPRMMatchRepository()),
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	defer func() {
+		err := pc.Destroy()
+		require.NoError(t, err)
+	}()
+
+	// Test with requireSigned=false (default behavior)
+	// insecureAcceptAnything should be accepted
+	img := pcImageMock(t, "fixtures/dir-img-valid", "testing/manifest:insecureOnly")
+	res, err := pc.IsRunningImageAllowed(context.Background(), img)
+	assertRunningAllowed(t, res, err)
+
+	// Test with rejectInsecure=true
+	pc.RequireSignatureVerification(true)
+
+	// insecureAcceptAnything only: should be rejected
+	img = pcImageMock(t, "fixtures/dir-img-valid", "testing/manifest:insecureOnly")
+	res, err = pc.IsRunningImageAllowed(context.Background(), img)
+	assertRunningRejectedPolicyRequirement(t, res, err)
+
+	// insecureAcceptAnything + signed requirement: first requirement has no effect, second is secure and valid
+	img = pcImageMock(t, "fixtures/dir-img-valid", "testing/manifest:insecureWithOther")
+	res, err = pc.IsRunningImageAllowed(context.Background(), img)
+	assertRunningAllowed(t, res, err)
+
+	// signed requirement only: should work normally
+	img = pcImageMock(t, "fixtures/dir-img-valid", "testing/manifest:signedOnly")
+	res, err = pc.IsRunningImageAllowed(context.Background(), img)
+	assertRunningAllowed(t, res, err)
+
+	// Test with unsigned image and insecureAcceptAnything + signed requirement: first requirement has no effect, second is secure but rejects
+	img = pcImageMock(t, "fixtures/dir-img-unsigned", "testing/manifest:insecureWithOther")
+	res, err = pc.IsRunningImageAllowed(context.Background(), img)
+	assertRunningRejectedPolicyRequirement(t, res, err)
+}

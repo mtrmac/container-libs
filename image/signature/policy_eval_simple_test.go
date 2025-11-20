@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.podman.io/image/v5/internal/testing/mocks"
 	"go.podman.io/image/v5/types"
 )
@@ -55,4 +56,14 @@ func TestPRRejectIsRunningImageAllowed(t *testing.T) {
 	pr := NewPRReject()
 	res, err := pr.isRunningImageAllowed(context.Background(), nameOnlyImageMock{})
 	assertRunningRejectedPolicyRequirement(t, res, err)
+}
+
+func TestPRInsecureAcceptAnythingVerifiesSignatures(t *testing.T) {
+	pr := NewPRInsecureAcceptAnything()
+	require.False(t, pr.verifiesSignatures())
+}
+
+func TestPRRejectVerifiesSignatures(t *testing.T) {
+	pr := NewPRReject()
+	require.False(t, pr.verifiesSignatures())
 }
