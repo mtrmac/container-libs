@@ -298,9 +298,9 @@ Logging driver for the container. Currently available options are k8s-file, jour
 
 **log_path**=""
 
-Default path for container logs to be stored in. When empty, logs will be stored 
+Default path for container logs to be stored in. When empty, logs will be stored
 in the container's default storage and removed when the container is removed.
-A subdirectory named with the container ID will be created under the specified 
+A subdirectory named with the container ID will be created under the specified
 path, and the log file will have the default name `ctr.log` within that directory.
 This option can be overridden by the `--log-opt` flag.
 
@@ -621,9 +621,12 @@ Disabling this can save memory.
 
 **env**=[]
 
-Environment variables to be used when running the container engine (e.g., Podman, Buildah). For example "http_proxy=internal.proxy.company.com".
-Note these environment variables will not be used within the container. Set the env section under [containers] table,
+Environment variables to be used when running the container engine (e.g., Podman, Buildah). For example "MYVAR=value".
+These environment variables will not be used within the container. Set the env section under the [containers] table,
 if you want to set environment variables for the container.
+
+Note when using this to set http proxy variables then they might get leaked into the container depending on
+if `http_proxy` (under the [containers] table) is set to to true (default) or false.
 
 **events_logfile_path**=""
 
