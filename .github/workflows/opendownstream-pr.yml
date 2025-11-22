@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout Self'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         # Because we use pull_request_target, this checks out the code from the default branch, NOT the PR branch
 
       - name: 'Setup Go'
@@ -23,7 +23,7 @@ jobs:
           go-version: 'stable'
 
       - name: 'Checkout forked buildah'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: 'podmanbot/buildah' # The target repository
           path: 'buildah'                 # Checkout into a sub-directory
