@@ -159,6 +159,8 @@ func (index *OCI1IndexPublic) editInstances(editInstances []ListEdit, cannotModi
 					maps.Copy(index.Manifests[targetIndex].Annotations, editInstance.UpdateAnnotations)
 				}
 			}
+			// FIXME: This does not set updatedAnnotations, so we don’t re-sort images with Zstd instances if some other
+			// tool created them without the OCI1InstanceAnnotationCompressionZSTD annotation.
 			addCompressionAnnotations(editInstance.UpdateCompressionAlgorithms, &index.Manifests[targetIndex].Annotations, cannotModifyManifest)
 		case ListOpAdd:
 			annotations := map[string]string{}

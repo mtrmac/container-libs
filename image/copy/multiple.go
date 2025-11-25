@@ -216,6 +216,7 @@ func (c *copier) copyMultipleImages(ctx context.Context) (copiedManifest []byte,
 	case imgspecv1.MediaTypeImageManifest:
 		forceListMIMEType = imgspecv1.MediaTypeImageIndex
 	}
+	// FIXME: This does not take into account cannotModifyManifestListReason.
 	selectedListType, otherManifestMIMETypeCandidates, err := c.determineListConversion(manifestType, c.dest.SupportedManifestMIMETypes(), forceListMIMEType)
 	if err != nil {
 		return nil, fmt.Errorf("determining manifest list type to write to destination: %w", err)
