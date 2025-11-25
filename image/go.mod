@@ -25,7 +25,7 @@ require (
 	github.com/moby/moby/client v0.1.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/proglottis/gpgme v0.1.5
+	github.com/proglottis/gpgme v0.1.6
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1
 	github.com/sigstore/fulcio v1.7.1
