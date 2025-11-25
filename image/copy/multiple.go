@@ -284,7 +284,7 @@ func (c *copier) copyMultipleImages(ctx context.Context) (copiedManifest []byte,
 	}
 
 	// Now reset the digest/size/types of the manifests in the list to account for any conversions that we made.
-	if err = updatedList.EditInstances(instanceEdits); err != nil {
+	if err = updatedList.EditInstances(instanceEdits, cannotModifyManifestListReason != ""); err != nil {
 		return nil, fmt.Errorf("updating manifest list: %w", err)
 	}
 
