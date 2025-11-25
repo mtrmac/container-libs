@@ -105,7 +105,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/proglottis/gpgme v0.1.5 // indirect
+	github.com/proglottis/gpgme v0.1.6 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
 	github.com/sigstore/fulcio v1.7.1 // indirect
 	github.com/sigstore/protobuf-specs v0.4.1 // indirect
