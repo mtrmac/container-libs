@@ -46,31 +46,86 @@ func TestGuessMIMEType(t *testing.T) {
 	}
 }
 
+var digestTestCases = []struct {
+	path           string
+	expectedSHA256 digest.Digest
+	expectedSHA512 digest.Digest
+	shouldFail     bool
+}{
+	{
+		path:           "v2s2.manifest.json",
+		expectedSHA256: "sha256:20bf21ed457b390829cdbeec8795a7bea1626991fda603e0d01b4e7f60427e55",
+		expectedSHA512: "sha512:50763a72163eef344fc0b58ec5a2676ceeddfa46b547475013778f3de5c0c1a75e18c947db36483e4622c1d46a908aa26649e6b0ac22514b8100889f74ed2b8c",
+	},
+	{
+		path:           "v2s1.manifest.json",
+		expectedSHA256: "sha256:7364fea9d84ee548ab67d4c46c6006289800c98de3fbf8c0a97138dfcc23f000",
+		expectedSHA512: "sha512:987d6df9aca32adc296bd0698cc7407f12605b4d5e8f0de2ca5d0c43f22d894082e96fb0a02c0f659db3bb8314912dd0a1fcb5cb421c04cd5cb468ad3829d9f7",
+	},
+	{
+		path:           "v2s1-unsigned.manifest.json",
+		expectedSHA256: "sha256:7364fea9d84ee548ab67d4c46c6006289800c98de3fbf8c0a97138dfcc23f000",
+		expectedSHA512: "sha512:987d6df9aca32adc296bd0698cc7407f12605b4d5e8f0de2ca5d0c43f22d894082e96fb0a02c0f659db3bb8314912dd0a1fcb5cb421c04cd5cb468ad3829d9f7",
+	},
+	{
+		path:           "",
+		expectedSHA256: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		expectedSHA512: "sha512:cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
+	},
+	{
+		path:       "v2s1-invalid-signatures.manifest.json",
+		shouldFail: true,
+	},
+}
+
 func TestDigest(t *testing.T) {
-	cases := []struct {
-		path           string
-		expectedDigest digest.Digest
-	}{
-		{"v2s2.manifest.json", TestDockerV2S2ManifestDigest},
-		{"v2s1.manifest.json", TestDockerV2S1ManifestDigest},
-		{"v2s1-unsigned.manifest.json", TestDockerV2S1UnsignedManifestDigest},
-	}
-	for _, c := range cases {
-		manifest, err := os.ReadFile(filepath.Join("testdata", c.path))
-		require.NoError(t, err)
+	for _, c := range digestTestCases {
+		var manifest []byte
+		var err error
+		if c.path == "" {
+			manifest = []byte{}
+		} else {
+			manifest, err = os.ReadFile(filepath.Join("testdata", c.path))
+			require.NoError(t, err)
+		}
+
 		actualDigest, err := Digest(manifest)
-		require.NoError(t, err)
-		assert.Equal(t, c.expectedDigest, actualDigest)
+		if c.shouldFail {
+			assert.Error(t, err, c.path)
+		} else {
+			require.NoError(t, err, c.path)
+			assert.Equal(t, c.expectedSHA256, actualDigest, c.path)
+		}
 	}
+}
 
-	manifest, err := os.ReadFile("testdata/v2s1-invalid-signatures.manifest.json")
-	require.NoError(t, err)
-	_, err = Digest(manifest)
-	assert.Error(t, err)
+func TestDigestWithAlgorithm(t *testing.T) {
+	for _, c := range digestTestCases {
+		var manifest []byte
+		var err error
+		if c.path == "" {
+			manifest = []byte{}
+		} else {
+			manifest, err = os.ReadFile(filepath.Join("testdata", c.path))
+			require.NoError(t, err)
+		}
 
-	actualDigest, err := Digest([]byte{})
-	require.NoError(t, err)
-	assert.Equal(t, digest.Digest(digestSha256EmptyTar), actualDigest)
+		sha256Digest, err := DigestWithAlgorithm(manifest, digest.SHA256)
+		if c.shouldFail {
+			assert.Error(t, err, c.path)
+		} else {
+			require.NoError(t, err, c.path)
+			assert.Equal(t, c.expectedSHA256, sha256Digest, c.path)
+		}
+
+		sha512Digest, err := DigestWithAlgorithm(manifest, digest.SHA512)
+		if c.shouldFail {
+			assert.Error(t, err, c.path)
+		} else {
+			require.NoError(t, err, c.path)
+			assert.Equal(t, c.expectedSHA512, sha512Digest, c.path)
+		}
+	}
 }
 
 func TestMatchesDigest(t *testing.T) {
