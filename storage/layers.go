@@ -2500,7 +2500,7 @@ func (sl *maybeStagedLayerExtraction) cleanup() error {
 // If the driver does not support stage addition then this is a NOP and does nothing.
 // This should be done without holding the storage lock, if a parent is given the caller
 // must check for existence beforehand while holding a lock.
-func (r *layerStore) stageWithUnlockedStore(sl *maybeStagedLayerExtraction, parent string, layerOptions *LayerOptions) error {
+func (r *layerStore) stageWithUnlockedStore(sl *maybeStagedLayerExtraction, parent string, layerOptions *LayerOptions) (retErr error) {
 	if sl.staging == nil {
 		return nil
 	}
@@ -2520,7 +2520,13 @@ func (r *layerStore) stageWithUnlockedStore(sl *maybeStagedLayerExtraction, pare
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	// make sure to check for errors on close and return that one.
+	defer func() {
+		closeErr := f.Close()
+		if retErr == nil {
+			retErr = closeErr
+		}
+	}()
 
 	result, err := applyDiff(layerOptions, sl.diff, f, func(payload io.Reader) (int64, error) {
 		cleanup, stagedLayer, size, err := sl.staging.StartStagingDiffToApply(parent, drivers.ApplyDiffOpts{
@@ -2535,6 +2541,10 @@ func (r *layerStore) stageWithUnlockedStore(sl *maybeStagedLayerExtraction, pare
 	})
 	if err != nil {
 		return err
+	}
+
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("sync staged tar-split file: %w", err)
 	}
 
 	sl.result = result
@@ -2675,7 +2685,7 @@ func applyDiff(layerOptions *LayerOptions, diff io.Reader, tarSplitFile *os.File
 }
 
 // Requires startWriting.
-func (r *layerStore) applyDiffWithOptions(to string, layerOptions *LayerOptions, diff io.Reader) (int64, error) {
+func (r *layerStore) applyDiffWithOptions(to string, layerOptions *LayerOptions, diff io.Reader) (_ int64, retErr error) {
 	if !r.lockfile.IsReadWrite() {
 		return -1, fmt.Errorf("not allowed to modify layer contents at %q: %w", r.layerdir, ErrStoreIsReadOnly)
 	}
@@ -2689,7 +2699,13 @@ func (r *layerStore) applyDiffWithOptions(to string, layerOptions *LayerOptions,
 	if err != nil {
 		return -1, err
 	}
-	defer tarSplitFile.Close()
+	// make sure to check for errors on close and return that one.
+	defer func() {
+		closeErr := tarSplitFile.Close()
+		if retErr == nil {
+			retErr = closeErr
+		}
+	}()
 
 	result, err := applyDiff(layerOptions, diff, tarSplitFile, func(payload io.Reader) (int64, error) {
 		options := drivers.ApplyDiffOpts{
@@ -2741,7 +2757,7 @@ func (r *layerStore) DifferTarget(id string) (string, error) {
 }
 
 // Requires startWriting.
-func (r *layerStore) applyDiffFromStagingDirectory(id string, diffOutput *drivers.DriverWithDifferOutput, options *drivers.ApplyDiffWithDifferOpts) error {
+func (r *layerStore) applyDiffFromStagingDirectory(id string, diffOutput *drivers.DriverWithDifferOutput, options *drivers.ApplyDiffWithDifferOpts) (retErr error) {
 	ddriver, ok := r.driver.(drivers.DriverWithDiffer)
 	if !ok {
 		return ErrNotSupported
@@ -2789,7 +2805,13 @@ func (r *layerStore) applyDiffFromStagingDirectory(id string, diffOutput *driver
 		if err != nil {
 			return err
 		}
-		defer tarSplitFile.Close()
+		// make sure to check for errors on close and return that one.
+		defer func() {
+			closeErr := tarSplitFile.Close()
+			if retErr == nil {
+				retErr = closeErr
+			}
+		}()
 		tarSplitWriter := pools.BufioWriter32KPool.Get(tarSplitFile)
 		defer pools.BufioWriter32KPool.Put(tarSplitWriter)
 
