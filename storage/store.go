@@ -1450,13 +1450,6 @@ func (s *store) canUseShifting(uidmap, gidmap []idtools.IDMap) bool {
 }
 
 // On entry:
-// - rlstore must be locked for writing
-// - rlstores MUST NOT be locked
-func (s *store) putLayer(rlstore rwLayerStore, id string, parentLayer *Layer, names []string, mountLabel string, writeable bool, options *LayerOptions, contents *layerCreationContents) (*Layer, int64, error) {
-	return rlstore.create(id, parentLayer, names, mountLabel, nil, options, writeable, contents)
-}
-
-// On entry:
 // - rlstore must be locked for reading or writing
 // - rlstores MUST NOT be locked
 // Returns an extra unlock function to unlock any potentially read locked rlstores by this function.
@@ -1648,7 +1641,7 @@ func (s *store) PutLayer(id, parent string, names []string, mountLabel string, w
 			return nil, -1, fmt.Errorf("error during staged layer apply, parent layer %q changed id mappings while the content was extracted, must retry layer creation", parent)
 		}
 	}
-	return s.putLayer(rlstore, id, parentLayer, names, mountLabel, writeable, options, contents)
+	return rlstore.create(id, parentLayer, names, mountLabel, nil, options, writeable, contents)
 }
 
 func (s *store) CreateLayer(id, parent string, names []string, mountLabel string, writeable bool, options *LayerOptions) (*Layer, error) {
@@ -3294,7 +3287,7 @@ func (s *store) ApplyStagedLayer(args ApplyStagedLayerOptions) (*Layer, error) {
 	if err != nil {
 		return nil, err
 	}
-	layer, _, err = s.putLayer(rlstore, args.ID, parentLayer, args.Names, args.MountLabel, args.Writeable, options, &contents)
+	layer, _, err = rlstore.create(args.ID, parentLayer, args.Names, args.MountLabel, nil, options, args.Writeable, &contents)
 	return layer, err
 }
 
