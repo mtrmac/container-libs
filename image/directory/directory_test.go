@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -203,6 +204,8 @@ func TestGetPutSignatures(t *testing.T) {
 
 func TestSourceReference(t *testing.T) {
 	ref, tmpDir := refToTempDir(t)
+	err := os.WriteFile(filepath.Join(tmpDir, "version"), []byte("Directory Transport Version: 1.1\n"), 0o644)
+	require.NoError(t, err)
 
 	src, err := ref.NewImageSource(context.Background(), nil)
 	require.NoError(t, err)
