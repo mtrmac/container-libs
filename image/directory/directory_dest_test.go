@@ -1,0 +1,67 @@
+package directory
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/opencontainers/go-digest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.podman.io/image/v5/pkg/blobinfocache/memory"
+	"go.podman.io/image/v5/types"
+)
+
+func TestVersionAssignment(t *testing.T) {
+	for _, c := range []struct {
+		name            string
+		algorithms      []digest.Algorithm
+		expectedVersion version
+	}{
+		{
+			name:            "SHA256 only gets version 1.1",
+			algorithms:      []digest.Algorithm{digest.SHA256},
+			expectedVersion: version1_1,
+		},
+		{
+			name:            "SHA512 only gets version 1.2",
+			algorithms:      []digest.Algorithm{digest.SHA512},
+			expectedVersion: version1_2,
+		},
+		{
+			name:            "Mixed SHA256 and SHA512 gets version 1.2",
+			algorithms:      []digest.Algorithm{digest.SHA256, digest.SHA512},
+			expectedVersion: version1_2,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			ref, tmpDir := refToTempDir(t)
+			cache := memory.New()
+
+			dest, err := ref.NewImageDestination(context.Background(), nil)
+			require.NoError(t, err)
+			defer dest.Close()
+
+			for i, algo := range c.algorithms {
+				blobData := []byte("test-blob-" + algo.String() + "-" + string(rune(i)))
+				var blobDigest digest.Digest
+				if algo == digest.SHA256 {
+					blobDigest = ""
+				} else {
+					blobDigest = algo.FromBytes(blobData)
+				}
+				_, err = dest.PutBlob(context.Background(), bytes.NewReader(blobData), types.BlobInfo{Digest: blobDigest, Size: int64(len(blobData))}, cache, false)
+				require.NoError(t, err)
+			}
+
+			err = dest.Commit(context.Background(), nil)
+			require.NoError(t, err)
+
+			versionBytes, err := os.ReadFile(filepath.Join(tmpDir, "version"))
+			require.NoError(t, err)
+			assert.Equal(t, c.expectedVersion.String(), string(versionBytes))
+		})
+	}
+}
