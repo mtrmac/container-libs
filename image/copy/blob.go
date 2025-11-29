@@ -101,6 +101,7 @@ func (ic *imageCopier) copyBlobFromStream(ctx context.Context, srcReader io.Read
 		Cache:      ic.c.blobInfoCache,
 		IsConfig:   isConfig,
 		EmptyLayer: emptyLayer,
+		Digests:    ic.c.options.DigestOptions,
 	}
 	if !isConfig {
 		options.LayerIndex = &layerIndex
