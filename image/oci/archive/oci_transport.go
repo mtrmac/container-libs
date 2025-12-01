@@ -161,13 +161,20 @@ func createOCIRef(sys *types.SystemContext, image string) (tempDirOCIRef, error)
 	if err != nil {
 		return tempDirOCIRef{}, fmt.Errorf("creating temp directory: %w", err)
 	}
+	succeeded := false
+	defer func() {
+		if !succeeded {
+			_ = os.RemoveAll(dir)
+		}
+	}()
+
 	ociRef, err := ocilayout.NewReference(dir, image)
 	if err != nil {
 		return tempDirOCIRef{}, err
 	}
 
-	tempDirRef := tempDirOCIRef{tempDirectory: dir, ociRefExtracted: ociRef}
-	return tempDirRef, nil
+	succeeded = true
+	return tempDirOCIRef{tempDirectory: dir, ociRefExtracted: ociRef}, nil
 }
 
 // creates the temporary directory and copies the tarred content to it
