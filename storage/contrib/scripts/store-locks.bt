@@ -1,0 +1,72 @@
+#!/usr/bin/env bpftrace
+
+// Script to measure the file lock times of the store.
+//
+// This heavily depends on internal implementation details and as such could
+// become non functional and/or misleading if the implementation changes.
+// Also the ebpf kernel kfunc's can change and break the script, this was
+// tested on kernel 6.17.
+//
+// There is no expectation that this is being maintained and updated regularly.
+// It is just here to serve as reference (or starting point) for future locking
+// time analysis.
+//
+// The script also has a few know problems:
+//   - The code has a short cut for read-only locks by using an golang internal mutex
+//     which the script doesn't observe at all. Therefore the script may not print
+//     accurate results when holding more than one read-only lock simultaneously.
+//   - We assume the lock file names are unique on the whole system. You don't want to
+//     run podman as another user for example while doing any tests.
+//   - The lockfiles in the additional image stores are called the same, as such using
+//     additional stores makes it impossible to know which store was locked.
+
+kfunc:fcntl_setlk
+{
+  $lockname = str(args->filp->f_path.dentry->d_name.name);
+
+  if ($lockname == "storage.lock" || $lockname == "layers.lock" ||
+      $lockname == "images.lock" || $lockname == "containers.lock" ) {
+
+    @blockedTime[tid, $lockname] = nsecs;
+  }
+}
+
+kretfunc:fcntl_setlk
+{
+  $lockname = str(args->filp->f_path.dentry->d_name.name);
+
+  if ($lockname == "storage.lock" || $lockname == "layers.lock" ||
+      $lockname == "images.lock" || $lockname == "containers.lock" ) {
+
+    // lock duration in msec
+    $lock_duration = (nsecs - @blockedTime[tid, $lockname])/1000000;
+    if ($lock_duration) {
+      printf("blocked %s time: %lld msec\n", $lockname, $lock_duration);
+    }
+
+    // store max and create histogram that get printed on bpftrace exit (CTRL-C)
+    @block_max[$lockname] = max($lock_duration);
+    @block_duration[$lockname] = hist($lock_duration);
+
+    delete(@blockedTime[tid, $lockname]);
+    @lockholdTime[pid, args->fd] = (nsecs, $lockname);
+  }
+}
+
+tracepoint:syscalls:sys_enter_close
+{
+  $a = @lockholdTime[pid, args->fd];
+  if ($a.0) {
+    // lock duration in msec
+    $lock_duration = (nsecs - $a.0)/1000000;
+    if ($lock_duration) {
+      printf("lock %s time: %lld msec\n", $a.1, $lock_duration);
+    }
+
+    // store max and create histogram that get printed on bpftrace exit (CTRL-C)
+    @lock_max[$a.1] = max($lock_duration);
+    @lock_duration[$a.1] = hist($lock_duration);
+
+    delete(@lockholdTime[pid, args->fd]);
+  }
+}
