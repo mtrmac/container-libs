@@ -166,7 +166,13 @@ func (ref dirReference) manifestPath(instanceDigest *digest.Digest) (string, err
 		if err := instanceDigest.Validate(); err != nil { // digest.Digest.Encoded() panics on failure, and could possibly result in a path with ../, so validate explicitly.
 			return "", err
 		}
-		return filepath.Join(ref.path, instanceDigest.Encoded()+".manifest.json"), nil
+		var filename string
+		if instanceDigest.Algorithm() == digest.Canonical {
+			filename = instanceDigest.Encoded() + ".manifest.json"
+		} else {
+			filename = instanceDigest.Algorithm().String() + "-" + instanceDigest.Encoded() + ".manifest.json"
+		}
+		return filepath.Join(ref.path, filename), nil
 	}
 	return filepath.Join(ref.path, "manifest.json"), nil
 }

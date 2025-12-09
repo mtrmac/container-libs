@@ -194,7 +194,8 @@ func TestReferenceDeleteImage(t *testing.T) {
 }
 
 func TestReferenceManifestPath(t *testing.T) {
-	dhex := digest.Digest("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	dhex256 := digest.Digest("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	dhex512 := digest.Digest("sha512:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
 	ref, tmpDir := refToTempDir(t)
 	dirRef, ok := ref.(dirReference)
@@ -202,9 +203,15 @@ func TestReferenceManifestPath(t *testing.T) {
 	res, err := dirRef.manifestPath(nil)
 	require.NoError(t, err)
 	assert.Equal(t, tmpDir+"/manifest.json", res)
-	res, err = dirRef.manifestPath(&dhex)
+
+	res, err = dirRef.manifestPath(&dhex256)
 	require.NoError(t, err)
-	assert.Equal(t, tmpDir+"/"+dhex.Encoded()+".manifest.json", res)
+	assert.Equal(t, tmpDir+"/"+dhex256.Encoded()+".manifest.json", res)
+
+	res, err = dirRef.manifestPath(&dhex512)
+	require.NoError(t, err)
+	assert.Equal(t, tmpDir+"/sha512-"+dhex512.Encoded()+".manifest.json", res)
+
 	invalidDigest := digest.Digest("sha256:../hello")
 	_, err = dirRef.manifestPath(&invalidDigest)
 	assert.Error(t, err)

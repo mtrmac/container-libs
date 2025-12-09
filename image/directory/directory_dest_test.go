@@ -33,6 +33,15 @@ func TestVersionAssignment(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			name: "manifest",
+			put: func(t *testing.T, dest types.ImageDestination, algo digest.Algorithm, i int, cache types.BlobInfoCache) {
+				manifestData := []byte("test-manifest-" + algo.String() + "-" + string(rune(i)))
+				instanceDigest := algo.FromBytes(manifestData)
+				err := dest.PutManifest(context.Background(), manifestData, &instanceDigest)
+				require.NoError(t, err)
+			},
+		},
 	} {
 		for _, c := range []struct {
 			name            string
