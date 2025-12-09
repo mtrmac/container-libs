@@ -42,6 +42,17 @@ func TestVersionAssignment(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			name: "signature",
+			put: func(t *testing.T, dest types.ImageDestination, algo digest.Algorithm, i int, cache types.BlobInfoCache) {
+				manifestData := []byte("test-manifest-" + algo.String() + "-" + string(rune(i)))
+				instanceDigest := algo.FromBytes(manifestData)
+				// These signatures are completely invalid; start with 0xA3 just to be minimally plausible to signature.FromBlob.
+				signatures := [][]byte{[]byte("\xA3sig" + algo.String() + "-" + string(rune(i)))}
+				err := dest.PutSignatures(context.Background(), signatures, &instanceDigest)
+				require.NoError(t, err)
+			},
+		},
 	} {
 		for _, c := range []struct {
 			name            string

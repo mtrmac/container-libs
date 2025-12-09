@@ -238,7 +238,8 @@ func TestReferenceLayerPath(t *testing.T) {
 }
 
 func TestReferenceSignaturePath(t *testing.T) {
-	dhex := digest.Digest("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	dhex256 := digest.Digest("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	dhex512 := digest.Digest("sha512:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
 	ref, tmpDir := refToTempDir(t)
 	dirRef, ok := ref.(dirReference)
@@ -249,12 +250,21 @@ func TestReferenceSignaturePath(t *testing.T) {
 	res, err = dirRef.signaturePath(9, nil)
 	require.NoError(t, err)
 	assert.Equal(t, tmpDir+"/signature-10", res)
-	res, err = dirRef.signaturePath(0, &dhex)
+
+	res, err = dirRef.signaturePath(0, &dhex256)
 	require.NoError(t, err)
-	assert.Equal(t, tmpDir+"/"+dhex.Encoded()+".signature-1", res)
-	res, err = dirRef.signaturePath(9, &dhex)
+	assert.Equal(t, tmpDir+"/"+dhex256.Encoded()+".signature-1", res)
+	res, err = dirRef.signaturePath(9, &dhex256)
 	require.NoError(t, err)
-	assert.Equal(t, tmpDir+"/"+dhex.Encoded()+".signature-10", res)
+	assert.Equal(t, tmpDir+"/"+dhex256.Encoded()+".signature-10", res)
+
+	res, err = dirRef.signaturePath(0, &dhex512)
+	require.NoError(t, err)
+	assert.Equal(t, tmpDir+"/sha512-"+dhex512.Encoded()+".signature-1", res)
+	res, err = dirRef.signaturePath(9, &dhex512)
+	require.NoError(t, err)
+	assert.Equal(t, tmpDir+"/sha512-"+dhex512.Encoded()+".signature-10", res)
+
 	invalidDigest := digest.Digest("sha256:../hello")
 	_, err = dirRef.signaturePath(0, &invalidDigest)
 	assert.Error(t, err)
