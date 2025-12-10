@@ -742,7 +742,7 @@ func copyTrustedImageBlobToTarStream(ctx context.Context, imgSrc types.ImageSour
 	now := time.Now()
 	header := tar.Header{
 		Name:       filename,
-		Mode:       600,
+		Mode:       0o600,
 		Size:       srcSize,
 		ModTime:    now,
 		ChangeTime: now,
