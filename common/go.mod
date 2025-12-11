@@ -7,7 +7,7 @@ go 1.24.6
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/checkpoint-restore/checkpointctl v1.4.0
-	github.com/checkpoint-restore/go-criu/v7 v7.2.0
+	github.com/checkpoint-restore/go-criu/v8 v8.0.0
 	github.com/containerd/platforms v0.2.1
 	github.com/containernetworking/cni v1.3.0
 	github.com/containernetworking/plugins v1.9.0
