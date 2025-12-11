@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.39.0
 	golang.org/x/term v0.38.0
 	sigs.k8s.io/yaml v1.6.0
-	tags.cncf.io/container-device-interface v1.0.1
+	tags.cncf.io/container-device-interface v1.1.0
 )
 
 require (

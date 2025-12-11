@@ -769,6 +769,6 @@ gotest.tools/v3/internal/source
 # sigs.k8s.io/yaml v1.6.0
 ## explicit; go 1.22
 sigs.k8s.io/yaml
-# tags.cncf.io/container-device-interface v1.0.1
-## explicit; go 1.20
+# tags.cncf.io/container-device-interface v1.1.0
+## explicit; go 1.21
 tags.cncf.io/container-device-interface/pkg/parser
