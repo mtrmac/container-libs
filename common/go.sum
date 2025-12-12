@@ -22,8 +22,8 @@ github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK3
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/checkpoint-restore/checkpointctl v1.4.0 h1:3kRns56TArwiyHOMakaumUgSZZlB1hZBkjVgR6IeZ3E=
-github.com/checkpoint-restore/checkpointctl v1.4.0/go.mod h1:ynQ52zQBazgcTZuxpwTFzRinIcAf0haDTC1X1LA/FKA=
+github.com/checkpoint-restore/checkpointctl v1.4.1 h1:COI5vQxwM9B44Jsod3jQ59LY1KyPdNk6EHRNZEEUc/k=
+github.com/checkpoint-restore/checkpointctl v1.4.1/go.mod h1:CxdaYr8s4hHPL24u0igzEeN9mR7LUWrBBGB0mW6xe0Q=
 github.com/checkpoint-restore/go-criu/v8 v8.0.0 h1:J2nOIhH3g5vQZo2NLbmBq2GnD7pWCXl/ixa5tR9dkn0=
 github.com/checkpoint-restore/go-criu/v8 v8.0.0/go.mod h1:GtCbuv5kNUGKXLEhHwURnHwhHf7VApBd4k0+5cqsRmA=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
