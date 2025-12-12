@@ -30,8 +30,8 @@ github.com/VividCortex/ewma
 # github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 ## explicit
 github.com/acarl005/stripansi
-# github.com/checkpoint-restore/checkpointctl v1.4.0
-## explicit; go 1.23.0
+# github.com/checkpoint-restore/checkpointctl v1.4.1
+## explicit; go 1.24.6
 github.com/checkpoint-restore/checkpointctl/lib
 # github.com/checkpoint-restore/go-criu/v8 v8.0.0
 ## explicit; go 1.24.0
