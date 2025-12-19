@@ -779,10 +779,6 @@ create new containers and pods in that namespace. The default namespace is "",
 which corresponds to no namespace. When no namespace is set, all containers
 and pods are visible.
 
-**network_cmd_path**=""
-
-Path to the slirp4netns binary.
-
 **network_cmd_options**=[]
 
 Default options to pass to the slirp4netns binary.
