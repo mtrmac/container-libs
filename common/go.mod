@@ -116,7 +116,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
-	github.com/vbauerster/mpb/v8 v8.11.2 // indirect
+	github.com/vbauerster/mpb/v8 v8.11.3 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
