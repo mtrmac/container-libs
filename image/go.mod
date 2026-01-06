@@ -27,7 +27,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/proglottis/gpgme v0.1.6
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/secure-systems-lab/go-securesystemslib v0.9.1
+	github.com/secure-systems-lab/go-securesystemslib v0.10.0
 	github.com/sigstore/fulcio v1.8.1
 	github.com/sigstore/sigstore v1.9.6-0.20251111174640-d8ab8afb1326
 	github.com/sirupsen/logrus v1.9.4-0.20251023124752-b61f268f75b6
