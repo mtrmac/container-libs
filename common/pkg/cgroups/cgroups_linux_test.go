@@ -45,13 +45,11 @@ func TestResources(t *testing.T) {
 		return
 	}
 
-	wtDevices := []*cgroups.WeightDevice{}
-	devices := []*cgroups.ThrottleDevice{}
 	dev1 := cgroups.NewThrottleDevice(1, 3, 2097152)
 	dev2 := cgroups.NewThrottleDevice(3, 10, 2097152)
 	dev3 := cgroups.NewWeightDevice(5, 9, 500, 0)
-	devices = append(devices, dev1, dev2)
-	wtDevices = append(wtDevices, dev3)
+	wtDevices := []*cgroups.WeightDevice{dev3}
+	devices := []*cgroups.ThrottleDevice{dev1, dev2}
 
 	var resources cgroups.Resources
 	resources.CpuPeriod = 100000

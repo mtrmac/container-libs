@@ -142,7 +142,7 @@ func TestPushWithForceCompression(t *testing.T) {
 	// blobs from first push
 	entries, err := os.ReadDir(filepath.Join(ociDest, "blobs", "sha256"))
 	require.NoError(t, err)
-	blobsFirstPush := []string{}
+	blobsFirstPush := make([]string, 0, len(entries))
 	for _, e := range entries {
 		blobsFirstPush = append(blobsFirstPush, e.Name())
 	}
@@ -159,7 +159,7 @@ func TestPushWithForceCompression(t *testing.T) {
 	// blobs from second push
 	entries, err = os.ReadDir(filepath.Join(ociDest, "blobs", "sha256"))
 	require.NoError(t, err)
-	blobsSecondPush := []string{}
+	blobsSecondPush := make([]string, 0, len(entries))
 	for _, e := range entries {
 		blobsSecondPush = append(blobsSecondPush, e.Name())
 	}
@@ -180,7 +180,7 @@ func TestPushWithForceCompression(t *testing.T) {
 	// collect blobs from third push
 	entries, err = os.ReadDir(filepath.Join(ociDest, "blobs", "sha256"))
 	require.NoError(t, err)
-	blobsThirdPush := []string{}
+	blobsThirdPush := make([]string, 0, len(entries))
 	for _, e := range entries {
 		blobsThirdPush = append(blobsThirdPush, e.Name())
 	}

@@ -58,8 +58,8 @@ func TestLoadByPath(t *testing.T) {
 
 		// Make sure that all returned names exist as images in the
 		// local containers storage.
-		ids := []string{} // later used for image removal
-		names := [][]string{}
+		ids := make([]string, 0, len(loadedImages)) // later used for image removal
+		names := make([][]string, 0, len(loadedImages))
 		for _, name := range loadedImages {
 			image, resolvedName, err := runtime.LookupImage(name, nil)
 			require.NoError(t, err, test.input)
@@ -127,8 +127,8 @@ func TestLoadReference(t *testing.T) {
 
 		// Make sure that all returned names exist as images in the
 		// local containers storage.
-		ids := []string{} // later used for image removal
-		names := [][]string{}
+		ids := make([]string, 0, len(loadedImages)) // later used for image removal
+		names := make([][]string, 0, len(loadedImages))
 		for _, name := range loadedImages {
 			image, resolvedName, err := runtime.LookupImage(name, nil)
 			require.NoError(t, err, test.input)
