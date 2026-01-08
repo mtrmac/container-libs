@@ -44,6 +44,15 @@ kretfunc:fcntl_setlk
       printf("blocked %s time: %lld msec\n", $lockname, $lock_duration);
     }
 
+    // When observing long lock durations but not knowing what code paths do that
+    // uncomment the lines below and adjust the threshold in order to send SIGABRT
+    // to the process holding the lock. The go runtime should then create a stack
+    // trace which points to the code path holding the lock.
+    // When doing this add --unsafe as argument to bpftrace as it fails otherwise.
+    /*if ($lock_duration > 1000) {
+      signal("SIGABRT");
+    }*/
+
     // store max and create histogram that get printed on bpftrace exit (CTRL-C)
     @block_max[$lockname] = max($lock_duration);
     @block_duration[$lockname] = hist($lock_duration);
