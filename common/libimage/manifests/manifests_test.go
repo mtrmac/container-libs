@@ -229,7 +229,7 @@ func TestAddArtifact(t *testing.T) {
 		}
 		annotationsStr := "<nil>"
 		if annotations != nil {
-			var annotationsSlice []string
+			annotationsSlice := make([]string, 0, len(annotations))
 			for k, v := range annotations {
 				annotationsSlice = append(annotationsSlice, fmt.Sprintf("%q=%q", k, v))
 			}

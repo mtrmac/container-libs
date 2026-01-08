@@ -111,7 +111,7 @@ func TestRuntimeListImagesAllImages(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, images, 2)
-	var imageNames []string
+	imageNames := make([]string, 0, len(images))
 	for _, i := range images {
 		imageNames = append(imageNames, i.Names()...)
 	}
