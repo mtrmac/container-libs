@@ -1,4 +1,4 @@
-package store
+package libartifact
 
 import (
 	"go.podman.io/common/pkg/libartifact/types"

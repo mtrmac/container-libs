@@ -1,18 +1,21 @@
 package libartifact
 
 import (
-	"encoding/json"
-
 	"github.com/opencontainers/go-digest"
 	"go.podman.io/common/pkg/libartifact/types"
 	"go.podman.io/image/v5/manifest"
 )
 
 type Artifact struct {
+	// Digest is the Digest of the artifact
+	Digest digest.Digest
+	Name   string
 	// Manifest is the OCI manifest for the artifact with the name.
 	// In a valid artifact the Manifest is guaranteed to not be nil.
 	Manifest *manifest.OCI1
-	Name     string
+	// rawManifest is the manifest as it was originally read off disk
+	// and has never been marshalled. i.e. the "blob"
+	rawManifest []byte
 }
 
 // TotalSizeBytes returns the total bytes of the all the artifact layers.
@@ -40,15 +43,6 @@ func (a *Artifact) GetName() (string, error) {
 // called Name.
 func (a *Artifact) SetName(name string) {
 	a.Name = name
-}
-
-func (a *Artifact) GetDigest() (*digest.Digest, error) {
-	b, err := json.Marshal(a.Manifest)
-	if err != nil {
-		return nil, err
-	}
-	artifactDigest := digest.FromBytes(b)
-	return &artifactDigest, nil
 }
 
 type ArtifactList []*Artifact
