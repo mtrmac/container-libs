@@ -30,7 +30,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.10.0
 	github.com/sigstore/fulcio v1.8.1
 	github.com/sigstore/sigstore v1.9.6-0.20251111174640-d8ab8afb1326
-	github.com/sirupsen/logrus v1.9.4-0.20251023124752-b61f268f75b6
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/sylabs/sif/v2 v2.22.0
 	github.com/ulikunitz/xz v0.5.15
