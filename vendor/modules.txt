@@ -33,7 +33,7 @@ github.com/acarl005/stripansi
 # github.com/checkpoint-restore/checkpointctl v1.4.1
 ## explicit; go 1.24.6
 github.com/checkpoint-restore/checkpointctl/lib
-# github.com/checkpoint-restore/go-criu/v8 v8.0.0
+# github.com/checkpoint-restore/go-criu/v8 v8.1.0
 ## explicit; go 1.24.0
 github.com/checkpoint-restore/go-criu/v8/stats
 # github.com/chzyer/readline v1.5.1
@@ -714,7 +714,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.36.10
+# google.golang.org/protobuf v1.36.11
 ## explicit; go 1.23
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
