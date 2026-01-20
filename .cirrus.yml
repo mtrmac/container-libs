@@ -243,7 +243,7 @@ image_test_skopeo_task:
         HOME: "/root"  # default unset, needed by golangci-lint.
         GOSRC: "${CIRRUS_WORKING_DIR}"
         GOPATH: "/var/tmp/go"
-        SKOPEO_CI_BRANCH: "main"
+        SKOPEO_CI_BRANCH: "release-1.21"
         SCRIPT_BASE: "./contrib/cirrus"
         # Built along with the standard PR-based workflow in c/automation_images
         SKOPEO_CIDEV_CONTAINER_FQIN: "quay.io/libpod/skopeo_cidev:${IMAGE_SUFFIX}"
