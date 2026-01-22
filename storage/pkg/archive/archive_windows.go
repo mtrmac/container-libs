@@ -73,7 +73,7 @@ func handleLChmod(_ *tar.Header, _ string, _ os.FileInfo, _ *os.FileMode) error 
 
 func getFileUIDGID(_ any) (idtools.IDPair, error) {
 	// no notion of file ownership mapping yet on Windows
-	return idtools.IDPair{0, 0}, nil
+	return idtools.IDPair{UID: 0, GID: 0}, nil
 }
 
 // Hardlink without following symlinks
