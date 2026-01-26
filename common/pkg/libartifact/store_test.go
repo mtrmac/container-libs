@@ -1,4 +1,4 @@
-package store
+package libartifact
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.podman.io/common/pkg/libartifact"
 	libartTypes "go.podman.io/common/pkg/libartifact/types"
 	"go.podman.io/image/v5/types"
 )
@@ -379,8 +378,7 @@ func TestArtifactStore_Add_ReplaceChangesDigest(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, artifacts, 1)
 
-	firstArtifactDigest, err := artifacts[0].GetDigest()
-	require.NoError(t, err)
+	firstArtifactDigest := artifacts[0].Digest
 	assert.Equal(t, originalDigest.String(), firstArtifactDigest.String())
 
 	// Replace the artifact with different content
@@ -404,8 +402,7 @@ func TestArtifactStore_Add_ReplaceChangesDigest(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, artifacts, 1)
 
-	finalArtifactDigest, err := artifacts[0].GetDigest()
-	require.NoError(t, err)
+	finalArtifactDigest := artifacts[0].Digest
 	assert.Equal(t, replacedDigest.String(), finalArtifactDigest.String(),
 		"The artifact in the store should have the new digest")
 	assert.NotEqual(t, firstArtifactDigest.String(), finalArtifactDigest.String(),
@@ -433,8 +430,7 @@ func TestArtifactStore_Remove(t *testing.T) {
 
 	// Get the first artifact and create a reference with it
 	artifact1 := artifacts[0]
-	digest1, err := artifact1.GetDigest()
-	require.NoError(t, err)
+	digest1 := artifact1.Digest
 
 	// Remove the first artifact by digest
 	ref, err := NewArtifactStorageReference(digest1.Encoded())
@@ -452,8 +448,7 @@ func TestArtifactStore_Remove(t *testing.T) {
 
 	// Get the remaining artifact
 	artifact2 := artifacts[0]
-	digest2, err := artifact2.GetDigest()
-	require.NoError(t, err)
+	digest2 := artifact2.Digest
 
 	// Remove the second artifact by digest
 	ref2, err := NewArtifactStorageReference(digest2.Encoded())
@@ -495,8 +490,7 @@ func TestArtifactStore_Inspect(t *testing.T) {
 
 	// Create a reference using the artifact's digest
 	artifact := artifacts[0]
-	digest, err := artifact.GetDigest()
-	require.NoError(t, err)
+	digest := artifact.Digest
 
 	ref, err := NewArtifactStorageReference(digest.Encoded())
 	require.NoError(t, err)
@@ -528,6 +522,25 @@ func TestArtifactStore_Inspect(t *testing.T) {
 	totalSize := inspectedArtifact.TotalSizeBytes()
 	expectedTotal := int64(512 + 1024 + 2048)
 	assert.Equal(t, expectedTotal, totalSize)
+
+	// Test inspecting by digest reference format (repo@digest)
+	// This tests the fix for issue #408 - should be able to inspect by digest
+	// after adding by tag
+	digestRef := "quay.io/test/inspect@" + digest.String()
+	refByDigest, err := NewArtifactStorageReference(digestRef)
+	require.NoError(t, err)
+
+	inspectedByDigest, err := as.Inspect(ctx, refByDigest)
+	require.NoError(t, err, "should be able to inspect artifact by digest reference after adding by tag")
+	require.NotNil(t, inspectedByDigest)
+
+	// Verify it's the same artifact
+	assert.Equal(t, refName, inspectedByDigest.Name)
+	assert.Len(t, inspectedByDigest.Manifest.Layers, 3)
+
+	// Verify the digest matches
+	inspectedDigest := inspectedByDigest.Digest
+	assert.Equal(t, digest.String(), inspectedDigest.String())
 }
 
 func TestArtifactStore_Extract(t *testing.T) {
@@ -549,10 +562,8 @@ func TestArtifactStore_Extract(t *testing.T) {
 
 	// Create a reference using the artifact's digest
 	artifact := artifacts[0]
-	digest, err := artifact.GetDigest()
-	require.NoError(t, err)
 
-	ref, err := NewArtifactStorageReference(digest.Encoded())
+	ref, err := NewArtifactStorageReference(artifact.Digest.Encoded())
 	require.NoError(t, err)
 
 	// Extract to a directory
@@ -586,10 +597,7 @@ func TestArtifactStore_Extract_SingleFile(t *testing.T) {
 
 	// Create a reference using the artifact's digest
 	artifact := artifacts[0]
-	digest, err := artifact.GetDigest()
-	require.NoError(t, err)
-
-	ref, err := NewArtifactStorageReference(digest.Encoded())
+	ref, err := NewArtifactStorageReference(artifact.Digest.Encoded())
 	require.NoError(t, err)
 
 	// Extract only one file by title
@@ -647,7 +655,7 @@ func TestArtifactStore_List_Multiple(t *testing.T) {
 	assert.Len(t, artifacts, 3)
 
 	// Create a map of artifact names for easy lookup
-	artifactMap := make(map[string]*libartifact.Artifact)
+	artifactMap := make(map[string]*Artifact)
 	for _, artifact := range artifacts {
 		artifactMap[artifact.Name] = artifact
 	}
@@ -675,9 +683,7 @@ func TestArtifactStore_List_Multiple(t *testing.T) {
 
 	// Verify all artifacts have valid digests
 	for _, artifact := range artifacts {
-		digest, err := artifact.GetDigest()
-		require.NoError(t, err)
-		assert.NotEmpty(t, digest.String())
+		assert.NotEmpty(t, artifact.Digest.String())
 	}
 }
 
