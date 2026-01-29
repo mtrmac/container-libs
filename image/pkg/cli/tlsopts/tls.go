@@ -1,5 +1,7 @@
 // Package tlsopts provides a common implementation of parsing TLS configuration options,
 // to ensure consistent semantics across containers/* projects.
+//
+// Consider using c/image/pkg/cli/tlsopts/tlscobra instead.
 package tlsopts
 
 import (
