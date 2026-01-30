@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -59,6 +60,12 @@ func TestTlsConfig(t *testing.T) {
 		{&types.SystemContext{
 			DockerDaemonCertPath: filepath.Join("testdata", "certs"),
 		}, false, true, 1},
+		{&types.SystemContext{
+			DockerDaemonCertPath: filepath.Join("testdata", "certs"),
+			BaseTLSConfig: &tls.Config{
+				MinVersion: tls.VersionTLS13,
+			},
+		}, false, true, 1},
 	}
 	for _, c := range tests {
 		httpClient, err := tlsConfig(c.ctx)
@@ -106,6 +113,10 @@ func TestTlsConfig(t *testing.T) {
 		}
 
 		assert.Len(t, tlsCfg.Certificates, c.wantCerts)
+
+		if c.ctx.BaseTLSConfig != nil {
+			assert.Equal(t, c.ctx.BaseTLSConfig.MinVersion, tlsCfg.MinVersion)
+		}
 	}
 
 	for _, c := range []struct {
