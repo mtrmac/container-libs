@@ -30,12 +30,6 @@ type openshiftClient struct {
 
 // newOpenshiftClient creates a new openshiftClient for the specified reference.
 func newOpenshiftClient(ref openshiftReference) (*openshiftClient, error) {
-	// We have already done this parsing in ParseReference, but thrown away
-	// httpClient. So, parse again.
-	// (We could also rework/split restClientFor to "get base URL" to be done
-	// in ParseReference, and "get httpClient" to be done here.  But until/unless
-	// we support non-default clusters, this is good enough.)
-
 	// Overall, this is modelled on openshift/origin/pkg/cmd/util/clientcmd.New().ClientConfig() and openshift/origin/pkg/client.
 	cmdConfig := defaultClientConfig()
 	logrus.Debugf("cmdConfig: %#v", cmdConfig)
