@@ -15,6 +15,12 @@ func FromURL(tmpdir, source string) (string, error) {
 		return "", fmt.Errorf("creating temporary download file: %w", err)
 	}
 	defer tmp.Close()
+	succeeded := false
+	defer func() {
+		if !succeeded {
+			os.Remove(tmp.Name())
+		}
+	}()
 
 	response, err := http.Get(source) // nolint:noctx
 	if err != nil {
@@ -27,5 +33,6 @@ func FromURL(tmpdir, source string) (string, error) {
 		return "", fmt.Errorf("copying %s to %s: %w", source, tmp.Name(), err)
 	}
 
+	succeeded = true
 	return tmp.Name(), nil
 }
