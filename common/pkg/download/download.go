@@ -2,15 +2,22 @@ package download
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
 
+// Options holds named options for FromURL.
+type Options struct {
+	// If not nil, may contain TLS _algorithm_ options (e.g. TLS version, cipher suites, “curves”, etc.).
+	BaseTLSConfig *tls.Config
+}
+
 // FromURL downloads the specified source to a file in tmpdir (OS defaults if
 // empty).
-func FromURL(ctx context.Context, tmpdir, source string) (string, error) {
+func FromURL(ctx context.Context, tmpdir, source string, options Options) (string, error) {
 	tmp, err := os.CreateTemp(tmpdir, "")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary download file: %w", err)
@@ -23,7 +30,16 @@ func FromURL(ctx context.Context, tmpdir, source string) (string, error) {
 		}
 	}()
 
-	client := &http.Client{}
+	var transport *http.Transport // nil means http.DefaultTransport
+	if options.BaseTLSConfig != nil {
+		transport = &http.Transport{
+			TLSClientConfig: options.BaseTLSConfig,
+		}
+		defer transport.CloseIdleConnections()
+	}
+	client := &http.Client{
+		Transport: transport,
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
 	if err != nil {
 		return "", fmt.Errorf("preparing to download %q: %w", source, err)
