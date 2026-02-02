@@ -2,6 +2,7 @@ package configfile
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"iter"
@@ -212,7 +213,7 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			for _, module := range conf.Modules {
 				f, err := resolveModule(module, dirs)
 				if err != nil {
-					yield(nil, err)
+					yield(nil, fmt.Errorf("could not resolve module: %w", err))
 					return
 				}
 				resolvedModules = append(resolvedModules, f.Name())
@@ -354,7 +355,7 @@ func ParseTOML(configStruct any, conf *File) error {
 		}
 		meta, err := toml.NewDecoder(item.Reader).Decode(configStruct)
 		if err != nil {
-			return err
+			return fmt.Errorf("decode configuration %q: %w", item.Name, err)
 		}
 		keys := meta.Undecoded()
 		if len(keys) > 0 {
