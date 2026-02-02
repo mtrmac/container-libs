@@ -1,6 +1,7 @@
 package download
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 
 // FromURL downloads the specified source to a file in tmpdir (OS defaults if
 // empty).
-func FromURL(tmpdir, source string) (string, error) {
+func FromURL(ctx context.Context, tmpdir, source string) (string, error) {
 	tmp, err := os.CreateTemp(tmpdir, "")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary download file: %w", err)
@@ -22,7 +23,12 @@ func FromURL(tmpdir, source string) (string, error) {
 		}
 	}()
 
-	response, err := http.Get(source) // nolint:noctx
+	client := &http.Client{}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
+	if err != nil {
+		return "", fmt.Errorf("preparing to download %q: %w", source, err)
+	}
+	response, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("downloading %s: %w", source, err)
 	}

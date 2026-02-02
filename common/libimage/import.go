@@ -69,7 +69,7 @@ func (r *Runtime) Import(ctx context.Context, path string, options *ImportOption
 	if err == nil && u.Scheme != "" {
 		// If source is a URL, download the file.
 		fmt.Printf("Downloading from %q\n", path) //nolint:forbidigo
-		file, err := download.FromURL(r.systemContext.BigFilesTemporaryDir, path)
+		file, err := download.FromURL(ctx, r.systemContext.BigFilesTemporaryDir, path)
 		if err != nil {
 			return "", err
 		}
