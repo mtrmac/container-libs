@@ -361,6 +361,11 @@ func ParseTOML(configStruct any, conf *File) error {
 		if len(keys) > 0 {
 			logrus.Debugf("Failed to decode the keys %q from %q", keys, item.Name)
 		}
+
+		logrus.Debugf("Read config file %q", item.Name)
+		// This prints large potentially large structs so keep it to trace level only.
+		// It can however be useful to figure out which setting come from which file.
+		logrus.Tracef("Merged new config: %+v", configStruct)
 	}
 	return nil
 }
