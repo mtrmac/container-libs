@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - podman-*
   pull_request:
     branches:
       - main
+      - podman-*
 
 permissions: read-all
 
