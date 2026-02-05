@@ -13,34 +13,26 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
 
-// DigestUse represents a use of a digest.Digest value
-type DigestUse struct {
-	File    string // relative file path
-	Line    int    // line number
-	Column  int    // column number
-	Ignored bool   // true if this is construction/initialization, not a real use
-	Kind    string // kind of use (for future filtering)
-	Name    string // identifier name
+// SystemContextUse represents a use of types.SystemContext
+type SystemContextUse struct {
+	File   string // relative file path
+	Line   int    // line number
+	Column int    // column number
+	Kind   string // kind of use
+	Name   string // identifier name
 }
 
-// String returns a formatted string representation of the DigestUse
-func (du DigestUse) String() string {
-	kind := du.Kind
-	if du.Ignored {
-		kind = "ignored " + kind
-	}
-	return fmt.Sprintf("%s:%d:%d: %s %s", du.File, du.Line, du.Column, kind, du.Name)
+// String returns a formatted string representation of the SystemContextUse
+func (u SystemContextUse) String() string {
+	return fmt.Sprintf("%s:%d:%d: %s %s", u.File, u.Line, u.Column, u.Kind, u.Name)
 }
 
 func main() {
-	var showIgnored bool
-	flag.BoolVar(&showIgnored, "show-ignored", false, "include ignored uses (construction/initialization) in output")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -50,24 +42,20 @@ func main() {
 	}
 
 	dir := flag.Arg(0)
-	uses, err := auditDigestUses(dir)
+	uses, err := auditSystemContextUses(dir)
 	if err != nil {
-		log.Fatalf("Error auditing digest uses: %v", err)
+		log.Fatalf("Error auditing SystemContext uses: %v", err)
 	}
 
 	// Print results in VS Code compatible format
 	for _, use := range uses {
-		// Skip ignored uses unless -show-ignored flag is set
-		if use.Ignored && !showIgnored {
-			continue
-		}
 		fmt.Println(use.String())
 	}
 }
 
-// auditDigestUses finds all uses of digest.Digest values in the given directory
-// Returns all uses (including those with Ignored=true), error
-func auditDigestUses(dir string) ([]DigestUse, error) {
+// auditSystemContextUses finds all problematic uses of types.SystemContext in the given directory
+// Returns all uses, error
+func auditSystemContextUses(dir string) ([]SystemContextUse, error) {
 	// Determine if input path is absolute
 	inputIsAbsolute := filepath.IsAbs(dir)
 
@@ -107,7 +95,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		return nil, fmt.Errorf("no packages found in %s", dir)
 	}
 
-	var uses []DigestUse
+	var uses []SystemContextUse
 
 	// Process each package
 	for _, pkg := range pkgs {
@@ -118,41 +106,21 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 		// Walk AST of each file in the package
 		for _, file := range pkg.Syntax {
 			// Track which nodes we've already recorded to avoid duplicates
-			// Use separate maps so we don't skip a non-ignored use when an ignored one exists
-			recordedReported := make(map[ast.Node]bool)
-			recordedIgnored := make(map[ast.Node]bool)
+			// Key is combination of node and kind to allow multiple reports per node
+			type nodeKey struct {
+				node ast.Node
+				kind string
+			}
+			recordedNodes := make(map[nodeKey]bool)
 
 			// Use PreorderStack to walk with parent stack tracking
 			ast.PreorderStack(file, nil, func(node ast.Node, stack []ast.Node) bool {
-				expr, ok := node.(ast.Expr)
-				if !ok {
-					return true
-				}
-
-				// Skip type expressions - we only want values
-				if isTypeExpr(expr, pkg) {
-					return true
-				}
-
-				// Check if this expression has digest.Digest or digest.Algorithm type
-				exprType := pkg.TypesInfo.TypeOf(expr)
-				if exprType == nil || !(isDigestType(exprType) || isAlgorithmType(exprType)) {
-					return true
-				}
-
-				// Found a digest.Digest or digest.Algorithm value expression
-				// Determine if we should report it or its parent
-				use := determineUse(expr, stack, pkg)
-
-				// Check if we've already recorded this use
-				if use.ignored {
-					if !recordedIgnored[use.node] {
-						recordedIgnored[use.node] = true
-						uses = append(uses, recordUse(use, pkg, cwd, inputIsAbsolute))
-					}
-				} else {
-					if !recordedReported[use.node] {
-						recordedReported[use.node] = true
+				foundUses := checkForSystemContextUse(node, stack, pkg)
+				for _, use := range foundUses {
+					// Check if we've already recorded this use
+					key := nodeKey{use.node, use.kind}
+					if !recordedNodes[key] {
+						recordedNodes[key] = true
 						uses = append(uses, recordUse(use, pkg, cwd, inputIsAbsolute))
 					}
 				}
@@ -163,7 +131,7 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	}
 
 	// Sort by file, line, column for consistent output
-	slices.SortFunc(uses, func(a, b DigestUse) int {
+	slices.SortFunc(uses, func(a, b SystemContextUse) int {
 		return cmp.Or(
 			cmp.Compare(a.File, b.File),
 			cmp.Compare(a.Line, b.Line),
@@ -174,16 +142,15 @@ func auditDigestUses(dir string) ([]DigestUse, error) {
 	return uses, nil
 }
 
-// useInfo describes what use to report for a digest.Digest value
+// useInfo describes what use to report
 type useInfo struct {
-	node    ast.Node // the node to report (position)
-	ignored bool     // true if this is construction/initialization, not a real use
-	kind    string   // kind of use
-	name    string   // descriptive name
+	node ast.Node // the node to report (position)
+	kind string   // kind of use
+	name string   // descriptive name
 }
 
-// recordUse creates a DigestUse record from useInfo
-func recordUse(use *useInfo, pkg *packages.Package, cwd string, useAbsolute bool) DigestUse {
+// recordUse creates a SystemContextUse record from useInfo
+func recordUse(use *useInfo, pkg *packages.Package, cwd string, useAbsolute bool) SystemContextUse {
 	pos := pkg.Fset.Position(use.node.Pos())
 
 	var filePath string
@@ -199,443 +166,540 @@ func recordUse(use *useInfo, pkg *packages.Package, cwd string, useAbsolute bool
 		filePath = relPath
 	}
 
-	return DigestUse{
-		File:    filePath,
-		Line:    pos.Line,
-		Column:  pos.Column,
-		Ignored: use.ignored,
-		Kind:    use.kind,
-		Name:    use.name,
+	return SystemContextUse{
+		File:   filePath,
+		Line:   pos.Line,
+		Column: pos.Column,
+		Kind:   use.kind,
+		Name:   use.name,
 	}
 }
 
-// determineUse decides what to report for a digest.Digest expression
-// Returns useInfo with ignored=true if this is construction/initialization, not a use
-func determineUse(expr ast.Expr, stack []ast.Node, pkg *packages.Package) *useInfo {
-	// Get parent from stack
-	// PreorderStack provides stack of ancestors, NOT including current node
-	// So the parent is the last element in the stack
-	var parent ast.Node
-	if len(stack) > 0 {
-		parent = stack[len(stack)-1]
+// checkForSystemContextUse checks if a node represents a problematic SystemContext use
+// Returns empty slice if not a reportable use
+func checkForSystemContextUse(node ast.Node, stack []ast.Node, pkg *packages.Package) []*useInfo {
+	var results []*useInfo
+
+	// Check for struct field declarations
+	if use := checkFieldDeclaration(node, stack, pkg); use != nil {
+		results = append(results, use)
 	}
 
-	// No parent case - this is expected for top-level expressions
-	if parent == nil {
-		return &useInfo{
-			node:    expr,
-			ignored: false,
-			kind:    determineExprKind(expr),
-			name:    getOriginalExprText(expr, pkg.Fset),
-		}
+	// Check for variable definitions (var or :=)
+	if use := checkVarDefinition(node, pkg); use != nil {
+		results = append(results, use)
 	}
 
-	// Get the type of expr to apply type-specific special cases
-	exprType := pkg.TypesInfo.TypeOf(expr)
-	isDigest := isDigestType(exprType)
-	isAlgorithm := isAlgorithmType(exprType)
+	// Check for nil assignments/uses
+	if use := checkNilUse(node, stack, pkg); use != nil {
+		results = append(results, use)
+	}
 
-	// Special cases for digest.Digest and digest.Algorithm
-	switch p := parent.(type) {
-	case *ast.BinaryExpr:
-		// Digest-only special cases: empty string and nil comparisons
-		if isDigest && (p.Op == token.EQL || p.Op == token.NEQ) && (p.X == expr || p.Y == expr) {
-			// Check if expr itself is an empty string literal
-			if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
-					// This is the empty string in a comparison - ignore it
-					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
-				}
-			}
-			// Check if expr itself is nil
-			if ident, ok := expr.(*ast.Ident); ok && ident.Name == "nil" {
-				// This is nil in a comparison with digest pointer - ignore it
-				return &useInfo{node: expr, ignored: true, kind: "cmp-nil", name: getOriginalExprText(expr, pkg.Fset)}
-			}
-			// Check the other operand
-			var otherExpr ast.Expr
-			if p.X == expr {
-				otherExpr = p.Y
-			} else {
-				otherExpr = p.X
-			}
-			// Check if the other operand is an empty string literal
-			if lit, ok := otherExpr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-				if unquoted, err := strconv.Unquote(lit.Value); err == nil && unquoted == "" {
-					// This is a digest in comparison with empty string - ignore it
-					return &useInfo{node: expr, ignored: true, kind: "cmp-empty-string", name: getOriginalExprText(expr, pkg.Fset)}
-				}
-			}
-			// Check if the other operand is nil
-			if ident, ok := otherExpr.(*ast.Ident); ok && ident.Name == "nil" {
-				// This is a digest pointer in comparison with nil - ignore it
-				return &useInfo{node: expr, ignored: true, kind: "cmp-nil", name: getOriginalExprText(expr, pkg.Fset)}
-			}
-		}
-	case *ast.SelectorExpr:
-		if p.X == expr && p.Sel != nil {
-			// Digest-only special case: Validate() call
-			if isDigest && p.Sel.Name == "Validate" {
-				// This is expr.Validate() - validation call, ignore it
-				return &useInfo{node: expr, ignored: true, kind: "digest-validate", name: getOriginalExprText(expr, pkg.Fset)}
-			}
-			// Both Digest and Algorithm: String() call inside logrus logging or fmt.Errorf
-			if (isDigest || isAlgorithm) && p.Sel.Name == "String" {
-				// This is expr.String() - check if it's inside fmt.Errorf or logrus logging
-				// Check fmt.Errorf first since it's more specific
-				if isInFmtErrorf(stack, pkg) {
-					kindName := "digest-string-in-errorf"
-					if isAlgorithm {
-						kindName = "algorithm-string-in-errorf"
+	// Check for empty SystemContext{} literal uses
+	if use := checkLiteralUse(node, pkg); use != nil {
+		results = append(results, use)
+	}
+
+	// Check for struct literals with implicit nil/empty SystemContext fields
+	results = append(results, checkImplicitNilInStructLiteral(node, pkg)...)
+
+	return results
+}
+
+// checkFieldDeclaration checks if node is a struct field declaration with SystemContext type
+func checkFieldDeclaration(node ast.Node, stack []ast.Node, pkg *packages.Package) *useInfo {
+	field, ok := node.(*ast.Field)
+	if !ok {
+		return nil
+	}
+
+	// Check if this is a struct field (not a function parameter)
+	// Parent is FieldList, grandparent should be StructType for struct fields
+	if len(stack) < 2 {
+		return nil
+	}
+
+	// Parent should be FieldList
+	if _, ok := stack[len(stack)-1].(*ast.FieldList); !ok {
+		return nil
+	}
+
+	// Grandparent should be StructType (not FuncType for parameters)
+	if _, ok := stack[len(stack)-2].(*ast.StructType); !ok {
+		return nil
+	}
+
+	// Check if the field type is SystemContext
+	fieldType := pkg.TypesInfo.TypeOf(field.Type)
+	if fieldType == nil || !isSystemContextType(fieldType) {
+		return nil
+	}
+
+	// Get field name
+	var fieldName string
+	if len(field.Names) > 0 {
+		fieldName = field.Names[0].Name
+	} else {
+		// Embedded field
+		fieldName = getOriginalExprText(field.Type, pkg.Fset)
+	}
+
+	return &useInfo{
+		node: field,
+		kind: "field-declaration",
+		name: fieldName,
+	}
+}
+
+// checkVarDefinition checks if node is a variable definition with SystemContext type
+// Reports: var declarations and := assignments that create new SystemContext variables
+func checkVarDefinition(node ast.Node, pkg *packages.Package) *useInfo {
+	switch n := node.(type) {
+	case *ast.ValueSpec:
+		// var declaration: var ctx types.SystemContext or var ctx *types.SystemContext
+		// Check if any of the declared names have SystemContext type
+		for _, name := range n.Names {
+			if obj := pkg.TypesInfo.Defs[name]; obj != nil {
+				if isSystemContextType(obj.Type()) {
+					return &useInfo{
+						node: name,
+						kind: "var-definition",
+						name: name.Name,
 					}
-					return &useInfo{node: expr, ignored: true, kind: kindName, name: getOriginalExprText(expr, pkg.Fset)}
 				}
-				if isInLogrusCall(stack, pkg) {
-					kindName := "digest-string-in-logrus"
-					if isAlgorithm {
-						kindName = "algorithm-string-in-logrus"
-					}
-					return &useInfo{node: expr, ignored: true, kind: kindName, name: getOriginalExprText(expr, pkg.Fset)}
-				}
-			}
-		}
-	}
-
-	// Handle all known parent situations
-	switch p := parent.(type) {
-	case *ast.SelectorExpr:
-		// expr.Method or expr.Field
-		if p.X == expr {
-			// Report the selector (method/field access), not the receiver
-			return &useInfo{node: p.Sel, ignored: false, kind: "selector", name: p.Sel.Name}
-		}
-		// Check if expr is the field being selected (p.Sel)
-		if p.Sel == expr {
-			// This is a field access where the field itself is a digest
-			// Pure value move (field access)
-			return &useInfo{node: expr, ignored: true, kind: "field-access", name: getOriginalExprText(expr, pkg.Fset)}
-		}
-
-	case *ast.BinaryExpr:
-		// expr op expr2 or expr2 op expr
-		if p.X == expr || p.Y == expr {
-			// Report the binary operation
-			return &useInfo{node: p, ignored: false, kind: "binary-op", name: p.Op.String()}
-		}
-
-	case *ast.UnaryExpr:
-		// op expr (like &expr)
-		if p.X == expr {
-			if p.Op == token.AND {
-				// Pure value move (taking address)
-				return &useInfo{node: p, ignored: true, kind: "addr-of", name: p.Op.String()}
-			}
-			// Other unary operations are reported
-			return &useInfo{node: p, ignored: false, kind: "unary-op", name: p.Op.String()}
-		}
-
-	case *ast.CallExpr:
-		// Function/method call or type conversion with expr as argument
-		for i, arg := range p.Args {
-			if arg == expr {
-				// Check if this is a type conversion or a function/method call
-				funType := pkg.TypesInfo.TypeOf(p.Fun)
-				if _, isType := funType.(*types.Basic); isType {
-					// Type conversion (e.g., string(digest))
-					return &useInfo{node: expr, ignored: false, kind: "type-cast", name: funType.String()}
-				}
-
-				// Check if the type is a named type (also indicates type conversion)
-				if _, isNamed := funType.(*types.Named); isNamed {
-					// Type conversion to named type
-					return &useInfo{node: expr, ignored: false, kind: "type-cast", name: funType.String()}
-				}
-
-				// It's a function or method call - get parameter name
-				paramName, err := getParameterName(p.Fun, i, pkg)
-				if err != nil {
-					// Unexpected situation: fall through to unhandled case
-					// This will report it rather than ignore it
-					break
-				}
-				// This is a pure value move (passing argument to function)
-				return &useInfo{node: expr, ignored: true, kind: "call-arg", name: paramName}
 			}
 		}
 
 	case *ast.AssignStmt:
-		// Assignment involving expr
-		for _, rhs := range p.Rhs {
-			if rhs == expr {
-				// expr is on right-hand side of assignment
-				// This is construction/initialization, not a use
-				return &useInfo{node: expr, ignored: true, kind: "assign-rhs", name: getOriginalExprText(expr, pkg.Fset)}
-			}
-		}
-		// Check if it's on LHS (being assigned to, or declared with :=)
-		for _, lhs := range p.Lhs {
-			if lhs == expr {
-				// Identifier on LHS of assignment (including := declarations)
-				// This is a pure value move (declaration/assignment destination)
-				return &useInfo{node: expr, ignored: true, kind: "assign-lhs", name: getOriginalExprText(expr, pkg.Fset)}
-			}
+		// := assignment
+		if n.Tok != token.DEFINE {
+			return nil // Not a := assignment
 		}
 
-	case *ast.ReturnStmt:
-		// Return statement with expr
-		for _, result := range p.Results {
-			if result == expr {
-				// Returning a value is not a "use" - it's passing ownership
-				return &useInfo{node: expr, ignored: true, kind: "return", name: getOriginalExprText(expr, pkg.Fset)}
+		// Check each LHS identifier being defined
+		for _, lhs := range n.Lhs {
+			ident, ok := lhs.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if obj := pkg.TypesInfo.Defs[ident]; obj != nil {
+				if isSystemContextType(obj.Type()) {
+					return &useInfo{
+						node: ident,
+						kind: "var-definition",
+						name: ident.Name,
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkNilUse checks if node is setting a *types.SystemContext to nil
+func checkNilUse(node ast.Node, stack []ast.Node, pkg *packages.Package) *useInfo {
+	ident, ok := node.(*ast.Ident)
+	if !ok || ident.Name != "nil" {
+		return nil
+	}
+
+	// Get parent from stack
+	var parent ast.Node
+	if len(stack) > 0 {
+		parent = stack[len(stack)-1]
+	}
+	if parent == nil {
+		return nil
+	}
+
+	switch p := parent.(type) {
+	case *ast.AssignStmt:
+		// Check if nil is on RHS being assigned to a *SystemContext
+		for i, rhs := range p.Rhs {
+			if rhs == ident {
+				if i < len(p.Lhs) {
+					lhs := p.Lhs[i]
+					lhsType := pkg.TypesInfo.TypeOf(lhs)
+					if isSystemContextPtrType(lhsType) {
+						return &useInfo{
+							node: ident,
+							kind: "nil-assignment",
+							name: getOriginalExprText(lhs, pkg.Fset),
+						}
+					}
+				}
 			}
 		}
 
 	case *ast.ValueSpec:
-		// Variable declaration with initialization
-		// Check if expr is the Type (type expression in a declaration)
-		if p.Type == expr {
-			// This is a type expression (e.g., *digest.Digest in var x *digest.Digest)
-			// This is a type declaration, not a use of a value
-			return &useInfo{node: expr, ignored: true, kind: "var-type", name: getOriginalExprText(expr, pkg.Fset)}
-		}
-		for _, val := range p.Values {
-			if val == expr {
-				// expr is an initializer value
-				// This is initialization, not a use
-				return &useInfo{node: expr, ignored: true, kind: "var-init", name: getOriginalExprText(expr, pkg.Fset)}
-			}
-		}
-		// Check if it's a name being declared
-		for _, name := range p.Names {
-			if name == expr {
-				// The digest is the name being declared
-				// This is a pure value move (variable declaration)
-				return &useInfo{node: expr, ignored: true, kind: "var-name", name: getOriginalExprText(expr, pkg.Fset)}
+		// var ctx *types.SystemContext = nil
+		for i, val := range p.Values {
+			if val == ident {
+				if i < len(p.Names) {
+					name := p.Names[i]
+					if obj := pkg.TypesInfo.Defs[name]; obj != nil {
+						if isSystemContextPtrType(obj.Type()) {
+							return &useInfo{
+								node: ident,
+								kind: "nil-init",
+								name: name.Name,
+							}
+						}
+					}
+				}
 			}
 		}
 
-	case *ast.CompositeLit:
-		// Composite literal containing expr
-		for _, elt := range p.Elts {
-			if elt == expr {
-				// Pure value move (element in literal)
-				return &useInfo{node: expr, ignored: true, kind: "composite-lit", name: getExprName(expr, pkg.Fset)}
+	case *ast.CallExpr:
+		// Check if this is a type conversion like (*Type)(nil) vs a function call
+		funType := pkg.TypesInfo.TypeOf(p.Fun)
+		if funType == nil {
+			return nil
+		}
+		sig, isSignature := funType.(*types.Signature)
+		if !isSignature {
+			// Type conversion, not a function call
+			convType := pkg.TypesInfo.TypeOf(p)
+			if isSystemContextPtrType(convType) {
+				return &useInfo{
+					node: ident,
+					kind: "nil-conversion",
+					name: "*SystemContext",
+				}
 			}
+			return nil
 		}
 
-	case *ast.IndexExpr:
-		// Array/slice/map access
-		if p.X == expr {
-			// digestValue[something] - the digest is being indexed
-			return &useInfo{node: expr, ignored: false, kind: "index", name: getExprName(expr, pkg.Fset)}
-		}
-		if p.Index == expr {
-			// something[digestValue] - the digest is used as a key/index
-			// Report the collection name (something), not the digest value
-			return &useInfo{node: expr, ignored: false, kind: "index-key-in", name: getExprName(p.X, pkg.Fset)}
+		// Passing nil as argument to function expecting *SystemContext
+		for i, arg := range p.Args {
+			if arg == ident {
+				paramType, err := getParameterType(sig, i)
+				if err != nil {
+					pos := pkg.Fset.Position(ident.Pos())
+					fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: failed to get parameter type: %v\n",
+						pos.Filename, pos.Line, pos.Column, err)
+					continue
+				}
+				if isSystemContextPtrType(paramType) {
+					paramName, err := getParameterName(sig, i)
+					if err != nil {
+						pos := pkg.Fset.Position(ident.Pos())
+						fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: failed to get parameter name: %v\n",
+							pos.Filename, pos.Line, pos.Column, err)
+					}
+					if paramName == "" {
+						paramName = fmt.Sprintf("arg%d", i)
+					}
+					return &useInfo{
+						node: ident,
+						kind: "nil-argument",
+						name: paramName,
+					}
+				}
+			}
 		}
 
 	case *ast.KeyValueExpr:
-		// Key or value in map/struct literal
-		if p.Key == expr {
-			// Check if this is in a struct literal (field name)
-			// Get grandparent (should be CompositeLit)
+		// nil in struct/map literal: Container{SysCtx: nil}
+		if p.Value == ident {
 			var grandparent ast.Node
 			if len(stack) >= 2 {
 				grandparent = stack[len(stack)-2]
 			}
 
 			if compositeLit, ok := grandparent.(*ast.CompositeLit); ok {
-				// Check if the composite literal type is a struct
 				litType := pkg.TypesInfo.TypeOf(compositeLit)
 				if litType != nil {
-					if _, isStruct := litType.Underlying().(*types.Struct); isStruct {
-						// Struct key (field name) is ignored
-						return &useInfo{node: expr, ignored: true, kind: "struct-key", name: getExprName(expr, pkg.Fset)}
+					if structType, ok := litType.Underlying().(*types.Struct); ok {
+						if keyIdent, ok := p.Key.(*ast.Ident); ok {
+							for i := 0; i < structType.NumFields(); i++ {
+								field := structType.Field(i)
+								if field.Name() == keyIdent.Name {
+									if isSystemContextPtrType(field.Type()) {
+										return &useInfo{
+											node: ident,
+											kind: "nil-field-value",
+											name: keyIdent.Name,
+										}
+									}
+									break
+								}
+							}
+						}
 					}
 				}
 			}
-			// Default: map key is reported (used for hashing)
-			// This is fail-safe: if we can't determine, assume it's a use
-			return &useInfo{node: expr, ignored: false, kind: "map-key", name: getExprName(expr, pkg.Fset)}
-		}
-		if p.Value == expr {
-			// Value is ignored (pure storage) in both map and struct
-			return &useInfo{node: expr, ignored: true, kind: "map-value", name: getExprName(expr, pkg.Fset)}
 		}
 
-	case *ast.Field:
-		// Function parameter, struct field, etc.
-		// Check if expr is the Type (type expression in a declaration)
-		if p.Type == expr {
-			// This is a type expression (e.g., *digest.Digest as parameter type)
-			// This is a type declaration, not a use of a value
-			return &useInfo{node: expr, ignored: true, kind: "field-type", name: getOriginalExprText(expr, pkg.Fset)}
-		}
-		// Check if expr is one of the Names
-		for _, name := range p.Names {
-			if name == expr {
-				// This is a parameter/field name
-				// This is a pure value move (parameter/field declaration)
-				return &useInfo{node: expr, ignored: true, kind: "field-name", name: getOriginalExprText(expr, pkg.Fset)}
+	case *ast.ReturnStmt:
+		// return nil from function returning *SystemContext
+		for i, result := range p.Results {
+			if result == ident {
+				encFunc := findEnclosingFunc(stack)
+				if encFunc == nil {
+					pos := pkg.Fset.Position(ident.Pos())
+					fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: nil in return statement but no enclosing function found\n",
+						pos.Filename, pos.Line, pos.Column)
+					continue
+				}
+				retType, err := getReturnType(encFunc, i, pkg)
+				if err != nil {
+					pos := pkg.Fset.Position(ident.Pos())
+					fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: failed to get return type: %v\n",
+						pos.Filename, pos.Line, pos.Column, err)
+					continue
+				}
+				if isSystemContextPtrType(retType) {
+					return &useInfo{
+						node: ident,
+						kind: "nil-return",
+						name: "return",
+					}
+				}
 			}
 		}
+	}
 
-	case *ast.RangeStmt:
-		// Range statement
-		if p.Key == expr {
-			// Range key is ignored (iteration index/key variable)
-			return &useInfo{node: expr, ignored: true, kind: "range-key", name: getOriginalExprText(expr, pkg.Fset)}
-		}
-		if p.Value == expr {
-			// Range value is ignored (iteration value variable)
-			return &useInfo{node: expr, ignored: true, kind: "range-value", name: getOriginalExprText(expr, pkg.Fset)}
-		}
-		if p.X == expr {
-			// Range expression is reported (the collection being iterated over)
-			return &useInfo{node: expr, ignored: false, kind: "range-expr", name: getOriginalExprText(expr, pkg.Fset)}
-		}
+	return nil
+}
 
-	case *ast.StarExpr:
-		// Dereferencing a pointer: *expr
-		if p.X == expr {
-			// Pure value move (pointer dereference)
-			return &useInfo{node: p, ignored: true, kind: "deref", name: "*" + getExprName(expr, pkg.Fset)}
-		}
+// checkLiteralUse reports all types.SystemContext{...} literals
+func checkLiteralUse(node ast.Node, pkg *packages.Package) *useInfo {
+	compositeLit, ok := node.(*ast.CompositeLit)
+	if !ok {
+		return nil
+	}
 
-	case *ast.SwitchStmt:
-		// Switch statement on a digest value
-		if p.Tag == expr {
-			// This is the switch tag, a use
-			return &useInfo{node: expr, ignored: false, kind: "switch-tag", name: getOriginalExprText(expr, pkg.Fset)}
-		}
+	litType := pkg.TypesInfo.TypeOf(compositeLit)
+	if litType == nil {
+		pos := pkg.Fset.Position(compositeLit.Pos())
+		log.Fatalf("FATAL: %s:%d:%d: no type info for composite literal",
+			pos.Filename, pos.Line, pos.Column)
+	}
+	if !isSystemContextTypeExact(litType) {
+		return nil // Not a SystemContext literal
+	}
 
-	case *ast.CaseClause:
-		// Case clause in a switch
-		for _, caseExpr := range p.List {
-			if caseExpr == expr {
-				// This is a case value being compared
-				return &useInfo{node: expr, ignored: false, kind: "case-value", name: getOriginalExprText(expr, pkg.Fset)}
+	return &useInfo{
+		node: compositeLit,
+		kind: "literal",
+		name: "SystemContext{}",
+	}
+}
+
+// checkImplicitNilInStructLiteral checks if a struct literal has a *SystemContext field
+// that is not explicitly set (implicitly nil)
+func checkImplicitNilInStructLiteral(node ast.Node, pkg *packages.Package) []*useInfo {
+	compositeLit, ok := node.(*ast.CompositeLit)
+	if !ok {
+		return nil
+	}
+
+	// Get the type of the composite literal
+	litType := pkg.TypesInfo.TypeOf(compositeLit)
+	if litType == nil {
+		return nil
+	}
+
+	// Check if this is a struct type
+	structType, ok := litType.Underlying().(*types.Struct)
+	if !ok {
+		return nil
+	}
+
+	// Find all SystemContext fields in the struct (both pointer and non-pointer)
+	var sysCtxPtrFields []string   // *types.SystemContext fields
+	var sysCtxValueFields []string // types.SystemContext fields
+	for field := range structType.Fields() {
+		if isSystemContextPtrType(field.Type()) {
+			sysCtxPtrFields = append(sysCtxPtrFields, field.Name())
+		} else if isSystemContextTypeExact(field.Type()) {
+			sysCtxValueFields = append(sysCtxValueFields, field.Name())
+		}
+	}
+
+	if len(sysCtxPtrFields) == 0 && len(sysCtxValueFields) == 0 {
+		return nil
+	}
+
+	// Find which fields are explicitly set in the literal
+	explicitlySet := make(map[string]bool)
+	for _, elt := range compositeLit.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			if keyIdent, ok := kv.Key.(*ast.Ident); ok {
+				explicitlySet[keyIdent.Name] = true
 			}
 		}
+	}
 
-	case *ast.ArrayType:
-		// Array or slice type declaration
-		if p.Elt == expr {
-			// This is the element type of an array/slice (e.g., []digest.Digest or []*digest.Digest)
-			return &useInfo{node: expr, ignored: true, kind: "array-type", name: getOriginalExprText(expr, pkg.Fset)}
+	var results []*useInfo
+
+	// Check if any *SystemContext field is not explicitly set (implicitly nil)
+	for _, fieldName := range sysCtxPtrFields {
+		if !explicitlySet[fieldName] {
+			results = append(results, &useInfo{
+				node: compositeLit,
+				kind: "implicit-nil-field",
+				name: fieldName,
+			})
 		}
-
-	case *ast.ParenExpr:
-		// Parenthesized expression - ignored (transparent wrapper)
-		return &useInfo{node: expr, ignored: true, kind: "paren", name: getOriginalExprText(expr, pkg.Fset)}
 	}
 
-	// Unhandled situation: warn and report the expression itself
-	pos := pkg.Fset.Position(expr.Pos())
-	exprText := getOriginalExprText(expr, pkg.Fset)
-	fmt.Fprintf(os.Stderr, "WARNING: %s:%d:%d: unhandled digest expression %q in parent %s\n",
-		pos.Filename, pos.Line, pos.Column, exprText, fmt.Sprintf("%T", parent))
+	// Check if any SystemContext field is not explicitly set (implicitly empty)
+	for _, fieldName := range sysCtxValueFields {
+		if !explicitlySet[fieldName] {
+			results = append(results, &useInfo{
+				node: compositeLit,
+				kind: "implicit-empty-literal-field",
+				name: fieldName,
+			})
+		}
+	}
 
-	return &useInfo{node: expr, ignored: false, kind: determineExprKind(expr), name: exprText}
+	return results
 }
 
-// getOriginalExprText returns the original source text of an expression
-func getOriginalExprText(expr ast.Expr, fset *token.FileSet) string {
-	var buf bytes.Buffer
-	if err := format.Node(&buf, fset, expr); err != nil {
-		panic(fmt.Sprintf("failed to format expression: %v", err))
-	}
-	return buf.String()
+// findEnclosingFunc finds the enclosing function declaration in the stack
+// enclosingFunc represents either a FuncDecl or FuncLit
+type enclosingFunc struct {
+	decl *ast.FuncDecl // non-nil for function declarations
+	lit  *ast.FuncLit  // non-nil for function literals
 }
 
-// getParameterName returns the parameter name at the given index for a function/method call
-func getParameterName(fun ast.Expr, argIndex int, pkg *packages.Package) (string, error) {
-	// Get the type of the function being called
-	funType := pkg.TypesInfo.TypeOf(fun)
-	if funType == nil {
-		return "", fmt.Errorf("no type info for function")
+func findEnclosingFunc(stack []ast.Node) *enclosingFunc {
+	for i := len(stack) - 1; i >= 0; i-- {
+		switch f := stack[i].(type) {
+		case *ast.FuncDecl:
+			return &enclosingFunc{decl: f}
+		case *ast.FuncLit:
+			return &enclosingFunc{lit: f}
+		}
 	}
+	return nil
+}
 
-	// Extract the signature
+// getReturnType returns the type of the i-th return value of a function
+func getReturnType(ef *enclosingFunc, index int, pkg *packages.Package) (types.Type, error) {
 	var sig *types.Signature
-	switch t := funType.(type) {
-	case *types.Signature:
-		sig = t
-	default:
-		return "", fmt.Errorf("function type is not a signature: %T", funType)
+	var funcName string
+
+	if ef.decl != nil {
+		// Function declaration - get type from Defs
+		obj := pkg.TypesInfo.Defs[ef.decl.Name]
+		funcName = ef.decl.Name.Name
+		if obj == nil {
+			return nil, fmt.Errorf("no type info for function %s", funcName)
+		}
+
+		funcObj, ok := obj.(*types.Func)
+		if !ok {
+			return nil, fmt.Errorf("function %s is not a *types.Func: %T", funcName, obj)
+		}
+
+		sig = funcObj.Signature()
+	} else if ef.lit != nil {
+		// Function literal - get type from TypeOf
+		funcName = "func literal"
+		litType := pkg.TypesInfo.TypeOf(ef.lit)
+		if litType == nil {
+			return nil, fmt.Errorf("no type info for function literal")
+		}
+
+		var ok bool
+		sig, ok = litType.(*types.Signature)
+		if !ok {
+			return nil, fmt.Errorf("function literal type is not a signature: %T", litType)
+		}
+	} else {
+		return nil, fmt.Errorf("enclosingFunc has neither decl nor lit")
 	}
 
-	// Get the parameter at the given index
+	if sig == nil {
+		return nil, fmt.Errorf("function %s has no signature", funcName)
+	}
+
+	results := sig.Results()
+	if results == nil || index >= results.Len() {
+		return nil, fmt.Errorf("return index %d out of bounds for function %s (has %d results)",
+			index, funcName, results.Len())
+	}
+
+	return results.At(index).Type(), nil
+}
+
+// getParameterType returns the type of the i-th parameter of a function signature
+func getParameterType(sig *types.Signature, argIndex int) (types.Type, error) {
+	params := sig.Params()
+	if params == nil {
+		return nil, fmt.Errorf("no parameters in signature")
+	}
+
+	if argIndex >= params.Len() {
+		// Handle variadic functions
+		if sig.Variadic() && argIndex >= params.Len()-1 && params.Len() > 0 {
+			lastParam := params.At(params.Len() - 1)
+			// For variadic, the type is a slice, get element type
+			if slice, ok := lastParam.Type().(*types.Slice); ok {
+				return slice.Elem(), nil
+			}
+			return lastParam.Type(), nil
+		}
+		return nil, fmt.Errorf("argument index %d out of bounds (params: %d, variadic: %v)",
+			argIndex, params.Len(), sig.Variadic())
+	}
+
+	return params.At(argIndex).Type(), nil
+}
+
+// getParameterName returns the parameter name at the given index for a function signature
+func getParameterName(sig *types.Signature, argIndex int) (string, error) {
 	params := sig.Params()
 	if params == nil {
 		return "", fmt.Errorf("no parameters in signature")
 	}
 
 	if argIndex >= params.Len() {
-		// Handle variadic functions
 		if sig.Variadic() && argIndex >= params.Len()-1 && params.Len() > 0 {
-			// This is a variadic argument
-			lastParam := params.At(params.Len() - 1)
-			name := lastParam.Name()
-			if name == "" {
-				return fmt.Sprintf("arg%d", argIndex), nil
-			}
-			return name, nil
+			return params.At(params.Len() - 1).Name(), nil
 		}
 		return "", fmt.Errorf("argument index %d out of bounds (params: %d)", argIndex, params.Len())
 	}
 
-	param := params.At(argIndex)
-	name := param.Name()
-	if name == "" {
-		return fmt.Sprintf("arg%d", argIndex), nil
-	}
-
-	return name, nil
+	return params.At(argIndex).Name(), nil
 }
 
-// isTypeExpr checks if an expression is being used as a type (not a value)
-func isTypeExpr(expr ast.Expr, pkg *packages.Package) bool {
-	// Check if this expression is recorded as a type use in TypesInfo
-	// TypesInfo.Uses maps identifiers to their objects, but type names
-	// are recorded differently - they map to TypeName objects
-	if ident, ok := expr.(*ast.Ident); ok {
-		if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
-			_, isTypeName := obj.(*types.TypeName)
-			return isTypeName
-		}
-		if obj := pkg.TypesInfo.Defs[ident]; obj != nil {
-			_, isTypeName := obj.(*types.TypeName)
-			return isTypeName
-		}
-	}
-
-	// Check if it's a selector expression referring to a type
-	if sel, ok := expr.(*ast.SelectorExpr); ok {
-		if obj := pkg.TypesInfo.Uses[sel.Sel]; obj != nil {
-			_, isTypeName := obj.(*types.TypeName)
-			return isTypeName
-		}
-	}
-
-	return false
-}
-
-// isType checks if a type matches the given package path and type name
-func isType(t types.Type, pkgPath, typeName string) bool {
+// isSystemContextType checks if a type is types.SystemContext or *types.SystemContext
+func isSystemContextType(t types.Type) bool {
 	// Handle pointer types
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
 	}
+	return isTypeExact(t, "go.podman.io/image/v5/types", "SystemContext")
+}
 
-	// Get the named type
+// isSystemContextTypeExact checks if a type is exactly types.SystemContext (not *types.SystemContext)
+func isSystemContextTypeExact(t types.Type) bool {
+	return isTypeExact(t, "go.podman.io/image/v5/types", "SystemContext")
+}
+
+// isSystemContextPtrType checks if a type is *types.SystemContext specifically
+func isSystemContextPtrType(t types.Type) bool {
+	ptr, ok := t.(*types.Pointer)
+	if !ok {
+		return false
+	}
+	return isTypeExact(ptr.Elem(), "go.podman.io/image/v5/types", "SystemContext")
+}
+
+// isTypeExact checks if a type exactly matches the given package path and type name
+// Does NOT unwrap pointers
+func isTypeExact(t types.Type, pkgPath, typeName string) bool {
 	named, ok := t.(*types.Named)
 	if !ok {
 		return false
 	}
 
-	// Check package path and type name
 	obj := named.Obj()
 	if obj == nil {
 		return false
@@ -649,145 +713,11 @@ func isType(t types.Type, pkgPath, typeName string) bool {
 	return pkg.Path() == pkgPath && obj.Name() == typeName
 }
 
-// isDigestType checks if a type is github.com/opencontainers/go-digest.Digest
-func isDigestType(t types.Type) bool {
-	return isType(t, "github.com/opencontainers/go-digest", "Digest")
-}
-
-// isAlgorithmType checks if a type is github.com/opencontainers/go-digest.Algorithm
-func isAlgorithmType(t types.Type) bool {
-	return isType(t, "github.com/opencontainers/go-digest", "Algorithm")
-}
-
-// determineExprKind determines the kind of expression for future filtering capabilities
-func determineExprKind(expr ast.Expr) string {
-	switch expr.(type) {
-	case *ast.Ident:
-		return "identifier"
-	case *ast.CallExpr:
-		return "call-result"
-	case *ast.SelectorExpr:
-		return "selector"
-	case *ast.BinaryExpr:
-		return "binary-op"
-	case *ast.UnaryExpr:
-		return "unary-op"
-	case *ast.ParenExpr:
-		return "paren"
-	case *ast.TypeAssertExpr:
-		return "type-assert"
-	case *ast.IndexExpr:
-		return "index"
-	case *ast.StarExpr:
-		return "deref"
-	case *ast.BasicLit:
-		return "literal"
-	default:
-		return "expression"
+// getOriginalExprText returns the original source text of an expression
+func getOriginalExprText(expr ast.Expr, fset *token.FileSet) string {
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fset, expr); err != nil {
+		panic(fmt.Sprintf("failed to format expression: %v", err))
 	}
-}
-
-// getExprName returns a descriptive name for an expression use
-func getExprName(expr ast.Expr, fset *token.FileSet) string {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name
-	case *ast.CallExpr:
-		// This is a call that returns digest.Digest
-		// Get the function name being called
-		if fun, ok := e.Fun.(*ast.SelectorExpr); ok {
-			return fun.Sel.Name + "()"
-		} else if fun, ok := e.Fun.(*ast.Ident); ok {
-			return fun.Name + "()"
-		}
-		return "call()"
-	case *ast.SelectorExpr:
-		// Method call or field access
-		return e.Sel.Name
-	case *ast.BasicLit:
-		return e.Value
-	case *ast.BinaryExpr:
-		// Binary operation involving digest.Digest
-		return e.Op.String()
-	case *ast.UnaryExpr:
-		// Unary operation
-		return e.Op.String()
-	case *ast.ParenExpr:
-		return getExprName(e.X, fset)
-	case *ast.TypeAssertExpr:
-		return "type-assert"
-	case *ast.IndexExpr:
-		return "index"
-	case *ast.StarExpr:
-		return "*"
-	default:
-		return "expr"
-	}
-}
-
-// isInLogrusCall checks if the expression is inside a logrus logging method call
-func isInLogrusCall(stack []ast.Node, pkg *packages.Package) bool {
-	for i := len(stack) - 1; i >= 0; i-- {
-		if call, ok := stack[i].(*ast.CallExpr); ok {
-			// Check if this is a selector expression (e.g., logger.Info() or logrus.Infof())
-			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-				methodName := sel.Sel.Name
-				// Check for common logrus logging methods
-				switch methodName {
-				case "Debug", "Debugf", "Debugln",
-					"Info", "Infof", "Infoln",
-					"Warn", "Warnf", "Warnln", "Warning", "Warningf", "Warningln",
-					"Error", "Errorf", "Errorln",
-					"Fatal", "Fatalf", "Fatalln",
-					"Panic", "Panicf", "Panicln",
-					"Print", "Printf", "Println",
-					"Trace", "Tracef", "Traceln":
-					// Check if this is from the logrus package
-					// Handle both package-level calls (logrus.Infof) and method calls (logger.Info)
-					if ident, ok := sel.X.(*ast.Ident); ok {
-						// Package-level function call
-						if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
-							if pkgName, ok := obj.(*types.PkgName); ok {
-								if pkgName.Imported().Path() == "github.com/sirupsen/logrus" {
-									return true
-								}
-							}
-						}
-					}
-					// Method call on logger instance
-					if exprType := pkg.TypesInfo.TypeOf(sel.X); exprType != nil {
-						typeStr := exprType.String()
-						if strings.Contains(typeStr, "github.com/sirupsen/logrus") {
-							return true
-						}
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
-// isInFmtErrorf checks if the expression is inside a fmt.Errorf call
-func isInFmtErrorf(stack []ast.Node, pkg *packages.Package) bool {
-	for i := len(stack) - 1; i >= 0; i-- {
-		if call, ok := stack[i].(*ast.CallExpr); ok {
-			// Check if this is fmt.Errorf
-			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-				if sel.Sel.Name == "Errorf" {
-					// Check if the package is "fmt"
-					if ident, ok := sel.X.(*ast.Ident); ok {
-						if obj := pkg.TypesInfo.Uses[ident]; obj != nil {
-							if pkgName, ok := obj.(*types.PkgName); ok {
-								if pkgName.Imported().Path() == "fmt" {
-									return true
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return false
+	return buf.String()
 }

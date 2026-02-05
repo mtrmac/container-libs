@@ -1,2 +1,8 @@
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
+github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
+github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
+go.podman.io/image/v5 v5.38.0 h1:aUKrCANkPvze1bnhLJsaubcfz0d9v/bSDLnwsXJm6G4=
+go.podman.io/image/v5 v5.38.0/go.mod h1:hSIoIUzgBnmc4DjoIdzk63aloqVbD7QXDMkSE/cvG90=
+go.podman.io/storage v1.61.0 h1:5hD/oyRYt1f1gxgvect+8syZBQhGhV28dCw2+CZpx0Q=
+go.podman.io/storage v1.61.0/go.mod h1:A3UBK0XypjNZ6pghRhuxg62+2NIm5lcUGv/7XyMhMUI=

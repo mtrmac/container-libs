@@ -9,7 +9,7 @@ import (
 
 func TestSampleFile(t *testing.T) {
 	// Run audit on sample directory (use relative path)
-	uses, err := auditDigestUses("sample")
+	uses, err := auditSystemContextUses("sample")
 	if err != nil {
 		t.Fatalf("Failed to audit sample: %v", err)
 	}

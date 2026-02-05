@@ -1,68 +1,35 @@
-sample/sample.go:10:5: ignored var-name globalDigest
-sample/sample.go:10:34: ignored var-init digest.FromString("global")
-sample/sample.go:12:5: ignored var-name globalDigestPtr
-sample/sample.go:12:21: ignored var-type *digest.Digest
-sample/sample.go:17:2: ignored field-name ID
-sample/sample.go:18:2: ignored field-name Backup
-sample/sample.go:18:9: ignored field-type *digest.Digest
-sample/sample.go:19:11: ignored array-type *digest.Digest
-sample/sample.go:23:6: ignored var-name d1
-sample/sample.go:23:25: ignored var-init "sha256:1234567890abcdef"
-sample/sample.go:24:2: ignored assign-lhs d2
-sample/sample.go:24:8: ignored assign-rhs digest.FromString("test")
-sample/sample.go:26:6: ignored var-name d3
-sample/sample.go:27:2: ignored assign-lhs d3
-sample/sample.go:27:7: ignored assign-rhs d1
-sample/sample.go:29:6: ignored assign-rhs d1.Algorithm()
-sample/sample.go:29:9: selector Algorithm
-sample/sample.go:31:5: binary-op ==
-sample/sample.go:35:13: type-cast string
-sample/sample.go:38:15: type-cast container-libs/digest-audit/sample.MyString
-sample/sample.go:40:16: ignored call-arg d
-sample/sample.go:42:22: ignored composite-lit d1
-sample/sample.go:44:39: map-key d1
-sample/sample.go:44:43: ignored map-value d2
-sample/sample.go:45:6: ignored assign-rhs m[d2]
-sample/sample.go:45:8: index-key-in m
-sample/sample.go:47:6: index d1
-sample/sample.go:49:22: ignored struct-key ID
-sample/sample.go:49:26: ignored map-value d1
-sample/sample.go:49:30: ignored struct-key Backup
-sample/sample.go:51:25: ignored struct-key ID
-sample/sample.go:51:29: ignored map-value d2
-sample/sample.go:51:33: ignored struct-key Backup
-sample/sample.go:53:6: ignored range-key k
-sample/sample.go:53:9: ignored range-value v
-sample/sample.go:54:7: ignored assign-rhs k
-sample/sample.go:55:7: ignored assign-rhs v
-sample/sample.go:58:20: range-expr d1
-sample/sample.go:62:2: ignored assign-lhs ptr
-sample/sample.go:62:9: ignored assign-rhs &d1
-sample/sample.go:63:6: ignored assign-rhs *ptr
-sample/sample.go:65:6: ignored assign-rhs (d1)
-sample/sample.go:65:7: ignored paren d1
-sample/sample.go:67:9: switch-tag d1
-sample/sample.go:68:7: case-value digest.FromString("test")
-sample/sample.go:72:5: ignored cmp-empty-string d1
-sample/sample.go:72:11: ignored cmp-empty-string ""
-sample/sample.go:76:5: ignored cmp-empty-string d2
-sample/sample.go:76:11: ignored cmp-empty-string ""
-sample/sample.go:80:42: ignored digest-string-in-errorf d1
-sample/sample.go:82:31: ignored digest-string-in-logrus d2
-sample/sample.go:84:5: ignored cmp-nil globalDigestPtr
-sample/sample.go:88:5: ignored cmp-nil globalDigestPtr
-sample/sample.go:92:6: ignored digest-validate d1
-sample/sample.go:94:2: ignored assign-lhs alg
-sample/sample.go:94:9: ignored assign-rhs d1.Algorithm()
-sample/sample.go:94:12: selector Algorithm
-sample/sample.go:95:10: selector String
-sample/sample.go:97:34: ignored algorithm-string-in-errorf alg
-sample/sample.go:99:34: ignored algorithm-string-in-logrus alg
-sample/sample.go:102:20: ignored field-name d
-sample/sample.go:102:37: ignored field-name ptr
-sample/sample.go:102:41: ignored field-type *digest.Digest
-sample/sample.go:103:6: ignored assign-rhs d
-sample/sample.go:104:6: ignored assign-rhs ptr
-sample/sample.go:108:9: ignored return digest.FromString("result")
-sample/sample.go:112:9: ignored return dc.ID
-sample/sample.go:112:12: ignored field-access ID
+sample/sample.go:8:5: var-definition globalSysCtx
+sample/sample.go:9:5: var-definition globalSysCtxPtr
+sample/sample.go:10:5: var-definition globalSysCtxPtr2
+sample/sample.go:10:45: nil-init globalSysCtxPtr2
+sample/sample.go:14:2: field-declaration SysCtx
+sample/sample.go:15:2: field-declaration SysCtxPtr
+sample/sample.go:36:9: nil-return return
+sample/sample.go:41:10: literal SystemContext{}
+sample/sample.go:46:9: literal SystemContext{}
+sample/sample.go:51:6: var-definition ctx1
+sample/sample.go:52:6: var-definition ctx2
+sample/sample.go:55:2: var-definition ctx3
+sample/sample.go:55:10: literal SystemContext{}
+sample/sample.go:56:2: var-definition ctx4
+sample/sample.go:56:11: literal SystemContext{}
+sample/sample.go:59:9: nil-assignment ctx2
+sample/sample.go:66:9: literal SystemContext{}
+sample/sample.go:69:9: literal SystemContext{}
+sample/sample.go:72:10: literal SystemContext{}
+sample/sample.go:75:10: literal SystemContext{}
+sample/sample.go:78:15: implicit-nil-field SysCtxPtr
+sample/sample.go:78:15: implicit-empty-literal-field SysCtx
+sample/sample.go:79:24: nil-assignment container.SysCtxPtr
+sample/sample.go:85:17: nil-argument ctx
+sample/sample.go:91:24: literal SystemContext{}
+sample/sample.go:94:18: literal SystemContext{}
+sample/sample.go:97:6: implicit-empty-literal-field SysCtx
+sample/sample.go:98:14: nil-field-value SysCtxPtr
+sample/sample.go:102:6: implicit-nil-field SysCtxPtr
+sample/sample.go:103:11: literal SystemContext{}
+sample/sample.go:107:6: implicit-empty-literal-field SysCtx
+sample/sample.go:112:6: implicit-empty-literal-field SysCtx
+sample/sample.go:113:15: literal SystemContext{}
+sample/sample.go:117:6: implicit-nil-field SysCtxPtr
+sample/sample.go:137:36: nil-conversion *SystemContext

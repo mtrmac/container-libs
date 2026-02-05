@@ -1,113 +1,144 @@
 package sample
 
 import (
-	"fmt"
-
-	"github.com/opencontainers/go-digest"
-	"github.com/sirupsen/logrus"
+	"go.podman.io/image/v5/types"
 )
 
-var globalDigest digest.Digest = digest.FromString("global")
+// Global variable declarations - SHOULD be reported
+var globalSysCtx types.SystemContext            // var definition
+var globalSysCtxPtr *types.SystemContext        // var definition with pointer
+var globalSysCtxPtr2 *types.SystemContext = nil // var definition + nil assignment
 
-var globalDigestPtr *digest.Digest
+// Struct field declarations - SHOULD be reported
+type Container struct {
+	SysCtx    types.SystemContext  // field declaration - SHOULD be reported
+	SysCtxPtr *types.SystemContext // field declaration (pointer) - SHOULD be reported
+}
 
-var globalDigestArray []digest.Digest
+// Struct without SystemContext fields - should NOT be reported
+type OtherContainer struct {
+	Name string
+}
 
-type DigestContainer struct {
-	ID     digest.Digest
-	Backup *digest.Digest
-	List   []*digest.Digest
+// Function parameter declarations - should NOT be reported
+func processContext(ctx *types.SystemContext) {
+	// Parameter declaration is not reported
+	_ = ctx
+}
+
+// Function taking SystemContext by value - parameter should NOT be reported
+func processContextByValue(ctx types.SystemContext) {
+	_ = ctx
+}
+
+// Return type - should NOT be reported
+func getContext() *types.SystemContext {
+	return nil // nil return - should be reported
+}
+
+// Return &types.SystemContext{} - SHOULD be reported
+func getContextPtrEmpty() *types.SystemContext {
+	return &types.SystemContext{} // empty literal ptr return - SHOULD be reported
+}
+
+// Return SystemContext by value
+func getContextByValue() types.SystemContext {
+	return types.SystemContext{} // empty literal return - SHOULD be reported
 }
 
 func CoverageFunction() {
-	var d1 digest.Digest = "sha256:1234567890abcdef"
-	d2 := digest.FromString("test")
+	// Variable definitions via "var" - SHOULD be reported
+	var ctx1 types.SystemContext  // var definition
+	var ctx2 *types.SystemContext // var definition (pointer)
 
-	var d3 digest.Digest
-	d3 = d1
+	// Variable definitions via ":=" - SHOULD be reported
+	ctx3 := types.SystemContext{}  // := definition
+	ctx4 := &types.SystemContext{} // := definition (pointer)
 
-	_ = d1.Algorithm()
+	// Setting variable to nil - SHOULD be reported
+	ctx2 = nil // assignment to nil
 
-	if d1 == d2 {
-		fmt.Println("equal")
+	// Variable reassignment (not nil) - should NOT be reported
+	ctx2 = &ctx1 // normal assignment (not nil)
+	ctx2 = ctx4  // normal assignment (not nil)
+
+	// Assigning SystemContext{} literal - SHOULD be reported (empty)
+	ctx1 = types.SystemContext{} // literal assignment
+
+	// Assigning SystemContext{...} literal with fields - SHOULD also be reported
+	ctx1 = types.SystemContext{SystemRegistriesConfPath: "/etc"} // literal assignment (non-empty)
+
+	// Assigning &types.SystemContext{} to pointer - SHOULD be reported
+	ctx2 = &types.SystemContext{} // literal ptr assignment
+
+	// Assigning &types.SystemContext{...} with fields - SHOULD also be reported
+	ctx2 = &types.SystemContext{SystemRegistriesConfPath: "/etc"} // literal ptr assignment (non-empty)
+
+	// Empty struct literal with *SystemContext field - SHOULD be reported (implicit nil)
+	container := Container{}  // Container{} leaves SysCtxPtr implicitly nil
+	container.SysCtxPtr = nil // field set to nil - SHOULD be reported
+
+	// Setting field within SystemContext - should NOT be reported
+	ctx3.SystemRegistriesConfPath = "/etc/containers/registries.conf" // field access
+
+	// Passing nil as function argument - SHOULD be reported
+	processContext(nil) // nil argument
+
+	// Passing non-nil as function argument - should NOT be reported
+	processContext(ctx2) // normal argument
+
+	// Passing empty SystemContext{} literal as argument - SHOULD be reported
+	processContextByValue(types.SystemContext{}) // empty literal argument
+
+	// Passing &types.SystemContext{} as argument - SHOULD be reported
+	processContext(&types.SystemContext{}) // empty literal ptr argument
+
+	// Struct literal with nil field - SHOULD be reported
+	_ = Container{
+		SysCtxPtr: nil, // nil in struct literal
 	}
 
-	_ = string(d1)
-
-	type MyString string
-	_ = MyString(d2)
-
-	processDigest(d3, nil)
-
-	_ = []digest.Digest{d1}
-
-	m := map[digest.Digest]digest.Digest{d1: d2}
-	_ = m[d2]
-
-	_ = d1[0]
-
-	_ = DigestContainer{ID: d1, Backup: nil}
-
-	_ = []DigestContainer{{ID: d2, Backup: nil}}
-
-	for k, v := range m {
-		_ = k
-		_ = v
+	// Struct literal with empty SystemContext{} field - SHOULD be reported
+	_ = Container{
+		SysCtx: types.SystemContext{}, // empty literal in struct literal
 	}
 
-	for _, r := range d1 {
-		_ = r
+	// Struct literal with non-nil field - should NOT be reported
+	_ = Container{
+		SysCtxPtr: ctx2, // non-nil in struct literal
 	}
 
-	ptr := &d1
-	_ = *ptr
-
-	_ = (d1)
-
-	switch d1 {
-	case digest.FromString("test"):
-		fmt.Println("test")
+	// Struct literal with &types.SystemContext{} field - SHOULD be reported
+	_ = Container{
+		SysCtxPtr: &types.SystemContext{}, // empty literal ptr in struct literal
 	}
 
-	if d1 == "" {
-		fmt.Println("empty digest")
+	// Struct literal with partial fields - SHOULD report implicit nil for missing *SystemContext field
+	_ = Container{
+		SysCtx: ctx1, // only sets SysCtx, leaves SysCtxPtr implicitly nil
 	}
 
-	if d2 != "" {
-		fmt.Println("non-empty digest")
-	}
+	// Struct literal for non-SystemContext struct - should NOT be reported
+	_ = OtherContainer{}
 
-	_ = fmt.Errorf("error with digest: %s", d1.String())
-
-	logrus.Infof("digest is %s", d2.String())
-
-	if globalDigestPtr != nil {
-		fmt.Println("non-nil")
-	}
-
-	if globalDigestPtr == nil {
-		fmt.Println("nil")
-	}
-
-	_ = d1.Validate()
-
-	alg := d1.Algorithm()
-	_ = alg.String()
-
-	_ = fmt.Errorf("algorithm: %s", alg.String())
-
-	logrus.Infof("algorithm is %s", alg.String())
+	// Using context (not nil related) - should NOT be reported
+	_ = ctx1
+	_ = ctx2
+	_ = ctx3
+	_ = ctx4
 }
 
-func processDigest(d digest.Digest, ptr *digest.Digest) {
-	_ = d
-	_ = ptr
+// Method with receiver - should NOT be reported (function parameter)
+func (c *Container) GetContext() *types.SystemContext {
+	return c.SysCtxPtr // field access - should NOT be reported
 }
 
-func getDigest() digest.Digest {
-	return digest.FromString("result")
-}
+// Type conversion of nil - should NOT be reported (not a function call)
+var _ any = (*types.SystemContext)(nil)
 
-func (dc *DigestContainer) GetID() digest.Digest {
-	return dc.ID
+// Multiple parameters - only function params should NOT be reported
+func multiParam(a int, ctx *types.SystemContext, b string) {
+	_ = a
+	_ = ctx
+	_ = b
 }
