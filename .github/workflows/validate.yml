@@ -81,7 +81,8 @@ jobs:
         # By default github actions creates a merge commit which fails the validation,
         # we only must validate the actual commits of the author.
         ref: ${{ github.event.pull_request.head.sha }}
-        fetch-depth: ${{ github.event.pull_request.commits }}
+        # Fetch all commits, a sparse checkout with only the commits count in the PR will not result in the right range.
+        fetch-depth: 0
     - uses: actions/setup-go@v6
       with:
         go-version: 1.25.x
