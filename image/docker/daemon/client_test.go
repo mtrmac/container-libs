@@ -7,6 +7,7 @@ import (
 
 	dockerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.podman.io/image/v5/types"
 )
 
@@ -39,42 +40,35 @@ func TestDockerClientFromCertContext(t *testing.T) {
 	assert.NoError(t, client.Close())
 }
 
-func TestTlsConfigFromInvalidCertPath(t *testing.T) {
-	ctx := &types.SystemContext{
-		DockerDaemonCertPath: "/foo/bar",
+func TestTlsConfig(t *testing.T) {
+	tests := []struct {
+		ctx          *types.SystemContext
+		wantInsecure bool
+		wantCerts    int
+	}{
+		{&types.SystemContext{
+			DockerDaemonCertPath:              filepath.Join("testdata", "certs"),
+			DockerDaemonInsecureSkipTLSVerify: true,
+		}, true, 1},
+		{&types.SystemContext{DockerDaemonInsecureSkipTLSVerify: true}, true, 0},
+	}
+	for _, c := range tests {
+		httpClient, err := tlsConfig(c.ctx)
+		require.NoError(t, err)
+		tlsCfg := httpClient.Transport.(*http.Transport).TLSClientConfig
+		assert.Equal(t, c.wantInsecure, tlsCfg.InsecureSkipVerify)
+		assert.Len(t, tlsCfg.Certificates, c.wantCerts)
 	}
 
-	_, err := tlsConfig(ctx)
-	assert.ErrorContains(t, err, "could not read CA certificate")
-}
-
-func TestTlsConfigFromCertPath(t *testing.T) {
-	ctx := &types.SystemContext{
-		DockerDaemonCertPath:              filepath.Join("testdata", "certs"),
-		DockerDaemonInsecureSkipTLSVerify: true,
+	for _, c := range []struct {
+		ctx          *types.SystemContext
+		pathFragment string
+	}{
+		{&types.SystemContext{DockerDaemonCertPath: "/dev/null/this/does/not/exist"}, "dev/null/this/does/not/exist"},
+	} {
+		_, err := tlsConfig(c.ctx)
+		assert.ErrorContains(t, err, c.pathFragment)
 	}
-
-	httpClient, err := tlsConfig(ctx)
-
-	assert.NoError(t, err, "There should be no error creating the HTTP client")
-
-	tlsConfig := httpClient.Transport.(*http.Transport).TLSClientConfig
-	assert.True(t, tlsConfig.InsecureSkipVerify, "TLS verification should be skipped")
-	assert.Len(t, tlsConfig.Certificates, 1, "There should be one certificate")
-}
-
-func TestSkipTLSVerifyOnly(t *testing.T) {
-	ctx := &types.SystemContext{
-		DockerDaemonInsecureSkipTLSVerify: true,
-	}
-
-	httpClient, err := tlsConfig(ctx)
-
-	assert.NoError(t, err, "There should be no error creating the HTTP client")
-
-	tlsConfig := httpClient.Transport.(*http.Transport).TLSClientConfig
-	assert.True(t, tlsConfig.InsecureSkipVerify, "TLS verification should be skipped")
-	assert.Len(t, tlsConfig.Certificates, 0, "There should be no certificate")
 }
 
 func TestSpecifyPlainHTTPViaHostScheme(t *testing.T) {
