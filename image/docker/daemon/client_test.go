@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"net/http"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -23,11 +22,9 @@ func TestDockerClientFromNilSystemContext(t *testing.T) {
 }
 
 func TestDockerClientFromCertContext(t *testing.T) {
-	testDir := testDir(t)
-
 	host := "tcp://127.0.0.1:2376"
 	systemCtx := &types.SystemContext{
-		DockerDaemonCertPath:              filepath.Join(testDir, "testdata", "certs"),
+		DockerDaemonCertPath:              filepath.Join("testdata", "certs"),
 		DockerDaemonHost:                  host,
 		DockerDaemonInsecureSkipTLSVerify: true,
 	}
@@ -52,10 +49,8 @@ func TestTlsConfigFromInvalidCertPath(t *testing.T) {
 }
 
 func TestTlsConfigFromCertPath(t *testing.T) {
-	testDir := testDir(t)
-
 	ctx := &types.SystemContext{
-		DockerDaemonCertPath:              filepath.Join(testDir, "testdata", "certs"),
+		DockerDaemonCertPath:              filepath.Join("testdata", "certs"),
 		DockerDaemonInsecureSkipTLSVerify: true,
 	}
 
@@ -69,8 +64,6 @@ func TestTlsConfigFromCertPath(t *testing.T) {
 }
 
 func TestSkipTLSVerifyOnly(t *testing.T) {
-	// testDir := testDir(t)
-
 	ctx := &types.SystemContext{
 		DockerDaemonInsecureSkipTLSVerify: true,
 	}
@@ -97,12 +90,4 @@ func TestSpecifyPlainHTTPViaHostScheme(t *testing.T) {
 
 	assert.Equal(t, host, client.DaemonHost())
 	assert.NoError(t, client.Close())
-}
-
-func testDir(t *testing.T) string {
-	testDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to determine the current test directory")
-	}
-	return testDir
 }
