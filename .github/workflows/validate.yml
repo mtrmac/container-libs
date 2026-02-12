@@ -37,7 +37,7 @@ jobs:
         fetch-depth: 2
     - uses: actions/setup-go@v6
       with:
-        go-version: 1.25.x
+        go-version: 1.26.x
         # By default the go cache will only use go.sum in the root which we don't have,
         # make it use for all checksum files.
         # https://github.com/actions/setup-go?tab=readme-ov-file#caching-dependency-files-and-build-outputs
@@ -85,7 +85,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v6
       with:
-        go-version: 1.25.x
+        go-version: 1.26.x
         # See comment on lint task
         cache-dependency-path: "**/go.sum"
     - name: run git-validation
@@ -97,7 +97,7 @@ jobs:
     - uses: actions/checkout@v6
     - uses: actions/setup-go@v6
       with:
-        go-version: 1.25.x
+        go-version: 1.26.x
         # See comment on lint task
         cache-dependency-path: "**/go.sum"
     - name: vendor
