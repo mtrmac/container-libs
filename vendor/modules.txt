@@ -33,7 +33,7 @@ github.com/acarl005/stripansi
 # github.com/checkpoint-restore/checkpointctl v1.5.0
 ## explicit; go 1.24.6
 github.com/checkpoint-restore/checkpointctl/lib
-# github.com/checkpoint-restore/go-criu/v8 v8.1.0
+# github.com/checkpoint-restore/go-criu/v8 v8.2.0
 ## explicit; go 1.24.0
 github.com/checkpoint-restore/go-criu/v8/stats
 # github.com/chzyer/readline v1.5.1
