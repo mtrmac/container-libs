@@ -71,8 +71,7 @@ func Setup(opts *SetupOptions) (*SetupResult, error) {
 		// pasta forks once ready, and quits once we delete the target namespace
 		out, err := exec.Command(path, cmdArgs...).CombinedOutput()
 		if err != nil {
-			exitErr := &exec.ExitError{}
-			if errors.As(err, &exitErr) {
+			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 				// special backwards compat check, --map-guest-addr was added in pasta version 20240814 so we
 				// cannot hard require it yet. Once we are confident that the update is most distros we can remove it.
 				if exitErr.ExitCode() == 1 &&

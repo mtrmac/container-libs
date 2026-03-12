@@ -140,7 +140,7 @@ func (n *Netns) getOrCreateNetns() (ns.NetNS, bool, error) {
 		// the file and mounting it. Or if the file is not on tmpfs (deleted on boot)
 		// you might run into it as well: https://github.com/containers/podman/issues/25144
 		// We have to do this because NewNSAtPath fails with EEXIST otherwise
-		if errors.As(err, &ns.NSPathNotNSErr{}) {
+		if _, ok := errors.AsType[ns.NSPathNotNSErr](err); ok {
 			// We don't care if this fails, NewNSAtPath() should return the real error.
 			_ = os.Remove(nsPath)
 		}
