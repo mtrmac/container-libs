@@ -12,12 +12,12 @@ func TestLockCounter(t *testing.T) {
 	l := &lockCtr{}
 	l.inc()
 
-	if l.waiters != 1 {
+	if l.waiters.Load() != 1 {
 		t.Fatal("counter inc failed")
 	}
 
 	l.dec()
-	if l.waiters != 0 {
+	if l.waiters.Load() != 0 {
 		t.Fatal("counter dec failed")
 	}
 }
@@ -28,7 +28,7 @@ func TestLockerLock(t *testing.T) {
 	ctr := l.locks["test"]
 
 	if ctr.count() != 0 {
-		t.Fatalf("expected waiters to be 0, got :%d", ctr.waiters)
+		t.Fatalf("expected waiters to be 0, got :%d", ctr.waiters.Load())
 	}
 
 	chDone := make(chan struct{})

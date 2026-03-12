@@ -441,11 +441,12 @@ func TestLockfileWriteConcurrent(t *testing.T) {
 	l := getTempLockfile(t)
 	var wg sync.WaitGroup
 	var highestMutex sync.Mutex
-	var counter, highest int64
+	var counter atomic.Int64
+	var highest int64
 	for range 8000 {
 		wg.Go(func() {
 			l.Lock()
-			workingCounter := atomic.AddInt64(&counter, 1)
+			workingCounter := counter.Add(1)
 			assert.True(t, workingCounter >= 0, "counter should never be less than zero")
 			highestMutex.Lock()
 			if workingCounter > highest {
@@ -457,7 +458,7 @@ func TestLockfileWriteConcurrent(t *testing.T) {
 				highest = workingCounter
 			}
 			highestMutex.Unlock()
-			atomic.AddInt64(&counter, -1)
+			counter.Add(-1)
 			l.Unlock()
 		})
 	}
@@ -501,7 +502,7 @@ func TestLockfileReadConcurrent(t *testing.T) {
 func TestLockfileMixedConcurrent(t *testing.T) {
 	l := getTempLockfile(t)
 
-	counter := int32(0)
+	counter := atomic.Int32{}
 	diff := int32(10000)
 	numIterations := 10
 	numReaders := 100
@@ -511,13 +512,13 @@ func TestLockfileMixedConcurrent(t *testing.T) {
 
 	// A writer always adds `diff` to the counter. Hence, `diff` is the
 	// only valid value in the critical section.
-	writer := func(c *int32) {
+	writer := func(c *atomic.Int32) {
 		for range numIterations {
 			l.Lock()
-			tmp := atomic.AddInt32(c, diff)
+			tmp := c.Add(diff)
 			assert.True(t, tmp == diff, "counter should be %d but instead is %d", diff, tmp)
 			time.Sleep(100 * time.Millisecond)
-			atomic.AddInt32(c, diff*(-1))
+			c.Add(-diff)
 			l.Unlock()
 		}
 		done <- true
@@ -525,13 +526,13 @@ func TestLockfileMixedConcurrent(t *testing.T) {
 
 	// A reader always adds `1` to the counter. Hence,
 	// [1,`numReaders*numIterations`] are valid values.
-	reader := func(c *int32) {
+	reader := func(c *atomic.Int32) {
 		for range numIterations {
 			l.RLock()
-			tmp := atomic.AddInt32(c, 1)
+			tmp := c.Add(1)
 			assert.True(t, tmp >= 1 && tmp < diff)
 			time.Sleep(100 * time.Millisecond)
-			atomic.AddInt32(c, -1)
+			c.Add(-1)
 			l.Unlock()
 		}
 		done <- true
@@ -553,7 +554,8 @@ func TestLockfileMixedConcurrent(t *testing.T) {
 func TestLockfileMultiprocessRead(t *testing.T) {
 	l := getTempLockfile(t)
 	var wg sync.WaitGroup
-	var rcounter, rhighest int64
+	var rcounter atomic.Int64
+	var rhighest int64
 	var highestMutex sync.Mutex
 	subs := make([]struct {
 		cmd    *exec.Cmd
@@ -574,14 +576,14 @@ func TestLockfileMultiprocessRead(t *testing.T) {
 			if testing.Verbose() {
 				t.Logf("\tchild %4d acquired the read lock\n", i+1)
 			}
-			workingRcounter := atomic.AddInt64(&rcounter, 1)
+			workingRcounter := rcounter.Add(1)
 			highestMutex.Lock()
 			if workingRcounter > rhighest {
 				rhighest = workingRcounter
 			}
 			highestMutex.Unlock()
 			time.Sleep(1 * time.Second)
-			atomic.AddInt64(&rcounter, -1)
+			rcounter.Add(-1)
 			if testing.Verbose() {
 				t.Logf("\ttelling child %4d to release the read lock\n", i+1)
 			}
@@ -597,7 +599,8 @@ func TestLockfileMultiprocessRead(t *testing.T) {
 func TestLockfileMultiprocessWrite(t *testing.T) {
 	l := getTempLockfile(t)
 	var wg sync.WaitGroup
-	var wcounter, whighest int64
+	var wcounter atomic.Int64
+	var whighest int64
 	var highestMutex sync.Mutex
 	subs := make([]struct {
 		cmd    *exec.Cmd
@@ -618,14 +621,14 @@ func TestLockfileMultiprocessWrite(t *testing.T) {
 			if testing.Verbose() {
 				t.Logf("\tchild %4d acquired the write lock\n", i+1)
 			}
-			workingWcounter := atomic.AddInt64(&wcounter, 1)
+			workingWcounter := wcounter.Add(1)
 			highestMutex.Lock()
 			if workingWcounter > whighest {
 				whighest = workingWcounter
 			}
 			highestMutex.Unlock()
 			time.Sleep(1 * time.Second)
-			atomic.AddInt64(&wcounter, -1)
+			wcounter.Add(-1)
 			if testing.Verbose() {
 				t.Logf("\ttelling child %4d to release the write lock\n", i+1)
 			}
@@ -641,7 +644,8 @@ func TestLockfileMultiprocessWrite(t *testing.T) {
 func TestLockfileMultiprocessMixed(t *testing.T) {
 	l := getTempLockfile(t)
 	var wg sync.WaitGroup
-	var rcounter, wcounter, rhighest, whighest int64
+	var rcounter, wcounter atomic.Int64
+	var rhighest, whighest int64
 	var rhighestMutex, whighestMutex sync.Mutex
 
 	const (
@@ -682,12 +686,12 @@ func TestLockfileMultiprocessMixed(t *testing.T) {
 				if testing.Verbose() {
 					t.Logf("\tchild %4d acquired the write lock\n", i+1)
 				}
-				workingWcounter := atomic.AddInt64(&wcounter, 1)
+				workingWcounter := wcounter.Add(1)
 				whighestMutex.Lock()
 				if workingWcounter > whighest {
 					whighest = workingWcounter
 				}
-				workingRcounter := atomic.LoadInt64(&rcounter)
+				workingRcounter := rcounter.Load()
 				require.Zero(t, workingRcounter, "acquired a write lock while we appear to have read locks")
 				whighestMutex.Unlock()
 			} else {
@@ -695,23 +699,23 @@ func TestLockfileMultiprocessMixed(t *testing.T) {
 				if testing.Verbose() {
 					t.Logf("\tchild %4d acquired the read lock\n", i+1)
 				}
-				workingRcounter := atomic.AddInt64(&rcounter, 1)
+				workingRcounter := rcounter.Add(1)
 				rhighestMutex.Lock()
 				if workingRcounter > rhighest {
 					rhighest = workingRcounter
 				}
-				workingWcounter := atomic.LoadInt64(&wcounter)
+				workingWcounter := wcounter.Load()
 				require.Zero(t, workingWcounter, "acquired a read lock while we appear to have write locks")
 				rhighestMutex.Unlock()
 			}
 			time.Sleep(1 * time.Second)
 			if writer(i) {
-				atomic.AddInt64(&wcounter, -1)
+				wcounter.Add(-1)
 				if testing.Verbose() {
 					t.Logf("\ttelling child %4d to release the write lock\n", i+1)
 				}
 			} else {
-				atomic.AddInt64(&rcounter, -1)
+				rcounter.Add(-1)
 				if testing.Verbose() {
 					t.Logf("\ttelling child %4d to release the read lock\n", i+1)
 				}
