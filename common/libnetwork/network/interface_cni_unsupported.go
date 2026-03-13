@@ -14,7 +14,7 @@ const (
 	cniSupported = false
 )
 
-func networkBackendFromStore(_store storage.Store, _conf *config.Config) (backend types.NetworkBackend, err error) {
+func networkBackendFromStore(_ storage.Store, _ *config.Config) (backend types.NetworkBackend, err error) {
 	return types.Netavark, nil
 }
 
