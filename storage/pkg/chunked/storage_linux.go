@@ -700,7 +700,7 @@ func (c *chunkedDiffer) prepareCompressedStreamToFile(partCompression compressed
 	case partCompression == fileTypeNoCompression:
 		return fileTypeNoCompression, nil
 	default:
-		return partCompression, fmt.Errorf("unknown file type %q", c.fileType)
+		return partCompression, fmt.Errorf("unknown file type %d", c.fileType)
 	}
 	return partCompression, nil
 }
@@ -751,7 +751,7 @@ func (c *chunkedDiffer) appendCompressedStreamToFile(compression compressedFileT
 			}
 		}
 	default:
-		return fmt.Errorf("unknown file type %q", c.fileType)
+		return fmt.Errorf("unknown file type %d", c.fileType)
 	}
 	return nil
 }
