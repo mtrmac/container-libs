@@ -26,9 +26,6 @@ settings in `/etc/containers/registries.conf`.  The `[[registry]]` tables merged
 by overwriting existing items if the prefixes are identical while new ones are
 added.
 
-All drop-in configuration files must be specified in the version 2 of the
-`containers-registries.conf(5)` format.
-
 # SEE ALSO
 `containers-registries.conf(5)`
 

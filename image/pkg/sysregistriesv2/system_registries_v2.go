@@ -185,11 +185,15 @@ func (r *Registry) PullSourcesFromReference(ref reference.Named) ([]PullSource, 
 }
 
 // V1TOMLregistries is for backwards compatibility to sysregistries v1
+//
+// Deprecated: This format is no longer accepted, use [V2RegistriesConf] instead.
 type V1TOMLregistries struct {
 	Registries []string `toml:"registries"`
 }
 
 // V1TOMLConfig is for backwards compatibility to sysregistries v1
+//
+// Deprecated: This format is no longer accepted, use [V2RegistriesConf] instead.
 type V1TOMLConfig struct {
 	Search   V1TOMLregistries `toml:"search"`
 	Insecure V1TOMLregistries `toml:"insecure"`
@@ -197,6 +201,9 @@ type V1TOMLConfig struct {
 }
 
 // V1RegistriesConf is the sysregistries v1 configuration format.
+//
+// Deprecated: This format is no longer accepted, use [V2RegistriesConf] instead.
+// You can use [V1RegistriesConf.ConvertToV2] to convert the type.
 type V1RegistriesConf struct {
 	V1TOMLConfig `toml:"registries"`
 }
@@ -721,7 +728,7 @@ func tryUpdatingCache(ctx *types.SystemContext, wrapper configWrapper) (*parsedC
 	defer configMutex.Unlock()
 
 	// load the config
-	config, err := loadConfigFile(wrapper.configPath, false)
+	config, err := loadConfigFile(wrapper.configPath)
 	if err != nil {
 		// Continue with an empty []Registry if we use the default config, which
 		// implies that the config path of the SystemContext isn't set.
@@ -746,8 +753,7 @@ func tryUpdatingCache(ctx *types.SystemContext, wrapper configWrapper) (*parsedC
 		return nil, err
 	}
 	for _, path := range dinConfigs {
-		// Enforce v2 format for drop-in-configs.
-		dropIn, err := loadConfigFile(path, true)
+		dropIn, err := loadConfigFile(path)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				// file must have been removed between the directory listing
@@ -947,14 +953,13 @@ func findRegistryWithParsedConfig(config *parsedConfig, ref string) (*Registry, 
 }
 
 // loadConfigFile loads and unmarshals a single config file.
-// Use forceV2 if the config must in the v2 format.
-func loadConfigFile(path string, forceV2 bool) (*parsedConfig, error) {
+func loadConfigFile(path string) (*parsedConfig, error) {
 	logrus.Debugf("Loading registries configuration %q", path)
 
 	// tomlConfig allows us to unmarshal either V1 or V2 simultaneously.
 	type tomlConfig struct {
 		V2RegistriesConf
-		V1RegistriesConf // for backwards compatibility with sysregistries v1
+		V1RegistriesConf // to detect no-longer-supported use of the v1 format
 	}
 
 	// Load the tomlConfig. Note that `DecodeFile` will overwrite set fields.
@@ -968,21 +973,8 @@ func loadConfigFile(path string, forceV2 bool) (*parsedConfig, error) {
 	}
 
 	if combinedTOML.V1RegistriesConf.hasSetField() {
-		// Enforce the v2 format if requested.
-		if forceV2 {
-			return nil, &InvalidRegistries{s: "registry must be in v2 format but is in v1"}
-		}
-
-		// Convert a v1 config into a v2 config.
-		if combinedTOML.V2RegistriesConf.hasSetField() {
-			return nil, &InvalidRegistries{s: fmt.Sprintf("mixing sysregistry v1/v2 is not supported: %#v", combinedTOML)}
-		}
-		converted, err := combinedTOML.V1RegistriesConf.ConvertToV2()
-		if err != nil {
-			return nil, err
-		}
-		combinedTOML.V1RegistriesConf = V1RegistriesConf{}
-		combinedTOML.V2RegistriesConf = *converted
+		// V1 format is no longer supported, produce hard error so callers know they must update the config.
+		return nil, &InvalidRegistries{s: "registry must be in v2 format but is in v1"}
 	}
 
 	res := parsedConfig{partialV2: combinedTOML.V2RegistriesConf}

@@ -461,38 +461,12 @@ func TestUnmarshalConfig(t *testing.T) {
 	assert.Equal(t, 4, len(registries))
 }
 
-func TestV1BackwardsCompatibility(t *testing.T) {
-	sys := &types.SystemContext{
-		SystemRegistriesConfPath:    "testdata/v1-compatibility.conf",
-		SystemRegistriesConfDirPath: "testdata/this-does-not-exist",
-	}
-
-	registries, err := GetRegistries(sys)
-	assert.Nil(t, err)
-	assert.Equal(t, 4, len(registries))
-
-	unqRegs, err := UnqualifiedSearchRegistries(sys)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"registry-a.com", "registry-c.com", "registry-d.com"}, unqRegs)
-
-	// check if merging works
-	reg, err := FindRegistry(sys, "registry-b.com/bar/foo/barfoo:latest")
-	assert.Nil(t, err)
-	assert.NotNil(t, reg)
-	assert.True(t, reg.Insecure)
-	assert.True(t, reg.Blocked)
-
-	for _, c := range []string{"testdata/v1-invalid-block.conf", "testdata/v1-invalid-insecure.conf", "testdata/v1-invalid-search.conf"} {
-		_, err := GetRegistries(&types.SystemContext{
-			SystemRegistriesConfPath:    c,
-			SystemRegistriesConfDirPath: "testdata/this-does-not-exist",
-		})
-		assert.Error(t, err, c)
-	}
-}
-
-func TestMixingV1andV2(t *testing.T) {
+func TestV1SyntaxErrors(t *testing.T) {
 	for _, c := range []string{
+		"testdata/v1-compatibility.conf",
+		"testdata/v1-invalid-block.conf",
+		"testdata/v1-invalid-insecure.conf",
+		"testdata/v1-invalid-search.conf",
 		"testdata/mixing-v1-v2.conf",
 		"testdata/mixing-v1-v2-empty.conf",
 	} {
@@ -500,7 +474,7 @@ func TestMixingV1andV2(t *testing.T) {
 			SystemRegistriesConfPath:    c,
 			SystemRegistriesConfDirPath: "testdata/this-does-not-exist",
 		})
-		assert.ErrorContains(t, err, "mixing sysregistry v1/v2 is not supported", c)
+		assert.ErrorContains(t, err, "registry must be in v2 format but is in v1", c)
 	}
 }
 

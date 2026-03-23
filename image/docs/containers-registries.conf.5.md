@@ -284,24 +284,6 @@ The format of `$image_reference` is `$repo{:$tag|@$digest}`.
 
 Additional Layer Stores can use this helper binary to access the private registry.
 
-## VERSION 1 FORMAT - DEPRECATED
-VERSION 1 format is still supported but it does not support
-using registry mirrors, longest-prefix matches, or location rewriting.
-
-The TOML format is used to build a simple list of registries under three
-categories: `registries.search`, `registries.insecure`, and `registries.block`.
-You can list multiple registries using a comma separated list.
-
-Search registries are used when the caller of a container runtime does not fully specify the
-container image that they want to execute.  These registries are prepended onto the front
-of the specified container image until the named image is found at a registry.
-
-Note that insecure registries can be used for any registry, not just the registries listed
-under search.
-
-The `registries.insecure` and `registries.block` lists have the same meaning as the
-`insecure` and `blocked` fields in the current version.
-
 ### EXAMPLE
 The following example configuration defines two searchable registries, one
 insecure registry, and two blocked registries.
