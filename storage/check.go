@@ -118,6 +118,26 @@ type CheckReport struct {
 	Containers            map[string][]error // damaged containers (including those based on damaged images)
 }
 
+func (r *CheckReport) recordLayerErrors(id string, errs ...error) {
+	r.Layers[id] = append(r.Layers[id], errs...)
+}
+
+func (r *CheckReport) recordROLayerErrors(id string, errs ...error) {
+	r.ROLayers[id] = append(r.ROLayers[id], errs...)
+}
+
+func (r *CheckReport) recordImageErrors(id string, errs ...error) {
+	r.Images[id] = append(r.Images[id], errs...)
+}
+
+func (r *CheckReport) recordROImageErrors(id string, errs ...error) {
+	r.ROImages[id] = append(r.ROImages[id], errs...)
+}
+
+func (r *CheckReport) recordContainerErrors(id string, errs ...error) {
+	r.Containers[id] = append(r.Containers[id], errs...)
+}
+
 // RepairOptions is the set of options for Repair().
 type RepairOptions struct {
 	RemoveContainers bool // Remove damaged containers
@@ -192,13 +212,13 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 		if isReadWrite {
 			readWriteDesc = ""
 			recordError2 = func(id string, err error) {
-				report.Layers[id] = append(report.Layers[id],
+				report.recordLayerErrors(id,
 					fmt.Errorf("layer %s: %w", id, err))
 			}
 		} else {
 			readWriteDesc = "read-only "
 			recordError2 = func(id string, err error) {
-				report.ROLayers[id] = append(report.ROLayers[id],
+				report.recordROLayerErrors(id,
 					fmt.Errorf("read-only layer %s: %w", id, err))
 			}
 		}
@@ -417,8 +437,8 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 
 			// Not recordError2 because we are recording for layer "id"
 			// but the text talks about layer "parent".
-			err := fmt.Errorf("%slayer %s: %w", readWriteDesc, parent, ErrLayerMissing)
-			report.Layers[id] = append(report.Layers[id], err)
+			report.recordLayerErrors(id,
+				fmt.Errorf("%slayer %s: %w", readWriteDesc, parent, ErrLayerMissing))
 		}
 		return struct{}{}, false, nil
 	}); err != nil {
@@ -451,14 +471,14 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			var recordError func(err error)
 			if isReadWrite {
 				appendErrors = func(errors ...error) {
-					report.Images[id] = append(report.Images[id], errors...)
+					report.recordImageErrors(id, errors...)
 				}
 				recordError = func(err error) {
 					appendErrors(fmt.Errorf("image %s: %w", id, err))
 				}
 			} else {
 				appendErrors = func(errors ...error) {
-					report.ROImages[id] = append(report.ROImages[id], errors...)
+					report.recordROImageErrors(id, errors...)
 				}
 				recordError = func(err error) {
 					appendErrors(fmt.Errorf("read-only image %s: %w", id, err))
@@ -548,7 +568,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			container := containers[i]
 			id := container.ID
 			appendErrors := func(errors ...error) {
-				report.Containers[id] = append(report.Containers[id], errors...)
+				report.recordContainerErrors(id, errors...)
 			}
 			recordError := func(err error) {
 				appendErrors(fmt.Errorf("container %s: %w", id, err))
@@ -621,8 +641,8 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					// created, or it was created far enough in the past that we're
 					// reasonably sure it's not part of an image that's being written
 					// right now.
-					err := fmt.Errorf("layer %s: %w", layer.ID, ErrLayerUnreferenced)
-					report.Layers[layer.ID] = append(report.Layers[layer.ID], err)
+					report.recordLayerErrors(layer.ID,
+						fmt.Errorf("layer %s: %w", layer.ID, ErrLayerUnreferenced))
 				}
 			}
 		}
@@ -645,8 +665,8 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 	if !errors.Is(err, drivers.ErrNotSupported) {
 		for i, id := range layerList {
 			if _, known := referencedLayers[id]; !known {
-				err := fmt.Errorf("layer %s: %w", id, ErrLayerUnaccounted)
-				report.Layers[id] = append(report.Layers[id], err)
+				report.recordLayerErrors(id,
+					fmt.Errorf("layer %s: %w", id, ErrLayerUnaccounted))
 			}
 			report.layerOrder[id] = i + 1
 		}
