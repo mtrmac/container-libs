@@ -447,6 +447,23 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 		for i := range images {
 			image := images[i]
 			id := image.ID
+			var appendErrors func(errors ...error)
+			var recordError func(err error)
+			if isReadWrite {
+				appendErrors = func(errors ...error) {
+					report.Images[id] = append(report.Images[id], errors...)
+				}
+				recordError = func(err error) {
+					appendErrors(fmt.Errorf("image %s: %w", id, err))
+				}
+			} else {
+				appendErrors = func(errors ...error) {
+					report.ROImages[id] = append(report.ROImages[id], errors...)
+				}
+				recordError = func(err error) {
+					appendErrors(fmt.Errorf("read-only image %s: %w", id, err))
+				}
+			}
 			// If we've already seen an image with this ID, skip it.
 			if _, checked := examinedImages[id]; checked {
 				continue
@@ -464,29 +481,14 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						data, err := store.BigData(id, key)
 						if err != nil {
 							if errors.Is(err, os.ErrNotExist) {
-								err = fmt.Errorf("%simage %s: data item %q: %w", readWriteDesc, id, key, ErrImageDataMissing)
-								if isReadWrite {
-									report.Images[id] = append(report.Images[id], err)
-								} else {
-									report.ROImages[id] = append(report.ROImages[id], err)
-								}
+								recordError(fmt.Errorf("data item %q: %w", key, ErrImageDataMissing))
 								return
 							}
-							err = fmt.Errorf("%simage %s: data item %q: %w", readWriteDesc, id, key, err)
-							if isReadWrite {
-								report.Images[id] = append(report.Images[id], err)
-							} else {
-								report.ROImages[id] = append(report.ROImages[id], err)
-							}
+							recordError(fmt.Errorf("data item %q: %w", key, err))
 							return
 						}
 						if int64(len(data)) != image.BigDataSizes[key] {
-							err = fmt.Errorf("%simage %s: data item %q: %w", readWriteDesc, id, key, ErrImageDataIncorrectSize)
-							if isReadWrite {
-								report.Images[id] = append(report.Images[id], err)
-							} else {
-								report.ROImages[id] = append(report.ROImages[id], err)
-							}
+							recordError(fmt.Errorf("data item %q: %w", key, ErrImageDataIncorrectSize))
 							return
 						}
 					}()
@@ -510,12 +512,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					_, checkedRO := referencedROLayers[layer]
 					if !checked && !checkedRO {
 						err := fmt.Errorf("layer %s: %w", layer, ErrImageLayerMissing)
-						err = fmt.Errorf("%simage %s: %w", readWriteDesc, id, err)
-						if isReadWrite {
-							report.Images[id] = append(report.Images[id], err)
-						} else {
-							report.ROImages[id] = append(report.ROImages[id], err)
-						}
+						recordError(err)
 					} else {
 						// Count this layer as referenced.  Whether by the
 						// image or one of its child layers doesn't matter
@@ -527,20 +524,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 							referencedROLayers[layer] = true
 						}
 					}
-					if isReadWrite {
-						if len(report.Layers[layer]) > 0 {
-							report.Images[id] = append(report.Images[id], report.Layers[layer]...)
-						}
-						if len(report.ROLayers[layer]) > 0 {
-							report.Images[id] = append(report.Images[id], report.ROLayers[layer]...)
-						}
-					} else {
-						if len(report.Layers[layer]) > 0 {
-							report.ROImages[id] = append(report.ROImages[id], report.Layers[layer]...)
-						}
-						if len(report.ROLayers[layer]) > 0 {
-							report.ROImages[id] = append(report.ROImages[id], report.ROLayers[layer]...)
-						}
+					if len(report.Layers[layer]) > 0 {
+						appendErrors(report.Layers[layer]...)
+					}
+					if len(report.ROLayers[layer]) > 0 {
+						appendErrors(report.ROLayers[layer]...)
 					}
 				}
 			}
