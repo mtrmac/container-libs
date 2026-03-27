@@ -296,9 +296,9 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					digester := expectedDigest.Algorithm().Digester()
 					counter := ioutils.NewWriteCounter(digester.Hash())
 					reader := io.TeeReader(diff, counter)
-					var wg sync.WaitGroup
+
 					var archiveErr error
-					wg.Go(func() {
+					func() {
 						// Read the diff, one item at a time.
 						tr := tar.NewReader(reader)
 						hdr, err := tr.Next()
@@ -315,8 +315,8 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						if _, err := io.Copy(io.Discard, reader); err != nil {
 							recordError(fmt.Errorf("consume any trailer after the EOF marker: %w", err))
 						}
-					})
-					wg.Wait()
+					}()
+
 					diff.Close()
 					if archiveErr != nil {
 						// Reading the diff didn't end as expected
