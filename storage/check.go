@@ -298,14 +298,13 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					reader := io.TeeReader(diff, counter)
 
 					var archiveErr error
+					var diffHeaders []*tar.Header
 					func() {
 						// Read the diff, one item at a time.
 						tr := tar.NewReader(reader)
 						hdr, err := tr.Next()
 						for err == nil {
-							diffHeadersByLayerMutex.Lock()
-							diffHeadersByLayer[id] = append(diffHeadersByLayer[id], hdr)
-							diffHeadersByLayerMutex.Unlock()
+							diffHeaders = append(diffHeaders, hdr)
 							hdr, err = tr.Next()
 						}
 						if !errors.Is(err, io.EOF) {
@@ -320,25 +319,21 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					diff.Close()
 					if archiveErr != nil {
 						// Reading the diff didn't end as expected
-						diffHeadersByLayerMutex.Lock()
-						delete(diffHeadersByLayer, id)
-						diffHeadersByLayerMutex.Unlock()
 						return archiveErr
 					}
+					failed := false
 					if digester.Digest() != layer.UncompressedDigest {
-						// The diff digest didn't match.
-						diffHeadersByLayerMutex.Lock()
-						delete(diffHeadersByLayer, id)
-						diffHeadersByLayerMutex.Unlock()
+						failed = true // The diff digest didn't match.
 						recordError(ErrLayerIncorrectContentDigest)
 					}
 					if layer.UncompressedSize != -1 && counter.Count != layer.UncompressedSize {
-						// We expected the diff to have a specific size, and
-						// it didn't match.
-						diffHeadersByLayerMutex.Lock()
-						delete(diffHeadersByLayer, id)
-						diffHeadersByLayerMutex.Unlock()
+						failed = true // We expected the diff to have a specific size, and it didn't match.
 						recordError(fmt.Errorf("read %d bytes instead of %d bytes: %w", counter.Count, layer.UncompressedSize, ErrLayerIncorrectContentSize))
+					}
+					if !failed {
+						diffHeadersByLayerMutex.Lock()
+						diffHeadersByLayer[id] = diffHeaders
+						diffHeadersByLayerMutex.Unlock()
 					}
 					return nil
 				}(); err != nil {
