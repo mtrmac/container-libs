@@ -539,11 +539,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 							referencedROLayers[layer] = true
 						}
 					}
-					if len(report.Layers[layer]) > 0 {
-						appendErrors(report.Layers[layer]...)
+					if layerErrs := report.Layers[layer]; len(layerErrs) > 0 {
+						appendErrors(layerErrs...)
 					}
-					if len(report.ROLayers[layer]) > 0 {
-						appendErrors(report.ROLayers[layer]...)
+					if layerErrs := report.ROLayers[layer]; len(layerErrs) > 0 {
+						appendErrors(layerErrs...)
 					}
 				}
 			}
@@ -597,11 +597,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					err := fmt.Errorf("image %s: %w", container.ImageID, ErrContainerImageMissing)
 					appendErrors(err)
 				}
-				if len(report.Images[container.ImageID]) > 0 {
-					appendErrors(report.Images[container.ImageID]...)
+				if imageErrs := report.Images[container.ImageID]; len(imageErrs) > 0 {
+					appendErrors(imageErrs...)
 				}
-				if len(report.ROImages[container.ImageID]) > 0 {
-					appendErrors(report.ROImages[container.ImageID]...)
+				if imageErrs := report.ROImages[container.ImageID]; len(imageErrs) > 0 {
+					appendErrors(imageErrs...)
 				}
 			}
 			// Count the container's layer as referenced.
