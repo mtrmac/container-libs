@@ -231,22 +231,22 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			// were stored.
 			if options.LayerData {
 				for _, name := range layer.BigDataNames {
-					func() {
+					if err := func() error {
 						rc, err := store.BigData(id, name)
 						if err != nil {
 							if errors.Is(err, os.ErrNotExist) {
-								recordError(fmt.Errorf("data item %q: %w", name, ErrLayerDataMissing))
-								return
+								return ErrLayerDataMissing
 							}
-							recordError(fmt.Errorf("data item %q: %w", name, err))
-							return
+							return err
 						}
 						defer rc.Close()
 						if _, err = io.Copy(io.Discard, rc); err != nil {
-							recordError(fmt.Errorf("data item %q: %w", name, err))
-							return
+							return err
 						}
-					}()
+						return nil
+					}(); err != nil {
+						recordError(fmt.Errorf("data item %q: %w", name, err))
+					}
 				}
 			}
 			// Check that the content we get back when extracting the layer's contents
@@ -257,12 +257,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			// diff, which we can use to reconstruct the expected contents for the tree
 			// we see when the layer is mounted.
 			if options.LayerDigests && layer.UncompressedDigest != "" {
-				func() {
+				if err := func() error {
 					expectedDigest := layer.UncompressedDigest
 					// Double-check that the digest isn't invalid somehow.
 					if err := layer.UncompressedDigest.Validate(); err != nil {
-						recordError(err)
-						return
+						return err
 					}
 					// Extract the diff.
 					uncompressed := archive.Uncompressed
@@ -271,8 +270,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					}
 					diff, err := store.Diff("", id, &diffOptions)
 					if err != nil {
-						recordError(err)
-						return
+						return err
 					}
 					// Digest and count the length of the diff.
 					digester := expectedDigest.Algorithm().Digester()
@@ -305,8 +303,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						diffHeadersByLayerMutex.Lock()
 						delete(diffHeadersByLayer, id)
 						diffHeadersByLayerMutex.Unlock()
-						recordError(archiveErr)
-						return
+						return archiveErr
 					}
 					if digester.Digest() != layer.UncompressedDigest {
 						// The diff digest didn't match.
@@ -323,7 +320,10 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						diffHeadersByLayerMutex.Unlock()
 						recordError(fmt.Errorf("read %d bytes instead of %d bytes: %w", counter.Count, layer.UncompressedSize, ErrLayerIncorrectContentSize))
 					}
-				}()
+					return nil
+				}(); err != nil {
+					recordError(err)
+				}
 			}
 		}
 		// At this point we're out of things that we can be sure will work in read-only
@@ -341,24 +341,22 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			// flag cases where content is in the layer that shouldn't be there.  The
 			// tar-split implementation of Diff() won't catch this problem by itself.
 			if options.LayerMountable {
-				func() {
+				if err := func() error {
 					// Mount the layer.
 					mountPoint, err := s.graphDriver.Get(id, drivers.MountOpts{MountLabel: layer.MountLabel, Options: []string{"ro"}})
 					if err != nil {
-						recordError(err)
-						return
+						return err
 					}
 					// Unmount the layer when we're done in here.
 					defer func() {
 						if err := s.graphDriver.Put(id); err != nil {
 							recordError(err)
-							return
 						}
 					}()
 					// If we're not looking at layer contents, or we didn't
 					// look at the diff for this layer, we're done here.
 					if !options.LayerDigests || layer.UncompressedDigest == "" || !options.LayerContents {
-						return
+						return nil
 					}
 					// Build a list of all of the changes in all of the layers
 					// that make up the tree we're looking at.
@@ -370,7 +368,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						layerChanges, haveChanges := diffHeadersByLayer[layerID]
 						diffHeadersByLayerMutex.Unlock()
 						if !haveChanges {
-							return
+							return nil
 						}
 						// The diff headers for this layer go _before_ those of
 						// layers that inherited some of its contents.
@@ -388,15 +386,17 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 					}
 					actualCheckDirectory, err := newCheckDirectoryFromDirectory(mountPoint)
 					if err != nil {
-						recordError(fmt.Errorf("scanning contents: %w", err))
-						return
+						return fmt.Errorf("scanning contents: %w", err)
 					}
 					// Every departure from our expectations is an error.
 					diffs := compareCheckDirectory(expectedCheckDirectory, actualCheckDirectory, idmap, ignore)
 					for _, diff := range diffs {
 						recordError(fmt.Errorf("%s, %w", diff, ErrLayerContentModified))
 					}
-				}()
+					return nil
+				}(); err != nil {
+					recordError(err)
+				}
 			}
 		}
 		// Check that we don't have any dangling parent layer references.
@@ -477,21 +477,21 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 				// were calculated (they're only used as lookup keys), so do not try
 				// to check them.
 				for _, key := range image.BigDataNames {
-					func() {
+					if err := func() error {
 						data, err := store.BigData(id, key)
 						if err != nil {
 							if errors.Is(err, os.ErrNotExist) {
-								recordError(fmt.Errorf("data item %q: %w", key, ErrImageDataMissing))
-								return
+								return ErrImageDataMissing
 							}
-							recordError(fmt.Errorf("data item %q: %w", key, err))
-							return
+							return err
 						}
 						if int64(len(data)) != image.BigDataSizes[key] {
-							recordError(fmt.Errorf("data item %q: %w", key, ErrImageDataIncorrectSize))
-							return
+							return ErrImageDataIncorrectSize
 						}
-					}()
+						return nil
+					}(); err != nil {
+						recordError(fmt.Errorf("data item %q: %w", key, err))
+					}
 				}
 			}
 			// Walk the layers list for the image.  For every layer that the image uses
@@ -558,21 +558,21 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 				// Check that all of the big data items are present and reading them
 				// back gives us the right amount of data.
 				for _, key := range container.BigDataNames {
-					func() {
+					if err := func() error {
 						data, err := s.containerStore.BigData(id, key)
 						if err != nil {
 							if errors.Is(err, os.ErrNotExist) {
-								recordError(fmt.Errorf("data item %q: %w", key, ErrContainerDataMissing))
-								return
+								return ErrContainerDataMissing
 							}
-							recordError(fmt.Errorf("data item %q: %w", key, err))
-							return
+							return err
 						}
 						if int64(len(data)) != container.BigDataSizes[key] {
-							recordError(fmt.Errorf("data item %q: %w", key, ErrContainerDataIncorrectSize))
-							return
+							return ErrContainerDataIncorrectSize
 						}
-					}()
+						return nil
+					}(); err != nil {
+						recordError(fmt.Errorf("data item %q: %w", key, err))
+					}
 				}
 			}
 			// Look at the container's base image.  If the image has errors, the image's errors
