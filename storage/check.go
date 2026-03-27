@@ -454,10 +454,6 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			return struct{}{}, true, err
 		}
 		isReadWrite := roImageStoreIsReallyReadWrite(store)
-		readWriteDesc := ""
-		if !isReadWrite {
-			readWriteDesc = "read-only "
-		}
 		// Examine each image in turn.
 		for i := range images {
 			image := images[i]
@@ -484,7 +480,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 				continue
 			}
 			examinedImages[id] = struct{}{}
-			logrus.Debugf("checking %simage %s", readWriteDesc, id)
+			if isReadWrite {
+				logrus.Debugf("checking image %s", id)
+			} else {
+				logrus.Debugf("checking read-only image %s", id)
+			}
 			if options.ImageData {
 				// Check that all of the big data items are present and reading them
 				// back gives us the right amount of data.  Even though we record
