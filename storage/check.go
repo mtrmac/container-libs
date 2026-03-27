@@ -547,6 +547,12 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 		for i := range containers {
 			container := containers[i]
 			id := container.ID
+			appendErrors := func(errors ...error) {
+				report.Containers[id] = append(report.Containers[id], errors...)
+			}
+			recordError := func(err error) {
+				appendErrors(fmt.Errorf("container %s: %w", id, err))
+			}
 			logrus.Debugf("checking container %s", id)
 			if options.ContainerData {
 				// Check that all of the big data items are present and reading them
@@ -556,17 +562,14 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 						data, err := s.containerStore.BigData(id, key)
 						if err != nil {
 							if errors.Is(err, os.ErrNotExist) {
-								err = fmt.Errorf("container %s: data item %q: %w", id, key, ErrContainerDataMissing)
-								report.Containers[id] = append(report.Containers[id], err)
+								recordError(fmt.Errorf("data item %q: %w", key, ErrContainerDataMissing))
 								return
 							}
-							err = fmt.Errorf("container %s: data item %q: %w", id, key, err)
-							report.Containers[id] = append(report.Containers[id], err)
+							recordError(fmt.Errorf("data item %q: %w", key, err))
 							return
 						}
 						if int64(len(data)) != container.BigDataSizes[key] {
-							err = fmt.Errorf("container %s: data item %q: %w", id, key, ErrContainerDataIncorrectSize)
-							report.Containers[id] = append(report.Containers[id], err)
+							recordError(fmt.Errorf("data item %q: %w", key, ErrContainerDataIncorrectSize))
 							return
 						}
 					}()
@@ -577,13 +580,13 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 			if container.ImageID != "" {
 				if _, checked := examinedImages[container.ImageID]; !checked {
 					err := fmt.Errorf("image %s: %w", container.ImageID, ErrContainerImageMissing)
-					report.Containers[id] = append(report.Containers[id], err)
+					appendErrors(err)
 				}
 				if len(report.Images[container.ImageID]) > 0 {
-					report.Containers[id] = append(report.Containers[id], report.Images[container.ImageID]...)
+					appendErrors(report.Images[container.ImageID]...)
 				}
 				if len(report.ROImages[container.ImageID]) > 0 {
-					report.Containers[id] = append(report.Containers[id], report.ROImages[container.ImageID]...)
+					appendErrors(report.ROImages[container.ImageID]...)
 				}
 			}
 			// Count the container's layer as referenced.
