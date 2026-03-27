@@ -625,11 +625,11 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 		if err != nil {
 			return struct{}{}, true, err
 		}
+		maximumAge := defaultMaximumUnreferencedLayerAge
+		if options.LayerUnreferencedMaximumAge != nil {
+			maximumAge = *options.LayerUnreferencedMaximumAge
+		}
 		for _, layer := range layers {
-			maximumAge := defaultMaximumUnreferencedLayerAge
-			if options.LayerUnreferencedMaximumAge != nil {
-				maximumAge = *options.LayerUnreferencedMaximumAge
-			}
 			if referenced := referencedLayers[layer.ID]; !referenced {
 				if layer.Created.IsZero() || layer.Created.Add(maximumAge).Before(time.Now()) {
 					// Either we don't (and never will) know when this layer was
