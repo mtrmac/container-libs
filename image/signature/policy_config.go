@@ -57,6 +57,7 @@ func DefaultPolicy(sys *types.SystemContext) (*Policy, error) {
 		DoNotLoadDropInFiles:         true,
 		EnvironmentName:              "CONTAINERS_POLICY_JSON",
 		RootForImplicitAbsolutePaths: rootForImplicitAbsPaths,
+		ErrorIfNotFound:              true,
 	}
 
 	var policy *Policy
@@ -73,10 +74,6 @@ func DefaultPolicy(sys *types.SystemContext) (*Policy, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid policy in %q: %w", item.Name, err)
 		}
-	}
-
-	if policy == nil {
-		return nil, fmt.Errorf("no policy.json file found")
 	}
 
 	return policy, nil
