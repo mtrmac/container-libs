@@ -57,6 +57,25 @@ type File struct {
 	// NOTE: This does NOT affect paths starting by $HOME or environment variables paths.
 	RootForImplicitAbsolutePaths string
 
+	// CustomConfigFilePath is the path to a specific file that will be parsed as main file instead
+	// of the default location files. Unlike the regular parsing logic if set this file must exists
+	// or ErrNotExist will be returned. Note when just using this option without also
+	// CustomConfigFileDropInDirectory it means the regular drop in directories are still searched
+	// assuming DoNotLoadDropInFiles is not set.
+	// This has higher priority over the EnvironmentName variable, so if set the env is ignored.
+	// RootForImplicitAbsolutePaths will not be used for this path.
+	// Optional.
+	CustomConfigFilePath string
+
+	// CustomConfigFileDropInDirectory is the path to a specific drop in directory that will be searched
+	// instead of the default location. Note when just using this option without also
+	// CustomConfigFilePath it means the regular main file location is still being read assuming
+	// DoNotLoadMainFiles is not set.
+	// This has higher priority over the EnvironmentName + "_OVERRIDE" variable, so if set the env is ignored.
+	// RootForImplicitAbsolutePaths will not be used for this path.
+	// Optional.
+	CustomConfigFileDropInDirectory string
+
 	// DoNotLoadMainFiles should be set if only the Drop In files should be loaded.
 	DoNotLoadMainFiles bool
 
@@ -146,7 +165,21 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			return ok
 		}
 
-		if conf.EnvironmentName != "" {
+		if conf.CustomConfigFilePath != "" {
+			usedPaths = append(usedPaths, conf.CustomConfigFilePath)
+			f, err := os.Open(conf.CustomConfigFilePath)
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if !yieldAndClose(f) {
+				return
+			}
+			shouldLoadMainFile = false
+			// Only consider the env if no custom path was explicitly set.
+			// As this path often comes from cli options it is important it wins over the env value.
+		} else if conf.EnvironmentName != "" {
 			if path := os.Getenv(conf.EnvironmentName); path != "" {
 				usedPaths = append(usedPaths, path)
 				f, err := os.Open(path)
@@ -200,7 +233,16 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 		}
 
 		if shouldLoadDropIns {
-			files, err := readDropIns(defaultConfig, overrideConfig, userConfig, conf.Extension, conf.UserId)
+			var (
+				files []string
+				err   error
+			)
+			suffix := "." + conf.Extension
+			if conf.CustomConfigFileDropInDirectory != "" {
+				files, err = readDropInsFromPaths([]string{conf.CustomConfigFileDropInDirectory}, suffix)
+			} else {
+				files, err = readDropIns(defaultConfig, overrideConfig, userConfig, suffix, conf.UserId)
+			}
 			if err != nil {
 				// return error via iterator
 				yield(nil, err)
@@ -241,7 +283,7 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			conf.Modules = resolvedModules
 		}
 
-		if conf.EnvironmentName != "" && !conf.DoNotLoadDropInFiles {
+		if conf.EnvironmentName != "" && !conf.DoNotLoadDropInFiles && conf.CustomConfigFileDropInDirectory == "" {
 			// The _OVERRIDE env must be appended after loading all files, even modules.
 			if path := os.Getenv(conf.EnvironmentName + "_OVERRIDE"); path != "" {
 				usedPaths = append(usedPaths, path)
@@ -266,11 +308,8 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 
 const dropInSuffix = ".d"
 
-func readDropIns(defaultConfig, overrideConfig, userConfig, extension string, uid int) ([]string, error) {
-	dropInMap := make(map[string]string)
+func readDropIns(defaultConfig, overrideConfig, userConfig, suffix string, uid int) ([]string, error) {
 	paths := make([]string, 0, 7)
-
-	suffix := "." + extension
 
 	if defaultConfig != "" {
 		paths = append(paths, getDropInPaths(defaultConfig, suffix, uid)...)
@@ -282,6 +321,12 @@ func readDropIns(defaultConfig, overrideConfig, userConfig, extension string, ui
 		// the $HOME config only has one .d path not the rootful/rootless ones.
 		paths = append(paths, userConfig+dropInSuffix)
 	}
+
+	return readDropInsFromPaths(paths, suffix)
+}
+
+func readDropInsFromPaths(paths []string, suffix string) ([]string, error) {
+	dropInMap := make(map[string]string)
 
 	for _, path := range paths {
 		entries, err := os.ReadDir(path)
