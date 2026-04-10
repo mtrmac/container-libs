@@ -97,8 +97,6 @@ func getConfName(name, extension string, noExtension bool) string {
 // If an error is returned by the iterator then this must be treated as fatal error and must fail the config file parsing.
 // Expected ENOENT errors are already ignored in this function and must not be handled again by callers.
 // The given File options must not be nil and populated with valid options.
-//
-// The _OVERRIDE environment is ignored if DoNotLoadDropInFiles is set.
 func Read(conf *File) iter.Seq2[*Item, error] {
 	configFileName := getConfName(conf.Name, conf.Extension, conf.DoNotUseExtensionForConfigName)
 

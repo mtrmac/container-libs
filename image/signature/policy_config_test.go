@@ -127,15 +127,21 @@ func TestInvalidPolicyFormatError(t *testing.T) {
 }
 
 func TestDefaultPolicy(t *testing.T) {
-	// prReject
 	const rejectJSON = `{"default":[{"type":"reject"}]}`
-	// prInsecureAcceptAnything
 	const insecureJSON = `{"default":[{"type":"insecureAcceptAnything"}]}`
+	rejectPolicy := &Policy{
+		Default:    PolicyRequirements{NewPRReject()},
+		Transports: map[string]PolicyTransportScopes{},
+	}
+	insecurePolicy := &Policy{
+		Default:    PolicyRequirements{NewPRInsecureAcceptAnything()},
+		Transports: map[string]PolicyTransportScopes{},
+	}
 
 	type tc struct {
 		name           string
 		setup          func(t *testing.T, rootPrefix string) *types.SystemContext
-		expectPolicy   any // *Policy, *prReject, *prInsecureAcceptAnything
+		expectPolicy   *Policy
 		expectErr      bool
 		expectErrMatch string
 	}
@@ -179,7 +185,7 @@ func TestDefaultPolicy(t *testing.T) {
 					RootForImplicitAbsolutePaths: rootPrefix,
 				}
 			},
-			expectPolicy: &prInsecureAcceptAnything{},
+			expectPolicy: insecurePolicy,
 		},
 		{
 			name: "etc fallback when user missing",
@@ -192,7 +198,7 @@ func TestDefaultPolicy(t *testing.T) {
 					RootForImplicitAbsolutePaths: rootPrefix,
 				}
 			},
-			expectPolicy: &prReject{},
+			expectPolicy: rejectPolicy,
 		},
 		{
 			name: "usr fallback when only usr present",
@@ -204,7 +210,7 @@ func TestDefaultPolicy(t *testing.T) {
 					RootForImplicitAbsolutePaths: rootPrefix,
 				}
 			},
-			expectPolicy: &prInsecureAcceptAnything{},
+			expectPolicy: insecurePolicy,
 		},
 		{
 			name: "no policy file found",
@@ -230,7 +236,7 @@ func TestDefaultPolicy(t *testing.T) {
 					RootForImplicitAbsolutePaths: rootPrefix,
 				}
 			},
-			expectPolicy: &prInsecureAcceptAnything{},
+			expectPolicy: insecurePolicy,
 		},
 		{
 			name: "containers policy conf read error",
@@ -290,7 +296,23 @@ func TestDefaultPolicy(t *testing.T) {
 					RootForImplicitAbsolutePaths: rootPrefix,
 				}
 			},
-			expectPolicy: &prReject{},
+			expectPolicy: rejectPolicy,
+		},
+		{
+			name: "nil SystemContext",
+			setup: func(t *testing.T, _ string) *types.SystemContext {
+				t.Setenv("CONTAINERS_POLICY_JSON", "./fixtures/policy.json")
+				return nil
+			},
+			expectPolicy: policyFixtureContents,
+		},
+		{
+			name: "empty SystemContext",
+			setup: func(t *testing.T, _ string) *types.SystemContext {
+				t.Setenv("CONTAINERS_POLICY_JSON", "./fixtures/policy.json")
+				return &types.SystemContext{}
+			},
+			expectPolicy: policyFixtureContents,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -311,19 +333,7 @@ func TestDefaultPolicy(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-
-			switch expected := test.expectPolicy.(type) {
-			case *Policy:
-				assert.Equal(t, expected, policy)
-			case *prInsecureAcceptAnything:
-				_, ok := policy.Default[0].(*prInsecureAcceptAnything)
-				assert.True(t, ok, "expected insecureAcceptAnything policy requirement")
-			case *prReject:
-				_, ok := policy.Default[0].(*prReject)
-				assert.True(t, ok, "expected reject policy requirement")
-			default:
-				t.Fatalf("unexpected expectedPolicy type %T", test.expectPolicy)
-			}
+			assert.Equal(t, test.expectPolicy, policy)
 		})
 	}
 }
