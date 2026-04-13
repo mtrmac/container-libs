@@ -34,6 +34,7 @@ type handler struct {
 
 	// Internal state.
 	sysctx      *types.SystemContext
+	policyctx   *signature.PolicyContext
 	cache       types.BlobInfoCache
 	imageSerial uint64
 	images      map[uint64]*openImage
@@ -62,6 +63,13 @@ func (h *handler) close() {
 			h.logger.Warnf("Failed to close image: %v", err)
 		}
 	}
+
+	if h.policyctx != nil {
+		if err := h.policyctx.Destroy(); err != nil {
+			h.logger.Warnf("tearing down policy context: %v", err)
+		}
+		h.policyctx = nil
+	}
 }
 
 // Initialize performs one-time initialization, and returns the protocol version.
@@ -86,6 +94,12 @@ func (h *handler) Initialize(ctx context.Context, args []any) (replyBuf, error) 
 	h.sysctx = sysctx
 	h.cache = blobinfocache.DefaultCache(sysctx)
 
+	policyContext, err := h.getPolicyContext()
+	if err != nil {
+		return ret, err
+	}
+	h.policyctx = policyContext
+
 	r := replyBuf{
 		value: protocolVersion,
 	}
@@ -98,7 +112,7 @@ func (h *handler) OpenImage(ctx context.Context, args []any) (replyBuf, error) {
 	return h.openImageImpl(ctx, args, false)
 }
 
-func (h *handler) openImageImpl(ctx context.Context, args []any, allowNotFound bool) (retReplyBuf replyBuf, retErr error) {
+func (h *handler) openImageImpl(ctx context.Context, args []any, allowNotFound bool) (replyBuf, error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	var ret replyBuf
@@ -127,18 +141,8 @@ func (h *handler) openImageImpl(ctx context.Context, args []any, allowNotFound b
 		return ret, err
 	}
 
-	policyContext, err := h.getPolicyContext()
-	if err != nil {
-		return ret, err
-	}
-	defer func() {
-		if err := policyContext.Destroy(); err != nil {
-			retErr = noteCloseFailure(retErr, "tearing down policy context", err)
-		}
-	}()
-
 	unparsedTopLevel := image.UnparsedInstance(imgsrc, nil)
-	allowed, err := policyContext.IsRunningImageAllowed(ctx, unparsedTopLevel)
+	allowed, err := h.policyctx.IsRunningImageAllowed(ctx, unparsedTopLevel)
 	if err != nil {
 		return ret, err
 	}
