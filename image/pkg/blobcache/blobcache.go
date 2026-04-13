@@ -2,7 +2,9 @@ package blobcache
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,11 +37,19 @@ func (c compressionNoteContent) String() string {
 	return strings.Join(lines, "\n")
 }
 
-// parseCompressedNote parses the content of a .compressed sidecar note.
+// parseCompressedNote reads and parses a .compressed sidecar note file.
 // The format is one "<digest> [<algorithm>]" entry per line.
 // Old caches may have a single line with just "<digest>" (no algorithm, implies gzip).
-func parseCompressedNote(content []byte) compressionNoteContent {
+// If the file does not exist, an empty map is returned with no error.
+func parseCompressedNote(filePath string) (compressionNoteContent, error) {
 	entries := make(compressionNoteContent)
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return entries, nil
+		}
+		return nil, err
+	}
 	for _, line := range strings.Split(string(content), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -48,7 +58,7 @@ func parseCompressedNote(content []byte) compressionNoteContent {
 		digestStr, algoName, _ := strings.Cut(line, " ")
 		entries[digestStr] = algoName
 	}
-	return entries
+	return entries, nil
 }
 
 // BlobCache is an object which saves copies of blobs that are written to it while passing them

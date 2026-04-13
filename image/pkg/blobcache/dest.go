@@ -2,10 +2,8 @@ package blobcache
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -129,16 +127,15 @@ func (d *blobCacheDestination) saveStream(decompressReader io.ReadCloser, tempFi
 	*alternateDigest = digester.Digest()
 	// Update the .compressed note with this entry, preserving any existing entries
 	// for other compression algorithms. The format is one "<digest> <algorithm>" per line.
-	rawCompressedNote, err := os.ReadFile(decompressedFilename + compressedNote)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	compressedNoteContent, err := parseCompressedNote(decompressedFilename + compressedNote)
+	if err != nil {
 		logrus.Debugf("error reading compressed note for %q: %v", decompressedFilename, err)
 		return
 	}
-	compressedNoteContent := parseCompressedNote(rawCompressedNote)
 	compressedNoteContent[compressedDigest.String()] = algorithm.Name()
 	// Note the relationship between the two files.
 	if err := ioutils.AtomicWriteFile(decompressedFilename+compressedNote, []byte(compressedNoteContent.String()), 0o600); err != nil {
-		logrus.Debugf("error noting that the compressed version of %q is %q: %v", digester.Digest().String(), compressedNoteContent.String(), err)
+		logrus.Debugf("error noting that the compressed version of %q is %q using algorithm %q: %v", digester.Digest().String(), compressedDigest.String(), algorithm.Name(), err)
 	}
 	if err := ioutils.AtomicWriteFile(compressedFilename+decompressedNote, []byte(digester.Digest().String()), 0o600); err != nil {
 		logrus.Debugf("error noting that the decompressed version of %q is %q: %v", compressedDigest.String(), digester.Digest().String(), err)

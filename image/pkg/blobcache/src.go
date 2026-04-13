@@ -129,8 +129,9 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 
 	switch s.reference.compress {
 	case types.Compress:
-		noteContent, err := os.ReadFile(blobFile + compressedNote)
+		noteContent, err := parseCompressedNote(blobFile + compressedNote)
 		if err != nil {
+			logrus.Debugf("error reading compressed note for %q: %v", blobFile, err)
 			return info, nil
 		}
 		// The .compressed note may contain multiple entries (one per line),
@@ -142,7 +143,7 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 		if s.reference.compressAlgorithm != nil {
 			requestedCompressedAlgo = *s.reference.compressAlgorithm
 		}
-		for digestStr, algoName := range parseCompressedNote(noteContent) {
+		for digestStr, algoName := range noteContent {
 			replaceDigest, err := digest.Parse(digestStr)
 			if err != nil {
 				continue
