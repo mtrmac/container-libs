@@ -4,11 +4,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
-	"strconv"
 
-	"go.podman.io/common/pkg/json-proxy"
+	jsonproxy "go.podman.io/common/pkg/json-proxy"
 	"go.podman.io/image/v5/signature"
 	"go.podman.io/image/v5/types"
 )
@@ -21,20 +21,31 @@ func main() {
 }
 
 func run() error {
-	if len(os.Args) < 3 || os.Args[1] != "--sockfd" {
-		return fmt.Errorf("usage: %s --sockfd <fd>", os.Args[0])
-	}
-	sockfd, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		return fmt.Errorf("invalid sockfd: %v", err)
+	sockfd := flag.Int("sockfd", -1, "socket file descriptor")
+	policyPath := flag.String("policy", "", "path to policy.json (default: system default)")
+	overrideArch := flag.String("override-arch", "", "override architecture for manifest list resolution")
+	flag.Parse()
+
+	if *sockfd < 0 {
+		return fmt.Errorf("usage: %s --sockfd <fd> [--policy <path>] [--override-arch <arch>]", os.Args[0])
 	}
 
 	manager, err := jsonproxy.NewManager(
 		jsonproxy.WithSystemContext(func() (*types.SystemContext, error) {
-			return &types.SystemContext{}, nil
+			sc := &types.SystemContext{}
+			if *overrideArch != "" {
+				sc.ArchitectureChoice = *overrideArch
+			}
+			return sc, nil
 		}),
 		jsonproxy.WithPolicyContext(func() (*signature.PolicyContext, error) {
-			policy, err := signature.DefaultPolicy(nil)
+			var policy *signature.Policy
+			var err error
+			if *policyPath != "" {
+				policy, err = signature.NewPolicyFromFile(*policyPath)
+			} else {
+				policy, err = signature.DefaultPolicy(nil)
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -45,5 +56,5 @@ func run() error {
 		return err
 	}
 	defer manager.Close()
-	return manager.Serve(context.Background(), sockfd)
+	return manager.Serve(context.Background(), *sockfd)
 }

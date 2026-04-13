@@ -142,12 +142,54 @@ func (h *handler) openImageImpl(ctx context.Context, args []any, allowNotFound b
 	}
 
 	unparsedTopLevel := image.UnparsedInstance(imgsrc, nil)
-	allowed, err := h.policyctx.IsRunningImageAllowed(ctx, unparsedTopLevel)
+	// Check the signature on the toplevel (possibly multi-arch) manifest, but we don't
+	// yet propagate the error here.
+	allowed, toplevelVerificationErr := h.policyctx.IsRunningImageAllowed(ctx, unparsedTopLevel)
+	if toplevelVerificationErr == nil && !allowed {
+		return ret, errors.New("internal inconsistency: policy verification failed without returning an error")
+	}
+
+	mfest, manifestType, err := unparsedTopLevel.Manifest(ctx)
 	if err != nil {
 		return ret, err
 	}
-	if !allowed {
-		return ret, errors.New("internal inconsistency: policy verification failed without returning an error")
+	var target *image.UnparsedImage
+	if manifest.MIMETypeIsMultiImage(manifestType) {
+		manifestList, err := manifest.ListFromBlob(mfest, manifestType)
+		if err != nil {
+			return ret, err
+		}
+		instanceDigest, err := manifestList.ChooseInstance(h.sysctx)
+		if err != nil {
+			return ret, err
+		}
+		target = image.UnparsedInstance(imgsrc, &instanceDigest)
+
+		allowed, targetVerificationErr := h.policyctx.IsRunningImageAllowed(ctx, target)
+		if targetVerificationErr == nil && !allowed {
+			return ret, errors.New("internal inconsistency: policy verification failed without returning an error")
+		}
+
+		// Now, we only error if *both* the toplevel and target verification failed.
+		// If either succeeded, that's OK.  We want to support a case where the manifest
+		// list is signed, but the target is not (because we previously supported that behavior),
+		// and we want to support the case where only the target is signed (consistent with
+		// what c/image enforces).
+		if targetVerificationErr != nil && toplevelVerificationErr != nil {
+			return ret, targetVerificationErr
+		}
+	} else {
+		target = unparsedTopLevel
+
+		// We're not using a manifest list, so require verification of the single arch manifest.
+		if toplevelVerificationErr != nil {
+			return ret, toplevelVerificationErr
+		}
+	}
+
+	img, err := image.FromUnparsedImage(ctx, h.sysctx, target)
+	if err != nil {
+		return ret, err
 	}
 
 	// Note that we never return zero as an imageid; this code doesn't yet
@@ -156,6 +198,7 @@ func (h *handler) openImageImpl(ctx context.Context, args []any, allowNotFound b
 	openimg := &openImage{
 		id:  h.imageSerial,
 		src: imgsrc,
+		img: img,
 	}
 	h.images[openimg.id] = openimg
 	ret.value = openimg.id
@@ -255,43 +298,6 @@ func (h *handler) returnBytes(retval any, buf []byte) (replyBuf, error) {
 	return ret, nil
 }
 
-// cacheTargetManifest is invoked when GetManifest or GetConfig is invoked
-// the first time for a given image.  If the requested image is a manifest
-// list, this function resolves it to the image matching the calling process'
-// operating system and architecture.
-//
-// TODO: Add GetRawManifest or so that exposes manifest lists.
-func (h *handler) cacheTargetManifest(ctx context.Context, img *openImage) error {
-	if img.cachedimg != nil {
-		return nil
-	}
-	unparsedToplevel := image.UnparsedInstance(img.src, nil)
-	mfest, manifestType, err := unparsedToplevel.Manifest(ctx)
-	if err != nil {
-		return err
-	}
-	var target *image.UnparsedImage
-	if manifest.MIMETypeIsMultiImage(manifestType) {
-		manifestList, err := manifest.ListFromBlob(mfest, manifestType)
-		if err != nil {
-			return err
-		}
-		instanceDigest, err := manifestList.ChooseInstance(h.sysctx)
-		if err != nil {
-			return err
-		}
-		target = image.UnparsedInstance(img.src, &instanceDigest)
-	} else {
-		target = unparsedToplevel
-	}
-	cachedimg, err := image.FromUnparsedImage(ctx, h.sysctx, target)
-	if err != nil {
-		return err
-	}
-	img.cachedimg = cachedimg
-	return nil
-}
-
 // GetManifest returns a copy of the manifest, converted to OCI format, along with the original digest.
 // Manifest lists are resolved to the current operating system and architecture.
 func (h *handler) GetManifest(ctx context.Context, args []any) (replyBuf, error) {
@@ -311,13 +317,7 @@ func (h *handler) GetManifest(ctx context.Context, args []any) (replyBuf, error)
 		return ret, err
 	}
 
-	err = h.cacheTargetManifest(ctx, imgref)
-	if err != nil {
-		return ret, err
-	}
-	img := imgref.cachedimg
-
-	rawManifest, manifestType, err := img.Manifest(ctx)
+	rawManifest, manifestType, err := imgref.img.Manifest(ctx)
 	if err != nil {
 		return ret, err
 	}
@@ -346,7 +346,7 @@ func (h *handler) GetManifest(ctx context.Context, args []any) (replyBuf, error)
 	// docker schema and MIME types.
 	if manifestType != imgspecv1.MediaTypeImageManifest {
 		manifestUpdates := types.ManifestUpdateOptions{ManifestMIMEType: imgspecv1.MediaTypeImageManifest}
-		ociImage, err := img.UpdatedImage(ctx, manifestUpdates)
+		ociImage, err := imgref.img.UpdatedImage(ctx, manifestUpdates)
 		if err != nil {
 			return ret, err
 		}
@@ -380,13 +380,8 @@ func (h *handler) GetFullConfig(ctx context.Context, args []any) (replyBuf, erro
 	if err != nil {
 		return ret, err
 	}
-	err = h.cacheTargetManifest(ctx, imgref)
-	if err != nil {
-		return ret, err
-	}
-	img := imgref.cachedimg
 
-	config, err := img.OCIConfig(ctx)
+	config, err := imgref.img.OCIConfig(ctx)
 	if err != nil {
 		return ret, err
 	}
@@ -416,13 +411,8 @@ func (h *handler) GetConfig(ctx context.Context, args []any) (replyBuf, error) {
 	if err != nil {
 		return ret, err
 	}
-	err = h.cacheTargetManifest(ctx, imgref)
-	if err != nil {
-		return ret, err
-	}
-	img := imgref.cachedimg
 
-	config, err := img.OCIConfig(ctx)
+	config, err := imgref.img.OCIConfig(ctx)
 	if err != nil {
 		return ret, err
 	}
@@ -607,19 +597,13 @@ func (h *handler) GetLayerInfo(ctx context.Context, args []any) (replyBuf, error
 		return ret, err
 	}
 
-	err = h.cacheTargetManifest(ctx, imgref)
-	if err != nil {
-		return ret, err
-	}
-	img := imgref.cachedimg
-
-	layerInfos, err := img.LayerInfosForCopy(ctx)
+	layerInfos, err := imgref.img.LayerInfosForCopy(ctx)
 	if err != nil {
 		return ret, err
 	}
 
 	if layerInfos == nil {
-		layerInfos = img.LayerInfos()
+		layerInfos = imgref.img.LayerInfos()
 	}
 
 	layers := make([]convertedLayerInfo, 0, len(layerInfos))
@@ -655,19 +639,13 @@ func (h *handler) GetLayerInfoPiped(ctx context.Context, args []any) (replyBuf, 
 		return ret, err
 	}
 
-	err = h.cacheTargetManifest(ctx, imgref)
-	if err != nil {
-		return ret, err
-	}
-	img := imgref.cachedimg
-
-	layerInfos, err := img.LayerInfosForCopy(ctx)
+	layerInfos, err := imgref.img.LayerInfosForCopy(ctx)
 	if err != nil {
 		return ret, err
 	}
 
 	if layerInfos == nil {
-		layerInfos = img.LayerInfos()
+		layerInfos = imgref.img.LayerInfos()
 	}
 
 	layers := make([]convertedLayerInfo, 0, len(layerInfos))
