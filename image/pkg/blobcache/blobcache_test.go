@@ -170,8 +170,9 @@ func (tc *testCaseBlobCache) desiredCompressionString() string {
 		return "Compress"
 	case types.Decompress:
 		return "Decompress"
+	default:
+		panic(fmt.Sprintf("unknown desired compression: %d", tc.desiredCompression))
 	}
-	return "unknown"
 }
 
 func TestBlobCache(t *testing.T) {

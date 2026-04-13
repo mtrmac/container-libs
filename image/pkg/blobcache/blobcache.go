@@ -73,10 +73,9 @@ type BlobCache struct {
 	directory string
 	compress  types.LayerCompression
 	// compressAlgorithm specifies compression algorithm for compressed blobs
-	// when compress is set to Compress.
-	// When compress is set to Decompress or PreserveOriginal, this field is ignored.
-	// Default compression algorithm is gzip.
-	compressAlgorithm *compression.Algorithm
+	// when compress is set to Compress. Defaults to gzip.
+	// Ignored when compress is Decompress or PreserveOriginal.
+	compressAlgorithm compression.Algorithm
 }
 
 // BlobCacheOption configures optional BlobCache behavior.
@@ -86,10 +85,10 @@ type BlobCacheOption func(*BlobCache)
 // when compress is set to Compress.
 func WithCompressAlgorithm(algo *compression.Algorithm) BlobCacheOption {
 	return func(b *BlobCache) {
-		if b.compress != types.Compress {
+		if b.compress != types.Compress || algo == nil {
 			return
 		}
-		b.compressAlgorithm = algo
+		b.compressAlgorithm = *algo
 	}
 }
 
@@ -110,9 +109,10 @@ func NewBlobCache(ref types.ImageReference, directory string, compress types.Lay
 		return nil, fmt.Errorf("unhandled LayerCompression value %v", compress)
 	}
 	bc := &BlobCache{
-		reference: ref,
-		directory: directory,
-		compress:  compress,
+		reference:         ref,
+		directory:         directory,
+		compress:          compress,
+		compressAlgorithm: compression.Gzip,
 	}
 	for _, o := range opts {
 		o(bc)
