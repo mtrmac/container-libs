@@ -31,6 +31,10 @@ var (
 	// This can be overridden at build time with the following go linker flag:
 	// -ldflags '-X go.podman.io/storage/pkg/configfile.adminOverrideConfigPath=$your_path'
 	adminOverrideConfigPath = getAdminOverrideConfigPath()
+
+	// ErrConfigFileNotFound is returned when ErrorIfNotFound is true and no config
+	// file could be loaded.
+	ErrConfigFileNotFound = errors.New("config file not found")
 )
 
 type File struct {
@@ -254,7 +258,7 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 		}
 
 		if conf.ErrorIfNotFound && !foundAny {
-			yield(nil, fmt.Errorf("no %s file found; searched paths: %q", configFileName, usedPaths))
+			yield(nil, fmt.Errorf("%w: no %s file found; searched paths: %q", ErrConfigFileNotFound, configFileName, usedPaths))
 			return
 		}
 	}

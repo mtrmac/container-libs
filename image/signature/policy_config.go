@@ -67,7 +67,7 @@ func DefaultPolicy(sys *types.SystemContext) (*Policy, error) {
 		}
 		if policy != nil {
 			// Coverage: This should never happen, configfile.Read ensures at most one policy file.
-			return nil, fmt.Errorf("internal error: expected at most one policy file, got another item %q", item.Name) //nolint:revive
+			return nil, fmt.Errorf("internal error: expected at most one policy file, got another item %q", item.Name)
 		}
 
 		contents, err := io.ReadAll(item.Reader)

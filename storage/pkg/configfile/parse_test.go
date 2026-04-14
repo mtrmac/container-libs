@@ -137,6 +137,7 @@ func Test_Read(t *testing.T) {
 			},
 			// Read records real paths (under RootForImplicitAbsolutePaths / XDG); the message is fmt.Errorf(..., %q, usedPaths).
 			wantErrContains: "no containers.conf file found; searched paths:",
+			wantErr:         ErrConfigFileNotFound,
 		},
 		{
 			name: "simple main file",
@@ -585,7 +586,8 @@ func Test_Read(t *testing.T) {
 				if tt.wantErrContains != "" {
 					assert.ErrorContains(t, err, tt.wantErrContains)
 					assert.Contains(t, err.Error(), tt.arg.RootForImplicitAbsolutePaths)
-				} else {
+				}
+				if tt.wantErr != nil {
 					assert.ErrorIs(t, err, tt.wantErr)
 				}
 
