@@ -129,8 +129,9 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 
 	switch s.reference.compress {
 	case types.Compress:
-		noteContent, err := os.ReadFile(blobFile + compressedNote)
+		noteContent, err := parseCompressedNote(blobFile + compressedNote)
 		if err != nil {
+			logrus.Debugf("error reading compressed note for %q: %v", blobFile, err)
 			return info, nil
 		}
 		// The .compressed note may contain multiple entries (one per line),
@@ -138,24 +139,11 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 		// is compatible with the layer's media type and, if the caller
 		// requested a specific algorithm, matches that algorithm.
 
-		requestedCompressedAlgo := compression.Gzip
-		if s.reference.compressAlgorithm != nil {
-			requestedCompressedAlgo = *s.reference.compressAlgorithm
-		}
-		for digestStr, algoName := range parseCompressedNote(noteContent) {
+		for digestStr, algoName := range noteContent {
 			replaceDigest, err := digest.Parse(digestStr)
 			if err != nil {
 				continue
 			}
-			alternate, err := s.reference.blobPath(replaceDigest, false)
-			if err != nil {
-				return types.BlobInfo{}, err
-			}
-			fileInfo, err := os.Stat(alternate)
-			if err != nil {
-				continue
-			}
-
 			// Fall back to gzip for backward compatibility with old caches
 			// that did not record the algorithm.
 			compressedAlgo := compression.Gzip
@@ -168,8 +156,8 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 				compressedAlgo = a
 			}
 
-			if compressedAlgo.Name() != requestedCompressedAlgo.Name() {
-				logrus.Debugf("skipping cached blob %q: algorithm %q does not match requested %q", replaceDigest.String(), compressedAlgo.Name(), requestedCompressedAlgo.Name())
+			if compressedAlgo.Name() != s.reference.compressAlgorithm.Name() {
+				logrus.Debugf("skipping cached blob %q: algorithm %q does not match requested %q", replaceDigest.String(), compressedAlgo.Name(), s.reference.compressAlgorithm.Name())
 				continue
 			}
 
@@ -195,11 +183,20 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 				continue
 			}
 
+			alternate, err := s.reference.blobPath(replaceDigest, false)
+			if err != nil {
+				return types.BlobInfo{}, err
+			}
+			fileInfo, err := os.Stat(alternate)
+			if err != nil {
+				continue
+			}
+
 			result.CompressionAlgorithm = &compressedAlgo
-			result.CompressionOperation = s.reference.compress
+			result.CompressionOperation = types.Compress
 			result.Digest = replaceDigest
 			result.Size = fileInfo.Size()
-			logrus.Debugf("suggesting cached blob with digest %q, type %q, and compression %v in place of blob with digest %q", result.Digest.String(), result.MediaType, s.reference.compress, info.Digest.String())
+			logrus.Debugf("suggesting cached blob with digest %q, type %q, and compression %q in place of blob with digest %q", result.Digest.String(), result.MediaType, compressedAlgo.Name(), info.Digest.String())
 			logrus.Debugf("info = %#v", result)
 			return result, nil
 		}
@@ -211,14 +208,6 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 			return info, nil
 		}
 		replaceDigest, err := digest.Parse(string(noteBytes))
-		if err != nil {
-			return info, nil
-		}
-		alternate, err := s.reference.blobPath(replaceDigest, false)
-		if err != nil {
-			return types.BlobInfo{}, err
-		}
-		fileInfo, err := os.Stat(alternate)
 		if err != nil {
 			return info, nil
 		}
@@ -238,8 +227,17 @@ func (s *blobCacheSource) layerInfoForCopy(info types.BlobInfo) (types.BlobInfo,
 			return info, nil
 		}
 
-		logrus.Debugf("suggesting cached blob with digest %q, type %q, and compression %v in place of blob with digest %q", replaceDigest.String(), info.MediaType, s.reference.compress, info.Digest.String())
-		info.CompressionOperation = s.reference.compress
+		alternate, err := s.reference.blobPath(replaceDigest, false)
+		if err != nil {
+			return types.BlobInfo{}, err
+		}
+		fileInfo, err := os.Stat(alternate)
+		if err != nil {
+			return info, nil
+		}
+
+		logrus.Debugf("suggesting cached blob with digest %q, type %q (decompress) in place of blob with digest %q", replaceDigest.String(), info.MediaType, info.Digest.String())
+		info.CompressionOperation = types.Decompress
 		info.Digest = replaceDigest
 		info.Size = fileInfo.Size()
 		logrus.Debugf("info = %#v", info)

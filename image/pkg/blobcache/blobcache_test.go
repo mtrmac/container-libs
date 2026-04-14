@@ -170,8 +170,9 @@ func (tc *testCaseBlobCache) desiredCompressionString() string {
 		return "Compress"
 	case types.Decompress:
 		return "Decompress"
+	default:
+		panic(fmt.Sprintf("unknown desired compression: %d", tc.desiredCompression))
 	}
-	return "unknown"
 }
 
 func TestBlobCache(t *testing.T) {
@@ -233,14 +234,14 @@ func TestBlobCache(t *testing.T) {
 
 				// Verify the .compressed note records the correct algorithm.
 				if tc.layerCompression != archive.Uncompressed {
-					noteBytes, err := os.ReadFile(filepath.Join(cacheDir, diffID.String()) + compressedNote)
+					noteFilePath := filepath.Join(cacheDir, diffID.String()) + compressedNote
+					entries, err := parseCompressedNote(noteFilePath)
 					if err != nil {
 						t.Fatalf("error reading %s note: %v", compressedNote, err)
 					}
-					entries := parseCompressedNote(noteBytes)
 					blobDigest := digest.FromBytes(blobBytes).String()
 					if algoName, ok := entries[blobDigest]; !ok || algoName != expectedAlgoName {
-						t.Fatalf("expected entry %q %q in note, got: %q", blobDigest, expectedAlgoName, string(noteBytes))
+						t.Fatalf("expected entry %q=%q in note, got entries: %v", blobDigest, expectedAlgoName, entries)
 					}
 				}
 
@@ -339,19 +340,19 @@ func TestBlobCacheMultipleCompressedVersions(t *testing.T) {
 	zstdDigest := digest.FromBytes(zstdBytes)
 
 	// Verify the .compressed note has both entries.
-	compressionNoteContent, err := os.ReadFile(filepath.Join(cacheDir, diffID.String()) + compressedNote)
+	noteFilePath := filepath.Join(cacheDir, diffID.String()) + compressedNote
+	entries, err := parseCompressedNote(noteFilePath)
 	if err != nil {
 		t.Fatalf("error reading compressed note: %v", err)
 	}
-	entries := parseCompressedNote(compressionNoteContent)
 	if len(entries) != 2 {
-		t.Fatalf("expected 2 entries in compressed note, got %d: %q", len(entries), string(compressionNoteContent))
+		t.Fatalf("expected 2 entries in compressed note, got %d: %v", len(entries), entries)
 	}
 	if algo, ok := entries[gzipDigest.String()]; !ok || algo != compressionTypes.GzipAlgorithmName {
-		t.Fatalf("missing or wrong gzip entry in compressed note; note content: %q", string(compressionNoteContent))
+		t.Fatalf("missing or wrong gzip entry in compressed note; entries: %v", entries)
 	}
 	if algo, ok := entries[zstdDigest.String()]; !ok || algo != compressionTypes.ZstdAlgorithmName {
-		t.Fatalf("missing or wrong zstd entry in compressed note; note content: %q", string(compressionNoteContent))
+		t.Fatalf("missing or wrong zstd entry in compressed note; entries: %v", entries)
 	}
 
 	// Search for the blobs in the cache.

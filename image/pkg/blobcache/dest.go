@@ -2,10 +2,8 @@ package blobcache
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -80,7 +78,7 @@ func (d *blobCacheDestination) IgnoresEmbeddedDockerReference() bool {
 // file.  If we successfully save all of the data, rename the file to match the digest of the data,
 // and make notes about the relationship between the file that holds a copy of the compressed data
 // and this new file, including which compression algorithm was used.
-func (d *blobCacheDestination) saveStream(decompressReader io.ReadCloser, tempFile *os.File, compressedFilename string, compressedDigest digest.Digest, isConfig bool, algorithmName string, alternateDigest *digest.Digest) {
+func (d *blobCacheDestination) saveStream(decompressReader io.ReadCloser, tempFile *os.File, compressedFilename string, compressedDigest digest.Digest, isConfig bool, algorithm compression.Algorithm, alternateDigest *digest.Digest) {
 	defer decompressReader.Close()
 
 	succeeded := false
@@ -129,16 +127,15 @@ func (d *blobCacheDestination) saveStream(decompressReader io.ReadCloser, tempFi
 	*alternateDigest = digester.Digest()
 	// Update the .compressed note with this entry, preserving any existing entries
 	// for other compression algorithms. The format is one "<digest> <algorithm>" per line.
-	rawCompressedNote, err := os.ReadFile(decompressedFilename + compressedNote)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	compressedNoteContent, err := parseCompressedNote(decompressedFilename + compressedNote)
+	if err != nil {
 		logrus.Debugf("error reading compressed note for %q: %v", decompressedFilename, err)
 		return
 	}
-	compressedNoteContent := parseCompressedNote(rawCompressedNote)
-	compressedNoteContent[compressedDigest.String()] = algorithmName
+	compressedNoteContent[compressedDigest.String()] = algorithm.Name()
 	// Note the relationship between the two files.
 	if err := ioutils.AtomicWriteFile(decompressedFilename+compressedNote, []byte(compressedNoteContent.String()), 0o600); err != nil {
-		logrus.Debugf("error noting that the compressed version of %q is %q: %v", digester.Digest().String(), compressedNoteContent.String(), err)
+		logrus.Debugf("error noting that the compressed version of %q is %q using algorithm %q: %v", digester.Digest().String(), compressedDigest.String(), algorithm.Name(), err)
 	}
 	if err := ioutils.AtomicWriteFile(compressedFilename+decompressedNote, []byte(digester.Digest().String()), 0o600); err != nil {
 		logrus.Debugf("error noting that the decompressed version of %q is %q: %v", compressedDigest.String(), digester.Digest().String(), err)
@@ -197,12 +194,12 @@ func (d *blobCacheDestination) PutBlobWithOptions(ctx context.Context, stream io
 			logrus.Debugf("error while creating a temporary file under %q to hold blob %q: %v", filepath.Dir(filename), inputInfo.Digest.String(), err)
 		}
 		if !options.IsConfig {
-			algo, _, updatedStream, err2 := compression.DetectCompressionFormat(stream)
+			algo, decompressorFunc, updatedStream, err2 := compression.DetectCompressionFormat(stream)
 			if err2 != nil {
 				logrus.Debugf("error detecting compression of blob %q: %v", inputInfo.Digest.String(), err2)
 			} else {
 				stream = updatedStream
-				if algo.Name() != "" {
+				if decompressorFunc != nil {
 					decompressedTemp, err2 := os.CreateTemp(filepath.Dir(filename), filepath.Base(filename))
 					if err2 != nil {
 						logrus.Debugf("error while creating a temporary file under %q to hold decompressed blob %q: %v", filepath.Dir(filename), inputInfo.Digest.String(), err2)
@@ -215,7 +212,7 @@ func (d *blobCacheDestination) PutBlobWithOptions(ctx context.Context, stream io
 						stream = io.TeeReader(stream, decompressWriter)
 						// Let saveStream() close the reading end and handle the temporary file.
 						wg.Go(func() {
-							d.saveStream(decompressReader, decompressedTemp, filename, inputInfo.Digest, options.IsConfig, algo.Name(), &alternateDigest)
+							d.saveStream(decompressReader, decompressedTemp, filename, inputInfo.Digest, options.IsConfig, algo, &alternateDigest)
 						})
 					}
 				}
