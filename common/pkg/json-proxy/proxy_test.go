@@ -272,7 +272,7 @@ type byteFetch struct {
 	err     error
 }
 
-func newProxy(t *testing.T) *proxy {
+func newProxy(t *testing.T, extraArgs ...string) *proxy {
 	t.Helper()
 
 	proxyBinary := os.Getenv("JSON_PROXY_TEST_BINARY")
@@ -293,7 +293,8 @@ func newProxy(t *testing.T) *proxy {
 	require.True(t, ok, "expected *net.UnixConn, got %T", mysock)
 
 	// Note ExtraFiles starts at 3
-	proc := exec.Command(proxyBinary, "--sockfd", "3") //nolint:gosec
+	args := append([]string{"--sockfd", "3"}, extraArgs...)
+	proc := exec.Command(proxyBinary, args...) //nolint:gosec
 	proc.Stderr = os.Stderr
 	proc.ExtraFiles = append(proc.ExtraFiles, theirfd)
 
@@ -507,4 +508,55 @@ func TestProxyGetBlob(t *testing.T) {
 		err = fmt.Errorf("Testing GetBLob for %s: %v", knownListImage, err)
 	}
 	assert.NoError(t, err)
+}
+
+func TestProxyPolicyVerification(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		policy    string
+		image     string
+		extraArgs []string
+		wantErr   string // empty = expect success
+	}{
+		{
+			name:   "cosign-signed image accepted",
+			policy: "testdata/policy-cosign.json",
+			image:  "dir:testdata/dir-img-cosign-valid",
+		},
+		{
+			name:    "unsigned image rejected",
+			policy:  "testdata/policy-cosign.json",
+			image:   "dir:testdata/dir-img-unsigned",
+			wantErr: "signature",
+		},
+		{ // The proxy checks signatures on *either* the manifest list or per-arch manifest.
+			name:      "manifest-list with per-arch sig accepted",
+			policy:    "testdata/policy-cosign.json",
+			image:     "dir:testdata/dir-img-cosign-manifest-list-signed-arch",
+			extraArgs: []string{"--override-arch", "amd64"},
+		},
+		{
+			name:    "reject-all policy",
+			policy:  "testdata/policy-reject.json",
+			image:   "dir:testdata/dir-img-cosign-valid",
+			wantErr: "reject",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"--policy", tc.policy}, tc.extraArgs...)
+			p := newProxy(t, args...)
+			v, err := p.callNoFd("OpenImage", []any{tc.image})
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			imgID, ok := v.(float64)
+			require.True(t, ok)
+			require.NotZero(t, imgID)
+			_, err = p.callNoFd("CloseImage", []any{imgID})
+			require.NoError(t, err)
+		})
+	}
 }

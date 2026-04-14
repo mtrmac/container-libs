@@ -1,0 +1,17 @@
+{
+    "default": [{"type": "reject"}],
+    "transports": {
+        "dir": {
+            "": [
+                {
+                    "type": "sigstoreSigned",
+                    "keyPath": "testdata/cosign.pub",
+                    "signedIdentity": {
+                        "type": "exactRepository",
+                        "dockerRepository": "192.168.64.2:5000/cosign-signed-single-sample"
+                    }
+                }
+            ]
+        }
+    }
+}
