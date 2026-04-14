@@ -238,66 +238,60 @@ func TestRefMatchingPrefix(t *testing.T) {
 }
 
 func TestNewConfigWrapper(t *testing.T) {
-	const nondefaultPath = "/this/is/not/the/default/registries.conf"
-	const variableReference = "$HOME"
-	const rootPrefix = "/root/prefix"
-	tempHome := t.TempDir()
-	userRegistriesFile := filepath.FromSlash(".config/containers/registries.conf")
-	userRegistriesFilePath := filepath.Join(tempHome, userRegistriesFile)
-
-	for _, c := range []struct {
-		sys             *types.SystemContext
-		userfilePresent bool
-		expected        string
+	for _, tt := range []struct {
+		name string
+		sys  *types.SystemContext
+		want configWrapper
 	}{
-		// The common case
-		{nil, false, systemRegistriesConfPath},
-		// There is a context, but it does not override the path.
-		{&types.SystemContext{}, false, systemRegistriesConfPath},
-		// Path overridden
-		{&types.SystemContext{SystemRegistriesConfPath: nondefaultPath}, false, nondefaultPath},
-		// Root overridden
 		{
-			&types.SystemContext{RootForImplicitAbsolutePaths: rootPrefix},
-			false,
-			filepath.Join(rootPrefix, systemRegistriesConfPath),
+			name: "nil context",
+			sys:  nil,
+			want: configWrapper{},
 		},
-		// Root and path overrides present simultaneously,
 		{
-			&types.SystemContext{
-				RootForImplicitAbsolutePaths: rootPrefix,
-				SystemRegistriesConfPath:     nondefaultPath,
+			name: "empty context",
+			sys:  &types.SystemContext{},
+			want: configWrapper{},
+		},
+		{
+			name: "RootForImplicitAbsolutePaths",
+			sys: &types.SystemContext{
+				RootForImplicitAbsolutePaths: "root",
 			},
-			false,
-			nondefaultPath,
+			want: configWrapper{rootForImplicitAbsolutePaths: "root"},
 		},
-		// User registries file overridden
-		{&types.SystemContext{}, true, userRegistriesFilePath},
-		// Context and user User registries file preset simultaneously
-		{&types.SystemContext{SystemRegistriesConfPath: nondefaultPath}, true, nondefaultPath},
-		// Root and user registries file overrides present simultaneously,
 		{
-			&types.SystemContext{
-				RootForImplicitAbsolutePaths: rootPrefix,
-				SystemRegistriesConfPath:     nondefaultPath,
+			name: "SystemRegistriesConfPath",
+			sys: &types.SystemContext{
+				SystemRegistriesConfPath: "somepath",
 			},
-			true,
-			nondefaultPath,
+			want: configWrapper{systemRegistriesConfPath: "somepath"},
 		},
-		// No environment expansion happens in the overridden paths
-		{&types.SystemContext{SystemRegistriesConfPath: variableReference}, false, variableReference},
+		{
+			name: "SystemRegistriesConfDirPath",
+			sys: &types.SystemContext{
+				SystemRegistriesConfDirPath: "somepath",
+			},
+			want: configWrapper{systemRegistriesConfDirPath: "somepath"},
+		},
+		{
+			name: "all fields",
+			sys: &types.SystemContext{
+				RootForImplicitAbsolutePaths: "a",
+				SystemRegistriesConfPath:     "b",
+				SystemRegistriesConfDirPath:  "c",
+			},
+			want: configWrapper{
+				rootForImplicitAbsolutePaths: "a",
+				systemRegistriesConfPath:     "b",
+				systemRegistriesConfDirPath:  "c",
+			},
+		},
 	} {
-		if c.userfilePresent {
-			err := os.MkdirAll(filepath.Dir(userRegistriesFilePath), os.ModePerm)
-			require.NoError(t, err)
-			f, err := os.Create(userRegistriesFilePath)
-			require.NoError(t, err)
-			f.Close()
-		} else {
-			os.Remove(userRegistriesFilePath)
-		}
-		path := newConfigWrapperWithHomeDir(c.sys, tempHome).configPath
-		assert.Equal(t, c.expected, path)
+		t.Run(tt.name, func(t *testing.T) {
+			got := newConfigWrapper(tt.sys)
+			assert.Equal(t, tt.want, got)
+		})
 	}
 }
 
