@@ -33,7 +33,7 @@ type handler struct {
 	logger           logrus.FieldLogger
 
 	// Internal state.
-	sysctx      *types.SystemContext
+	sysctx      *types.SystemContext // non-nil is used to indicate “Initialize succeeded”
 	policyctx   *signature.PolicyContext
 	cache       types.BlobInfoCache
 	imageSerial uint64
@@ -91,14 +91,14 @@ func (h *handler) Initialize(ctx context.Context, args []any) (replyBuf, error) 
 	if err != nil {
 		return ret, err
 	}
-	h.sysctx = sysctx
-	h.cache = blobinfocache.DefaultCache(sysctx)
-
 	policyContext, err := h.getPolicyContext()
 	if err != nil {
 		return ret, err
 	}
+
+	h.sysctx = sysctx // Setting this promises all fields set by Initialize are valid.
 	h.policyctx = policyContext
+	h.cache = blobinfocache.DefaultCache(sysctx)
 
 	r := replyBuf{
 		value: protocolVersion,
