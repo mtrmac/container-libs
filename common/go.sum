@@ -313,8 +313,8 @@ go.opentelemetry.io/proto/otlp v1.7.1 h1:gTOMpGDb0WTBOP8JaO72iL3auEZhVmAQg4ipjOV
 go.opentelemetry.io/proto/otlp v1.7.1/go.mod h1:b2rVh6rfI/s2pHWNlB7ILJcRALpcNDzKhACevjI+ZnE=
 go.podman.io/image/v5 v5.39.2 h1:EJua/pRtvgLV/a5y8/RvA+ekKukZh0UuKMvLdTmEWFk=
 go.podman.io/image/v5 v5.39.2/go.mod h1:SlaR6Pra1ATIx4BcuZ16oafb3QcCHISaKcJbtlN/G/0=
-go.podman.io/storage v1.62.1-0.20260414165207-bca05bdd0b77 h1:Dp2Xfq+q+j6LGnSBpUKUFlr9MK2QCtWDHeCwbHbu63M=
-go.podman.io/storage v1.62.1-0.20260414165207-bca05bdd0b77/go.mod h1:cmaK5fvO1TM9Pq2HWxnG7xZcavs21tKzKujPxwfHOQQ=
+go.podman.io/storage v1.62.1-0.20260420103546-618304d6f83d h1:aMAdj9gLrVUz+Zb+nOxcoeT6+CC+8Rk2lHs1MC3kcQM=
+go.podman.io/storage v1.62.1-0.20260420103546-618304d6f83d/go.mod h1:13aOBf6782/fbAzH7QNEqlVzFu+X4sS4MxDM/VdJGZU=
 go.yaml.in/yaml/v2 v2.4.3 h1:6gvOSjQoTB3vt1l+CU+tSyi/HOjfOjRLJ4YwYZGwRO0=
 go.yaml.in/yaml/v2 v2.4.3/go.mod h1:zSxWcmIDjOzPXpjlTTbAsKokqkDNAVtZO0WOMiT90s8=
 go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
