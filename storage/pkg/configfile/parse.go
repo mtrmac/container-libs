@@ -109,19 +109,40 @@ type Item struct {
 	Name string
 }
 
-func getConfName(name, extension string, noExtension bool) string {
-	if noExtension {
-		return name
-	}
-	return name + "." + extension
+type SearchPaths struct {
+	// MainFiles are the main config file paths, ordered from highest priority to lower ones.
+	// For example: $HOME/..., then /etc/..., then /usr/...
+	// Can be empty if there are no main files for the given config.
+	MainFiles []string
+	// DropInDirectories is the list of drop in directories read by this config file, again
+	// ordered from highest priority to lower ones.
+	// Can be empty if there are no drop in directories for the given config.
+	DropInDirectories []string
+	// ModuleDirectories is the list of module directories checked by this config file, again
+	// ordered from highest priority to lower ones.
+	// Will be empty if no modules were request for the given conf.
+	ModuleDirectories []string
+	// The file path from conf.EnvironmentName + "_OVERRIDE" env if it must be parsed for the given config.
+	// Can be empty.
+	ExtraOverrideFile string
 }
 
-// Read parses all config files with the specified options and returns an iterator which returns all files as Item in the right order.
-// If an error is returned by the iterator then this must be treated as fatal error and must fail the config file parsing.
-// Expected ENOENT errors are already ignored in this function and must not be handled again by callers.
-// The given File options must not be nil and populated with valid options.
-func Read(conf *File) iter.Seq2[*Item, error] {
-	configFileName := getConfName(conf.Name, conf.Extension, conf.DoNotUseExtensionForConfigName)
+func (f *File) getConfName() string {
+	if f.DoNotUseExtensionForConfigName {
+		return f.Name
+	}
+	return f.Name + "." + f.Extension
+}
+
+// GetSearchPaths returns the list of files which will be tried to be parsed.
+// See the doc of [SearchPaths] for more information.
+func GetSearchPaths(conf *File) (SearchPaths, error) {
+	paths, _, err := getSearchPaths(conf)
+	return paths, err
+}
+
+func getSearchPaths(conf *File) (SearchPaths, bool, error) {
+	configFileName := conf.getConfName()
 
 	// Note this can be empty which is a valid case and should be simply ignored then.
 	defaultConfig := systemConfigPath
@@ -141,12 +162,94 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 		}
 	}
 
+	// userConfig can be empty as well
+	userConfig, err := UserConfigPath()
+	if err != nil {
+		return SearchPaths{}, false, err
+	}
+	if userConfig != "" {
+		userConfig = filepath.Join(userConfig, configFileName)
+	}
+
+	// main files
+	ignoreENOENT := true
+	shouldLoadDropIns := true
+	var mainFiles []string
+	if !conf.DoNotLoadMainFiles {
+		if conf.CustomConfigFilePath != "" {
+			mainFiles = append(mainFiles, conf.CustomConfigFilePath)
+			ignoreENOENT = false
+			// Only consider the env if no custom path was explicitly set.
+			// As this path often comes from cli options it is important it wins over the env value.
+		} else if path := os.Getenv(conf.EnvironmentName); path != "" && conf.EnvironmentName != "" {
+			mainFiles = append(mainFiles, path)
+			ignoreENOENT = false
+			// Also when the env is set skip the loading of drop in files, modules and _OVERRIDE env are still read though.
+			shouldLoadDropIns = false
+		} else {
+			// default search paths
+			if userConfig != "" {
+				mainFiles = append(mainFiles, userConfig)
+			}
+			if overrideConfig != "" {
+				mainFiles = append(mainFiles, overrideConfig)
+			}
+			if defaultConfig != "" {
+				mainFiles = append(mainFiles, defaultConfig)
+			}
+		}
+	}
+
+	// drop in dirs
+	var dropInDirs []string
+	var extraOverrideFilePath string
+	if !conf.DoNotLoadDropInFiles {
+		if shouldLoadDropIns {
+			if conf.CustomConfigFileDropInDirectory != "" {
+				dropInDirs = append(dropInDirs, conf.CustomConfigFileDropInDirectory)
+			} else {
+				// default search paths
+				dropInDirs = getDropInPaths(defaultConfig, overrideConfig, userConfig, "."+conf.Extension, conf.UserId)
+			}
+		}
+
+		if conf.EnvironmentName != "" && conf.CustomConfigFileDropInDirectory == "" {
+			if path := os.Getenv(conf.EnvironmentName + "_OVERRIDE"); path != "" {
+				extraOverrideFilePath = path
+			}
+		}
+	}
+
+	// modules
+	var modDirs []string
+	if len(conf.Modules) > 0 {
+		modDirs = moduleDirectories(defaultConfig, overrideConfig, userConfig)
+	}
+
+	return SearchPaths{
+			MainFiles:         mainFiles,
+			DropInDirectories: dropInDirs,
+			ModuleDirectories: modDirs,
+			ExtraOverrideFile: extraOverrideFilePath,
+		},
+		ignoreENOENT,
+		nil
+}
+
+// Read parses all config files with the specified options and returns an iterator which returns all files as Item in the right order.
+// If an error is returned by the iterator then this must be treated as fatal error and must fail the config file parsing.
+// Expected ENOENT errors are already ignored in this function and must not be handled again by callers.
+// The given File options must not be nil and populated with valid options.
+func Read(conf *File) iter.Seq2[*Item, error] {
 	return func(yield func(*Item, error) bool) {
+		paths, ignoreMainENOENT, err := getSearchPaths(conf)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+
 		usedPaths := make([]string, 0, 8)
 		foundAny := false
-
-		shouldLoadMainFile := !conf.DoNotLoadMainFiles
-		shouldLoadDropIns := !conf.DoNotLoadDropInFiles
 
 		yieldAndClose := func(f *os.File) bool {
 			foundAny = true
@@ -165,10 +268,17 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			return ok
 		}
 
-		if conf.CustomConfigFilePath != "" {
-			usedPaths = append(usedPaths, conf.CustomConfigFilePath)
-			f, err := os.Open(conf.CustomConfigFilePath)
+		for _, path := range paths.MainFiles {
+			if path == "" {
+				continue
+			}
+			usedPaths = append(usedPaths, path)
+			f, err := os.Open(path)
 			if err != nil {
+				// only ignore ErrNotExist when needed, all other errors get return to the caller via yield
+				if ignoreMainENOENT && errors.Is(err, fs.ErrNotExist) {
+					continue
+				}
 				yield(nil, err)
 				return
 			}
@@ -176,73 +286,13 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			if !yieldAndClose(f) {
 				return
 			}
-			shouldLoadMainFile = false
-			// Only consider the env if no custom path was explicitly set.
-			// As this path often comes from cli options it is important it wins over the env value.
-		} else if conf.EnvironmentName != "" {
-			if path := os.Getenv(conf.EnvironmentName); path != "" {
-				usedPaths = append(usedPaths, path)
-				f, err := os.Open(path)
-				// Do not ignore ErrNotExist here, we want to hard error if users set a wrong path here.
-				if err != nil {
-					yield(nil, err)
-					return
-				}
-				if !yieldAndClose(f) {
-					return
-				}
-				// Also when the env is set skip the loading of the main and drop in files, modules and _OVERRIDE env are still read though.
-				shouldLoadMainFile = false
-				shouldLoadDropIns = false
-			}
+			// we only read the first found file
+			break
 		}
 
-		// userConfig can be empty as well
-		userConfig, err := UserConfigPath()
-		if err != nil {
-			// return error via iterator
-			yield(nil, err)
-			return
-		}
-		if userConfig != "" {
-			userConfig = filepath.Join(userConfig, configFileName)
-		}
-
-		if shouldLoadMainFile {
-			for _, path := range []string{userConfig, overrideConfig, defaultConfig} {
-				if path == "" {
-					continue
-				}
-				usedPaths = append(usedPaths, path)
-				f, err := os.Open(path)
-				// only ignore ErrNotExist, all other errors get return to the caller via yield
-				if err != nil {
-					if errors.Is(err, fs.ErrNotExist) {
-						continue
-					}
-					yield(nil, err)
-					return
-				}
-
-				if !yieldAndClose(f) {
-					return
-				}
-				// we only read the first file
-				break
-			}
-		}
-
-		if shouldLoadDropIns {
-			var (
-				files []string
-				err   error
-			)
+		if len(paths.DropInDirectories) > 0 {
 			suffix := "." + conf.Extension
-			if conf.CustomConfigFileDropInDirectory != "" {
-				files, err = readDropInsFromPaths([]string{conf.CustomConfigFileDropInDirectory}, suffix)
-			} else {
-				files, err = readDropIns(defaultConfig, overrideConfig, userConfig, suffix, conf.UserId)
-			}
+			files, err := readDropInsFromPaths(paths.DropInDirectories, suffix)
 			if err != nil {
 				// return error via iterator
 				yield(nil, err)
@@ -251,7 +301,7 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			for _, file := range files {
 				usedPaths = append(usedPaths, file)
 				f, err := os.Open(file)
-				// only ignore ErrNotExist, all other errors get return to the caller via yield
+				// always ignore ErrNotExist, all other errors get return to the caller via yield
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						continue
@@ -267,10 +317,9 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 		}
 
 		if len(conf.Modules) > 0 {
-			dirs := moduleDirectories(defaultConfig, overrideConfig, userConfig)
 			resolvedModules := make([]string, 0, len(conf.Modules))
 			for _, module := range conf.Modules {
-				f, err := resolveModule(module, dirs, &usedPaths)
+				f, err := resolveModule(module, paths.ModuleDirectories, &usedPaths)
 				if err != nil {
 					yield(nil, fmt.Errorf("could not resolve module: %w", err))
 					return
@@ -283,24 +332,22 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 			conf.Modules = resolvedModules
 		}
 
-		if conf.EnvironmentName != "" && !conf.DoNotLoadDropInFiles && conf.CustomConfigFileDropInDirectory == "" {
+		if paths.ExtraOverrideFile != "" {
 			// The _OVERRIDE env must be appended after loading all files, even modules.
-			if path := os.Getenv(conf.EnvironmentName + "_OVERRIDE"); path != "" {
-				usedPaths = append(usedPaths, path)
-				f, err := os.Open(path)
-				// Do not ignore ErrNotExist here, we want to hard error if users set a wrong path here.
-				if err != nil {
-					yield(nil, err)
-					return
-				}
-				if !yieldAndClose(f) {
-					return
-				}
+			usedPaths = append(usedPaths, paths.ExtraOverrideFile)
+			f, err := os.Open(paths.ExtraOverrideFile)
+			// Do not ignore ErrNotExist here, we want to hard error if users set a wrong path here.
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			if !yieldAndClose(f) {
+				return
 			}
 		}
 
 		if conf.ErrorIfNotFound && !foundAny {
-			yield(nil, fmt.Errorf("%w: no %s file found; searched paths: %q", ErrConfigFileNotFound, configFileName, usedPaths))
+			yield(nil, fmt.Errorf("%w: no %s file found; searched paths: %q", ErrConfigFileNotFound, conf.getConfName(), usedPaths))
 			return
 		}
 	}
@@ -308,27 +355,27 @@ func Read(conf *File) iter.Seq2[*Item, error] {
 
 const dropInSuffix = ".d"
 
-func readDropIns(defaultConfig, overrideConfig, userConfig, suffix string, uid int) ([]string, error) {
+func getDropInPaths(defaultConfig, overrideConfig, userConfig, suffix string, uid int) []string {
 	paths := make([]string, 0, 7)
 
-	if defaultConfig != "" {
-		paths = append(paths, getDropInPaths(defaultConfig, suffix, uid)...)
-	}
-	if overrideConfig != "" {
-		paths = append(paths, getDropInPaths(overrideConfig, suffix, uid)...)
-	}
 	if userConfig != "" {
 		// the $HOME config only has one .d path not the rootful/rootless ones.
 		paths = append(paths, userConfig+dropInSuffix)
 	}
+	if overrideConfig != "" {
+		paths = append(paths, getDropInPathsUnderMain(overrideConfig, suffix, uid)...)
+	}
+	if defaultConfig != "" {
+		paths = append(paths, getDropInPathsUnderMain(defaultConfig, suffix, uid)...)
+	}
 
-	return readDropInsFromPaths(paths, suffix)
+	return paths
 }
 
 func readDropInsFromPaths(paths []string, suffix string) ([]string, error) {
 	dropInMap := make(map[string]string)
 
-	for _, path := range paths {
+	for _, path := range slices.Backward(paths) {
 		entries, err := os.ReadDir(path)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -351,7 +398,7 @@ func readDropInsFromPaths(paths []string, suffix string) ([]string, error) {
 	return files, nil
 }
 
-func getDropInPaths(mainPath, suffix string, uid int) []string {
+func getDropInPathsUnderMain(mainPath, suffix string, uid int) []string {
 	paths := make([]string, 0, 3)
 	paths = append(paths, mainPath+dropInSuffix)
 

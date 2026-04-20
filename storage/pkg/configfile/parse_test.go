@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_getDropInPaths(t *testing.T) {
+func Test_getDropInPathsUnderMain(t *testing.T) {
 	tests := []struct {
 		name string
 		// Arguments for this function
@@ -89,7 +89,7 @@ func Test_getDropInPaths(t *testing.T) {
 	t.Parallel()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getDropInPaths(tt.mainPath, tt.suffix, tt.uid)
+			got := getDropInPathsUnderMain(tt.mainPath, tt.suffix, tt.uid)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -938,6 +938,60 @@ func Test_ParseTOML(t *testing.T) {
 			} else {
 				assert.ErrorContains(t, err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestGetSearchPaths(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/home")
+	tests := []struct {
+		name string
+		conf File
+		want SearchPaths
+	}{
+		{
+			name: "basic containers.conf",
+			conf: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			want: SearchPaths{
+				MainFiles: []string{
+					"/home/containers/containers.conf",
+					adminOverrideConfigPath + "/containers.conf",
+					systemConfigPath + "/containers.conf",
+				},
+				DropInDirectories: []string{
+					"/home/containers/containers.conf.d",
+					adminOverrideConfigPath + "/containers.conf.d",
+					adminOverrideConfigPath + "/containers.rootful.conf.d",
+					systemConfigPath + "/containers.conf.d",
+					systemConfigPath + "/containers.rootful.conf.d",
+				},
+			},
+		},
+		{
+			name: "basic policy.json",
+			conf: File{
+				Name:                 "policy",
+				Extension:            "json",
+				DoNotLoadDropInFiles: true,
+			},
+			want: SearchPaths{
+				MainFiles: []string{
+					"/home/containers/policy.json",
+					adminOverrideConfigPath + "/policy.json",
+					systemConfigPath + "/policy.json",
+				},
+			},
+		},
+		// TODO: add more test cases
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetSearchPaths(&tt.conf)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
