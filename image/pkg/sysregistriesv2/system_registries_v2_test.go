@@ -468,7 +468,7 @@ func TestV1SyntaxErrors(t *testing.T) {
 			SystemRegistriesConfPath:    c,
 			SystemRegistriesConfDirPath: "testdata/this-does-not-exist",
 		})
-		assert.ErrorContains(t, err, "registry must be in v2 format but is in v1", c)
+		assert.ErrorContains(t, err, "registries.conf must be in v2 format but is in v1", c)
 	}
 }
 

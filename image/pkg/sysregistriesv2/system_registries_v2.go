@@ -880,7 +880,7 @@ func loadConfigFile(item *configfile.Item) (*parsedConfig, error) {
 
 	if combinedTOML.V1RegistriesConf.hasSetField() {
 		// V1 format is no longer supported, produce hard error so callers know they must update the config.
-		return nil, &InvalidRegistries{s: "registry must be in v2 format but is in v1"}
+		return nil, &InvalidRegistries{s: "registries.conf must be in v2 format but is in v1"}
 	}
 
 	res := parsedConfig{partialV2: combinedTOML.V2RegistriesConf}
