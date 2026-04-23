@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_getDropInPaths(t *testing.T) {
+func Test_getDropInPathsUnderMain(t *testing.T) {
 	tests := []struct {
 		name string
 		// Arguments for this function
@@ -89,7 +89,7 @@ func Test_getDropInPaths(t *testing.T) {
 	t.Parallel()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getDropInPaths(tt.mainPath, tt.suffix, tt.uid)
+			got := getDropInPathsUnderMain(tt.mainPath, tt.suffix, tt.uid)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -558,6 +558,206 @@ func Test_Read(t *testing.T) {
 			// CONTAINERS_CONF, then modules, then CONTAINERS_CONF_OVERRIDE
 			want: []string{"env1", "mod", "env2"},
 		},
+		{
+			name: "CustomConfigFilePath with drop in",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				file := filepath.Join(t.TempDir(), "somepath")
+				err := os.WriteFile(file, []byte("custom"), 0o600)
+				require.NoError(t, err)
+
+				tc.arg.CustomConfigFilePath = file
+			},
+			want: []string{"custom", "drop in"},
+		},
+		{
+			name: "CustomConfigFilePath ENOENT",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				file := filepath.Join(t.TempDir(), "IDoNotExist")
+
+				tc.arg.CustomConfigFilePath = file
+			},
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name: "CustomConfigFilePath must win over env",
+			arg: File{
+				Name:            "containers",
+				Extension:       "conf",
+				EnvironmentName: "CONTAINERS_CONF",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				file := filepath.Join(t.TempDir(), "file")
+				err := os.WriteFile(file, []byte("explicit path"), 0o600)
+				require.NoError(t, err)
+				tc.arg.CustomConfigFilePath = file
+
+				file1 := filepath.Join(t.TempDir(), "path1")
+				err = os.WriteFile(file1, []byte("env"), 0o600)
+				require.NoError(t, err)
+				t.Setenv("CONTAINERS_CONF", file1)
+			},
+			want: []string{"explicit path", "drop in"},
+		},
+		{
+			name: "CustomConfigFileDropInDirectory with main file",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				dir := t.TempDir()
+				err := os.WriteFile(filepath.Join(dir, "file.conf"), []byte("custom"), 0o600)
+				require.NoError(t, err)
+
+				// write a second file without .conf which should not be parsed
+				err = os.WriteFile(filepath.Join(dir, "somefile"), []byte("somefile"), 0o600)
+				require.NoError(t, err)
+
+				tc.arg.CustomConfigFileDropInDirectory = dir
+			},
+			want: []string{"main", "custom"},
+		},
+		{
+			name: "CustomConfigFileDropInDirectory does not error with ENOENT",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				dir := filepath.Join(t.TempDir(), "dirDoesNotExist")
+				tc.arg.CustomConfigFileDropInDirectory = dir
+			},
+			want: []string{"main"},
+		},
+		{
+			name: "CustomConfigFileDropInDirectory must win over env",
+			arg: File{
+				Name:            "containers",
+				Extension:       "conf",
+				EnvironmentName: "CONTAINERS_CONF",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				dir := t.TempDir()
+				err := os.WriteFile(filepath.Join(dir, "file.conf"), []byte("explicit dir"), 0o600)
+				require.NoError(t, err)
+
+				tc.arg.CustomConfigFileDropInDirectory = dir
+
+				file2 := filepath.Join(t.TempDir(), "path1")
+				err = os.WriteFile(file2, []byte("env"), 0o600)
+				require.NoError(t, err)
+				t.Setenv("CONTAINERS_CONF_OVERRIDE", file2)
+			},
+			want: []string{"main", "explicit dir"},
+		},
+		{
+			name: "CustomConfigFilePath and CustomConfigFileDropInDirectory",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				file := filepath.Join(t.TempDir(), "file")
+				err := os.WriteFile(file, []byte("custom main"), 0o600)
+				require.NoError(t, err)
+				tc.arg.CustomConfigFilePath = file
+
+				dir := t.TempDir()
+				err = os.WriteFile(filepath.Join(dir, "file.conf"), []byte("custom dir"), 0o600)
+				require.NoError(t, err)
+
+				tc.arg.CustomConfigFileDropInDirectory = dir
+			},
+			want: []string{"custom main", "custom dir"},
+		},
+		{
+			name: "CustomConfigFilePath and CustomConfigFileDropInDirectory must win over envs",
+			arg: File{
+				Name:            "containers",
+				Extension:       "conf",
+				EnvironmentName: "CONTAINERS_CONF",
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf":                  "main",
+					"containers.conf.d/10-myconf.conf": "drop in",
+				},
+			},
+			setup: func(t *testing.T, tc *testcase) {
+				file := filepath.Join(t.TempDir(), "file")
+				err := os.WriteFile(file, []byte("explicit path"), 0o600)
+				require.NoError(t, err)
+				tc.arg.CustomConfigFilePath = file
+
+				file1 := filepath.Join(t.TempDir(), "path1")
+				err = os.WriteFile(file1, []byte("main env"), 0o600)
+				require.NoError(t, err)
+				t.Setenv("CONTAINERS_CONF", file1)
+
+				dir := t.TempDir()
+				err = os.WriteFile(filepath.Join(dir, "file.conf"), []byte("explicit dir"), 0o600)
+				require.NoError(t, err)
+
+				tc.arg.CustomConfigFileDropInDirectory = dir
+
+				file2 := filepath.Join(t.TempDir(), "path1")
+				err = os.WriteFile(file2, []byte("override env"), 0o600)
+				require.NoError(t, err)
+				t.Setenv("CONTAINERS_CONF_OVERRIDE", file2)
+			},
+			want: []string{"explicit path", "explicit dir"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -738,6 +938,60 @@ func Test_ParseTOML(t *testing.T) {
 			} else {
 				assert.ErrorContains(t, err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestGetSearchPaths(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/home")
+	tests := []struct {
+		name string
+		conf File
+		want SearchPaths
+	}{
+		{
+			name: "basic containers.conf",
+			conf: File{
+				Name:      "containers",
+				Extension: "conf",
+			},
+			want: SearchPaths{
+				MainFiles: []string{
+					"/home/containers/containers.conf",
+					adminOverrideConfigPath + "/containers.conf",
+					systemConfigPath + "/containers.conf",
+				},
+				DropInDirectories: []string{
+					"/home/containers/containers.conf.d",
+					adminOverrideConfigPath + "/containers.conf.d",
+					adminOverrideConfigPath + "/containers.rootful.conf.d",
+					systemConfigPath + "/containers.conf.d",
+					systemConfigPath + "/containers.rootful.conf.d",
+				},
+			},
+		},
+		{
+			name: "basic policy.json",
+			conf: File{
+				Name:                 "policy",
+				Extension:            "json",
+				DoNotLoadDropInFiles: true,
+			},
+			want: SearchPaths{
+				MainFiles: []string{
+					"/home/containers/policy.json",
+					adminOverrideConfigPath + "/policy.json",
+					systemConfigPath + "/policy.json",
+				},
+			},
+		},
+		// TODO: add more test cases
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetSearchPaths(&tt.conf)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

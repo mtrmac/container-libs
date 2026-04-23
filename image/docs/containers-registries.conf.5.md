@@ -9,7 +9,46 @@ containers-registries.conf - Syntax of System Registry Configuration File
 The CONTAINERS-REGISTRIES configuration file is a system-wide configuration
 file for container image registries. The file format is TOML.
 
-Container engines will use the `$HOME/.config/containers/registries.conf` if it exists, otherwise they will use `/etc/containers/registries.conf`
+By default, the configuration is read from `$XDG_CONFIG_HOME/containers/registries.conf` (or from `$HOME/.config/containers/registries.conf` if `$XDG_CONFIG_HOME` is unset), if it exists; otherwise from `/etc/containers/registries.conf`;  otherwise from `/usr/share/containers/registries.conf`. Applications may allow using a different configuration path instead.
+
+If `CONTAINERS_REGISTRIES_CONF` is set, it specifies the configuration file to use,
+unless overridden by application-specific configuration. If the environment variable
+is set then the following drop-in directories will not be read.
+
+In addition to registries.conf, drop-in files using the same format from the following directories are also read:
+ - `$XDG_CONFIG_HOME/containers/registries.conf.d` (or from `$HOME/.config/containers/registries.conf.d` if `$XDG_CONFIG_HOME` is unset)
+ - `/etc/containers/registries.conf.d`
+ - `/etc/containers/registries.rootful.conf.d` (only when running as uid 0)
+ - `/etc/containers/registries.rootless.conf.d` (only when running as uid > 0)
+ - `/etc/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/registries.rootful.conf.d` (only when running as uid 0)
+ - `/usr/share/containers/registries.rootless.conf.d` (only when running as uid > 0)
+ - `/usr/share/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
+
+The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
+All files from these paths will be first collected and then sorted in alpha-numerical order.
+If the same filename is used twice then only the first match from the directory list above is
+being used. Then the files will be parsed in the sorted order.
+
+For example consider these files:
+
+- `/usr/share/containers/registries.rootless.conf.d/50-middle.conf`
+- `/etc/containers/registries.rootless.conf.d/20-first.conf`
+- `/etc/containers/registries.rootless.conf.d/70-last.conf`
+
+They will be read in the order of `20-first.conf`, `50-middle.conf`, `70-last.conf`,
+the directory path itself does not matter for the order, only the basename.
+
+Specified fields in a conf file will overwrite any previous setting.
+For instance, setting the `unqualified-search-registries` in
+`/etc/containers/registries.conf.d/myregistries.conf` will overwrite previous
+settings in `/etc/containers/registries.conf`.  The `[[registry]]` tables merged
+by overwriting existing items if the prefixes are identical while new ones are
+added.
+
+If `CONTAINERS_REGISTRIES_CONF_OVERRIDE` is set, it specifies an additional path that is being read last,
+unless overridden by application-specific configuration.
+
 
 ### GLOBAL SETTINGS
 
@@ -283,24 +322,6 @@ and receives registry credentials from stdin in the following format.
 The format of `$image_reference` is `$repo{:$tag|@$digest}`.
 
 Additional Layer Stores can use this helper binary to access the private registry.
-
-## VERSION 1 FORMAT - DEPRECATED
-VERSION 1 format is still supported but it does not support
-using registry mirrors, longest-prefix matches, or location rewriting.
-
-The TOML format is used to build a simple list of registries under three
-categories: `registries.search`, `registries.insecure`, and `registries.block`.
-You can list multiple registries using a comma separated list.
-
-Search registries are used when the caller of a container runtime does not fully specify the
-container image that they want to execute.  These registries are prepended onto the front
-of the specified container image until the named image is found at a registry.
-
-Note that insecure registries can be used for any registry, not just the registries listed
-under search.
-
-The `registries.insecure` and `registries.block` lists have the same meaning as the
-`insecure` and `blocked` fields in the current version.
 
 ### EXAMPLE
 The following example configuration defines two searchable registries, one

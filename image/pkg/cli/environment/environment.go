@@ -11,6 +11,10 @@ import (
 // context, unless already set.  Possible values are, in priority and only if
 // set, the CONTAINERS_REGISTRIES_CONF or REGISTRIES_CONFIG_PATH environment
 // variable.
+//
+// Deprecated: The registries.conf parsing code in pkg/sysregistriesv2 already
+// reads CONTAINERS_REGISTRIES_CONF. REGISTRIES_CONFIG_PATH should not be used
+// anymore.
 func UpdateRegistriesConf(sys *types.SystemContext) error {
 	if sys == nil {
 		return errors.New("internal error: UpdateRegistriesConf: nil argument")

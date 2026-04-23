@@ -39,7 +39,7 @@ func testNewRuntime(t *testing.T, options ...testNewRuntimeOptions) *Runtime {
 	// Make sure that the tests do not use the host's registries.conf.
 	systemContext := &types.SystemContext{
 		SystemRegistriesConfPath:    "testdata/registries.conf",
-		SystemRegistriesConfDirPath: "/dev/null",
+		SystemRegistriesConfDirPath: t.TempDir(),
 	}
 
 	if len(options) == 1 {
