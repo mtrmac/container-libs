@@ -2003,23 +2003,15 @@ func (d *Driver) ListLayers() ([]string, error) {
 
 // isParent returns if the passed in parent is the direct parent of the passed in layer
 func (d *Driver) isParent(id, parent string) bool {
-	lowers, err := d.getLowerDirs(id)
+	lowerLayerIDs, err := d.getLowerLayerIDs(id)
 	if err != nil {
 		return false
 	}
-	if parent == "" && len(lowers) > 0 {
-		return false
+	actualParent := ""
+	if len(lowerLayerIDs) > 0 {
+		actualParent = lowerLayerIDs[0]
 	}
-
-	parentDir := d.dir(parent)
-	var ld string
-	if len(lowers) > 0 {
-		ld = filepath.Dir(lowers[0])
-	}
-	if ld == "" && parent == "" {
-		return true
-	}
-	return ld == parentDir
+	return parent == actualParent
 }
 
 func (d *Driver) getWhiteoutFormat() archive.WhiteoutFormat {
