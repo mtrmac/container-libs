@@ -48,8 +48,7 @@ import (
 var untar = chrootarchive.UntarUncompressed
 
 const (
-	defaultPerms         = os.FileMode(0o555)
-	mountProgramFlagFile = ".has-mount-program"
+	defaultPerms = os.FileMode(0o555)
 )
 
 // This backend uses the overlay union filesystem for containers
@@ -79,24 +78,32 @@ const (
 // syscall. A hard upper limit of 500 lower layers is enforced to ensure
 // that mounts do not fail due to length.
 
-const (
-	linkDir     = "l"
-	stagingDir  = "staging"
-	tempDirName = "tempdirs"
-	lowerFile   = "lower"
+const ( // Paths within the driver’s home directory
+	mountProgramFlagFile = ".has-mount-program"
+	linkDir              = "l"
+	stagingDir           = "staging"
+	tempDirName          = "tempdirs"
+)
+
+const ( // Paths within a per-layer directory
+	lowerFile = "lower"
 	// lowerLayersFile references lower layers directly by layer ID
 	// instead of going through the l/ symlinks.  The code appends
 	// "/diff" itself when consuming entries.  It is preferred over
 	// lowerFile when present.  The old lowerFile is still written
 	// for backward compatibility with older tools.
 	lowerLayersFile = "lower-layers"
-	maxDepth        = 500
+)
 
-	stagingLockFile = "staging.lock"
-
+const ( // Keys within DriverWithDifferOutput.Artifacts
 	tocArtifact             = "toc"
 	fsVerityDigestsArtifact = "fs-verity-digests"
+)
 
+const stagingLockFile = "staging.lock"
+
+const (
+	maxDepth = 500
 	// idLength represents the number of random characters
 	// which can be used to create the unique link identifier
 	// for every layer. If this value is too long then the
