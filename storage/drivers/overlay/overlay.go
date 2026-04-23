@@ -1152,7 +1152,7 @@ func (d *Driver) create(id, parent string, opts *graphdriver.CreateOpts, readOnl
 		return idtools.MkdirAndChown(path.Join(dir, "empty"), 0o700, forcedSt.IDs)
 	}
 
-	lower, err := d.getLower(parent)
+	lower, err := d.getLowerForParent(parent)
 	if err != nil {
 		return err
 	}
@@ -1238,7 +1238,11 @@ func (d *Driver) parseStorageOpt(opts *graphdriver.CreateOpts, readOnly bool) (q
 	return res, nil
 }
 
-func (d *Driver) getLower(parent string) (string, error) {
+// getLowerForParent returns the contents of lowerFile for a child layer of parent.
+//
+// This should only be used to construct a lowerFile for compatibility;
+// new code should rely on lowerLayersFile instead.
+func (d *Driver) getLowerForParent(parent string) (string, error) {
 	parentDir := d.dir(parent)
 
 	// Ensure parent exists
