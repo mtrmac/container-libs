@@ -1218,32 +1218,6 @@ func (d *Driver) parseStorageOpt(opts *graphdriver.CreateOpts, readOnly bool) (q
 	return res, nil
 }
 
-// getLowerForParent returns the contents of lowerFile for a child layer of parent.
-//
-// This should only be used to construct a lowerFile for compatibility;
-// new code should rely on lowerLayersFile instead.
-func (d *Driver) getLowerForParent(parent string) (string, error) {
-	parentDir := d.dir(parent)
-
-	// Ensure parent exists
-	if err := fileutils.Lexists(parentDir); err != nil {
-		return "", err
-	}
-
-	parentLink, err := os.ReadFile(path.Join(parentDir, "link"))
-	if err != nil {
-		return "", err
-	}
-	lowers := []string{path.Join(linkDir, string(parentLink))}
-
-	parentLower, err := os.ReadFile(path.Join(parentDir, lowerFile))
-	if err == nil {
-		parentLowers := strings.SplitSeq(string(parentLower), ":")
-		lowers = slices.AppendSeq(lowers, parentLowers)
-	}
-	return strings.Join(lowers, ":"), nil
-}
-
 func (d *Driver) dir(id string) string {
 	p, _, _ := d.dir2(id, false)
 	return p
@@ -1285,6 +1259,32 @@ func (d *Driver) dir2(id string, useImageStore bool) (string, string, bool) {
 	return newpath, homedir, false
 }
 
+// getLowerForParent returns the contents of lowerFile for a child layer of parent.
+//
+// This should only be used to construct a lowerFile for compatibility;
+// new code should rely on lowerLayersFile instead.
+func (d *Driver) getLowerForParent(parent string) (string, error) {
+	parentDir := d.dir(parent)
+
+	// Ensure parent exists
+	if err := fileutils.Lexists(parentDir); err != nil {
+		return "", err
+	}
+
+	parentLink, err := os.ReadFile(path.Join(parentDir, "link"))
+	if err != nil {
+		return "", err
+	}
+	lowers := []string{path.Join(linkDir, string(parentLink))}
+
+	parentLower, err := os.ReadFile(path.Join(parentDir, lowerFile))
+	if err == nil {
+		parentLowers := strings.SplitSeq(string(parentLower), ":")
+		lowers = slices.AppendSeq(lowers, parentLowers)
+	}
+	return strings.Join(lowers, ":"), nil
+}
+
 // getLowerLayerIDs returns a list of lower layer IDs for a layer id;
 // typically the contents of lowerLayersFile, falling back to lowerFile.
 // If the layer has neither of the files, returns an empty list without reporting an error.
@@ -1320,6 +1320,8 @@ func (d *Driver) getLowerLayerIDs(id string) ([]string, error) {
 	}
 }
 
+// getLowerDirs returns a list of lower directories for a layer id;
+// the directories may be symbolic links (do not call redirectDiffIfAdditionalLayer).
 func (d *Driver) getLowerDirs(id string) ([]string, error) {
 	lowerLayerIDs, err := d.getLowerLayerIDs(id)
 	if err != nil {
@@ -1331,6 +1333,22 @@ func (d *Driver) getLowerDirs(id string) ([]string, error) {
 		lowersArray = append(lowersArray, path.Join(lowerDir, "diff"))
 	}
 	return lowersArray, nil
+}
+
+// getLowerDiffPaths returns a list of lower diff paths for a layer id;
+// the paths have redirectDiffIfAdditionalLayer applied.
+func (d *Driver) getLowerDiffPaths(id string) ([]string, error) {
+	layers, err := d.getLowerDirs(id)
+	if err != nil {
+		return nil, err
+	}
+	for i, l := range layers {
+		layers[i], err = redirectDiffIfAdditionalLayer(l, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return layers, nil
 }
 
 func (d *Driver) optsAppendMappings(opts string, uidMaps, gidMaps []idtools.IDMap) string {
@@ -2393,20 +2411,6 @@ func (d *Driver) getComposefsData(id string) string {
 func (d *Driver) getDiffPath(id string) (string, error) {
 	dir := d.dir(id)
 	return redirectDiffIfAdditionalLayer(path.Join(dir, "diff"), false)
-}
-
-func (d *Driver) getLowerDiffPaths(id string) ([]string, error) {
-	layers, err := d.getLowerDirs(id)
-	if err != nil {
-		return nil, err
-	}
-	for i, l := range layers {
-		layers[i], err = redirectDiffIfAdditionalLayer(l, false)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return layers, nil
 }
 
 // DiffSize calculates the changes between the specified id
