@@ -1156,10 +1156,8 @@ func (d *Driver) create(id, parent string, opts *graphdriver.CreateOpts, readOnl
 	if err != nil {
 		return err
 	}
-	if lower != "" {
-		if err := os.WriteFile(path.Join(dir, lowerFile), []byte(lower), 0o666); err != nil {
-			return err
-		}
+	if err := os.WriteFile(path.Join(dir, lowerFile), []byte(lower), 0o666); err != nil {
+		return err
 	}
 
 	// Write a lower-layers file referencing layers by ID instead of
