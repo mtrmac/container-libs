@@ -21,6 +21,7 @@ require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/moby/sys/capability v0.4.0
+	github.com/moby/sys/devices v0.1.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/opencontainers/cgroups v0.0.6
