@@ -93,4 +93,13 @@ var _ = Describe("Config Modules", func() {
 		gomega.Expect(c.Containers.Env.Get()).To(gomega.Equal([]string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "usr share only", "override conf always wins"}))
 		gomega.Expect(c.Containers.Volumes.Get()).To(gomega.Equal([]string{"volume four", "home second"}))
 	})
+
+	It("new config with modules and env variables", func() {
+		paths, err := ModuleDirectories()
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		gomega.Expect(paths).To(gomega.HaveLen(3))
+		for _, path := range paths {
+			gomega.Expect(path).To(gomega.HaveSuffix("containers.conf.modules"))
+		}
+	})
 })
