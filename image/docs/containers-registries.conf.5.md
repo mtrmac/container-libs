@@ -49,6 +49,8 @@ added.
 If `CONTAINERS_REGISTRIES_CONF_OVERRIDE` is set, it specifies an additional path that is being read last,
 unless overridden by application-specific configuration.
 
+See **[containers-config(5)](../../common/docs/containers-config.5.md)** for a more detailed description on how the files are loaded.
+
 
 ### GLOBAL SETTINGS
 
@@ -360,7 +362,7 @@ the destination registry is unambiguous. Pulling by digest
 tags.
 
 # SEE ALSO
- containers-auth.json(5) containers-certs.d(5)
+**[containers-config(5)](../../common/docs/containers-config.5.md)**, containers-auth.json(5) containers-certs.d(5)
 
 # HISTORY
 Dec 2019, Warning added for unqualified image names by Tom Sweeney <tsweeney@redhat.com>

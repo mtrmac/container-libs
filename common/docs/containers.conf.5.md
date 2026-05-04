@@ -1090,6 +1090,6 @@ is used for the storage.conf file rather than the default.
 This is primarily used for testing.
 
 # SEE ALSO
-containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
+**[containers-config(5)](containers-config.5.md)**, containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
 
 [toml]: https://github.com/toml-lang/toml

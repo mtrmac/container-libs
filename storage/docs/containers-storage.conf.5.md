@@ -311,32 +311,30 @@ This is a way to prevent xfs_quota management from conflicting with containers/s
 
 ## FILES
 
-<!-- TODO: create and add link to general man page describing the new parsing behavior -->
-
 The following search locations are used:
 
-- /usr/share/containers/storage.conf
-- /usr/share/containers/storage.conf.d/
-- /usr/share/containers/storage.rootful.conf.d/ (only when UID == 0)
-- /usr/share/containers/storage.rootless.conf.d/ (only when UID > 0)
-- /usr/share/containers/storage.rootless.conf.d/<UID>/ (only when UID > 0)
+- `/usr/share/containers/storage.conf`
+- `/usr/share/containers/storage.conf.d/`
+- `/usr/share/containers/storage.rootful.conf.d/` (only when UID == 0)
+- `/usr/share/containers/storage.rootless.conf.d/` (only when UID > 0)
+- `/usr/share/containers/storage.rootless.conf.d/<UID>/` (only when UID > 0)
 
-- /etc/containers/storage.conf
-- /etc/containers/storage.conf.d/
-- /etc/containers/storage.rootful.conf.d/ (only when UID == 0)
-- /etc/containers/storage.rootless.conf.d/ (only when UID > 0)
-- /etc/containers/storage.rootless.conf.d/<UID>/ (only when UID > 0)
+- `/etc/containers/storage.conf`
+- `/etc/containers/storage.conf.d/`
+- `/etc/containers/storage.rootful.conf.d/` (only when UID == 0)
+- `/etc/containers/storage.rootless.conf.d/` (only when UID > 0)
+- `/etc/containers/storage.rootless.conf.d/<UID>/` (only when UID > 0)
 
-- $XDG_CONFIG_HOME/containers/storage.conf
-- $XDG_CONFIG_HOME/containers/storage.conf.d/
+- `$XDG_CONFIG_HOME/containers/storage.conf` or if `$XDG_CONFIG_HOME` is unset then `$HOME/.config/containers/storage.conf`
+- `$XDG_CONFIG_HOME/containers/storage.conf.d/` or if `$XDG_CONFIG_HOME` is unset then `$HOME/.config/containers/storage.conf.d/`
 
-If $XDG_CONFIG_HOME is empty then it uses $HOME/.config. The lookup in the home directory is also done as root.
+See **[containers-config(5)](../../common/docs/containers-config.5.md)** for a more detailed description on how the files are loaded.
 
 /etc/projects - XFS persistent project root definition
 /etc/projid -  XFS project name mapping file
 
 ## SEE ALSO
-`semanage(8)`, `restorecon(8)`, `mount(8)`, `fuse-overlayfs(1)`, `xfs_quota(8)`, `projects(5)`, `projid(5)`
+**[containers-config(5)](../../common/docs/containers-config.5.md)**, `semanage(8)`, `restorecon(8)`, `mount(8)`, `fuse-overlayfs(1)`, `xfs_quota(8)`, `projects(5)`, `projid(5)`
 
 ## HISTORY
 May 2017, Originally compiled by Dan Walsh <dwalsh@redhat.com>
