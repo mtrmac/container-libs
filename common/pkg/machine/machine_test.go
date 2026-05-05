@@ -6,56 +6,59 @@ import (
 )
 
 var _ = Describe("Machine", func() {
-	BeforeEach(func() {
-		// disable normal init for testing
-		markerSync.Do(func() {})
-	})
-
 	It("not a machine", func() {
-		loadMachineMarker("testdata/does-not-exist")
+		marker := loadMachineMarker("testdata/does-not-exist", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeFalse())
-		gomega.Expect(HostType()).To(gomega.BeEmpty())
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeFalse())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeFalse())
+		gomega.Expect(marker.HostType()).To(gomega.BeEmpty())
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeFalse())
 	})
 
 	It("generic machine", func() {
-		loadMachineMarker("testdata/empty-machine")
+		marker := loadMachineMarker("testdata/empty-machine", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeTrue())
-		gomega.Expect(HostType()).To(gomega.BeEmpty())
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeTrue())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.BeEmpty())
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeTrue())
 	})
 
 	It("wsl machine", func() {
-		loadMachineMarker("testdata/wsl-machine")
+		marker := loadMachineMarker("testdata/wsl-machine", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeTrue())
-		gomega.Expect(HostType()).To(gomega.Equal(Wsl))
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeFalse())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.Equal(Wsl))
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeFalse())
 	})
 
 	It("qemu machine", func() {
-		loadMachineMarker("testdata/qemu-machine")
+		marker := loadMachineMarker("testdata/qemu-machine", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeTrue())
-		gomega.Expect(HostType()).To(gomega.Equal(Qemu))
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeTrue())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.Equal(Qemu))
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeTrue())
 	})
 
 	It("applehv machine", func() {
-		loadMachineMarker("testdata/applehv-machine")
+		marker := loadMachineMarker("testdata/applehv-machine", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeTrue())
-		gomega.Expect(HostType()).To(gomega.Equal(AppleHV))
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeTrue())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.Equal(AppleHV))
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeTrue())
 	})
 
 	It("hyperv machine", func() {
-		loadMachineMarker("testdata/hyperv-machine")
+		marker := loadMachineMarker("testdata/hyperv-machine", "testdata/does-not-exist")
 
-		gomega.Expect(IsPodmanMachine()).To(gomega.BeTrue())
-		gomega.Expect(HostType()).To(gomega.Equal(HyperV))
-		gomega.Expect(IsGvProxyBased()).To(gomega.BeTrue())
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.Equal(HyperV))
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeTrue())
+	})
+
+	It("fallback path", func() {
+		marker := loadMachineMarker("testdata/does-not-exist", "testdata/hyperv-machine")
+
+		gomega.Expect(marker.IsPodmanMachine()).To(gomega.BeTrue())
+		gomega.Expect(marker.HostType()).To(gomega.Equal(HyperV))
+		gomega.Expect(marker.IsGvProxyBased()).To(gomega.BeTrue())
 	})
 })
