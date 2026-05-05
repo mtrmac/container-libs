@@ -6,9 +6,9 @@ containers-config - Rules for loading container engine configuration files
 
 # DESCRIPTION
 
-This document describes the loading order of the **[containers.conf](containers.conf.5.md)**,
-**[storage.conf](../../storage/docs/containers-storage.conf.5.md)** and
-**[registries.conf](../../image/docs/containers-registries.conf.5.md)**.
+This document describes the loading order of the **containers.conf(5)**,
+**containers-storage.conf(5)** and
+**containers-registries.conf(5)**.
 Refer to their individual man pages for more details on the file formats.
 
 # Search Locations
@@ -94,6 +94,8 @@ All drop-in files will be sorted in the lexicographic order of the file name, if
 drop-in files with the same file name only the one with the highest precedence will be used and thus
 replaces the prior one.
 
+# EXAMPLES
+
 ## Example 1
 
 - ~~`/usr/share/containers/containers.conf`~~ (overridden by `$XDG_CONFIG_HOME/containers/containers.conf` and thus not read)
@@ -155,6 +157,6 @@ field_6 = f
 
 # SEE ALSO
 
-**[containers.conf(5)](containers.conf.5.md)**,
-**[containers-storage.conf(5)](../../storage/docs/containers-storage.conf.5.md)**,
-**[containers-registries.conf(5)](../../image/docs/containers-registries.conf.5.md)**
+**containers.conf(5)**,
+**containers-storage.conf(5)**,
+**containers-registries.conf(5)**
