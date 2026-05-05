@@ -2,19 +2,19 @@
 
 # NAME
 
-containers-config - File tree layout for loading various container engine config
+containers-config - Rules for loading container engine configuration files
 
 # DESCRIPTION
 
 This document describes the loading order of the **[containers.conf](containers.conf.5.md)**,
-**[storage.conf](../../storage/docs/containers-storage.conf.5.md)**,
+**[storage.conf](../../storage/docs/containers-storage.conf.5.md)** and
 **[registries.conf](../../image/docs/containers-registries.conf.5.md)**.
 Refer to their individual man pages for more details on the file formats.
 
 # Search Locations
 
 In the following paths `<name>` is a placeholder for either `containers`, `storage`, or `registries`
-depending on which config file you like to use.
+depending on the specific config file.
 
 ## Linux and macOS
 
@@ -77,15 +77,15 @@ User overrides:
 - `%APPDATA%\containers\<name>.conf.d\`
 
 
-# Load order
+# Load Order
 
 The search locations are split into two file categories, the main files and the drop-in directories.
 
-Only one main file will be loaded in the order of "User override", if it the file does not exist
+Only one main file will be loaded in the order of "User override", if the file does not exist
 then load the "Admin override", if that also does not exist then load the "System default"
 location, if that also does not exist no main file is loaded which is valid too.
 
-After the main file drop-in directories are loaded, thus the files have higher precedence than
+After the main file, drop-in directories are loaded, thus the files have higher precedence than
 the main file. Files within the directory must be suffixed with `.conf`, otherwise they get ignored.
 
 All drop-in files will be sorted in the lexicographic order of the file name, if there are two or more
@@ -103,7 +103,7 @@ replaces the prior one.
 
 ## Example 2
 
-Consider the following files with its content:
+Consider the following files with their contents:
 
 ~~`/usr/share/containers/containers.conf`~~ (overridden by `/etc/containers/containers.conf`):
 ```

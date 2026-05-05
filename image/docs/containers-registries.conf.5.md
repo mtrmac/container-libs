@@ -363,7 +363,7 @@ the destination registry is unambiguous. Pulling by digest
 tags.
 
 # SEE ALSO
-**[containers-config(5)](../../common/docs/containers-config.5.md)**, containers-auth.json(5) containers-certs.d(5)
+**[containers-config(5)](../../common/docs/containers-config.5.md)**, containers-auth.json(5), containers-certs.d(5)
 
 # HISTORY
 Dec 2019, Warning added for unqualified image names by Tom Sweeney <tsweeney@redhat.com>

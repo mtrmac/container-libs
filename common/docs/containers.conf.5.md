@@ -17,7 +17,7 @@ In addition to containers.conf, drop-in files using the same format from the fol
  - `/etc/containers/containers.rootful.conf.d` (only when running as uid 0)
  - `/etc/containers/containers.rootless.conf.d` (only when running as uid > 0)
  - `/etc/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
--  `/usr/share/containers/containers.conf.d`
+ - `/usr/share/containers/containers.conf.d`
  - `/usr/share/containers/containers.rootful.conf.d` (only when running as uid 0)
  - `/usr/share/containers/containers.rootless.conf.d` (only when running as uid > 0)
  - `/usr/share/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
@@ -25,7 +25,7 @@ In addition to containers.conf, drop-in files using the same format from the fol
 The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
 All files from these paths will be first collected and then sorted in alpha-numerical order.
 If the same filename is used twice then only the first match from the directory list above is
-being used. Then the files will be parsed in the sorted order.
+used. Then the files will be parsed in the sorted order.
 
 Fields specified in containers conf override the default options, as well as
 options in previously read containers.conf files.
