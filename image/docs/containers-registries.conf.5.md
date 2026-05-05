@@ -21,6 +21,7 @@ In addition to registries.conf, drop-in files using the same format from the fol
  - `/etc/containers/registries.rootful.conf.d` (only when running as uid 0)
  - `/etc/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/etc/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/registries.conf.d`
  - `/usr/share/containers/registries.rootful.conf.d` (only when running as uid 0)
  - `/usr/share/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/usr/share/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
@@ -48,6 +49,8 @@ added.
 
 If `CONTAINERS_REGISTRIES_CONF_OVERRIDE` is set, it specifies an additional path that is being read last,
 unless overridden by application-specific configuration.
+
+See **containers-config(5)** for a more detailed description on how the files are loaded.
 
 
 ### GLOBAL SETTINGS
@@ -360,7 +363,7 @@ the destination registry is unambiguous. Pulling by digest
 tags.
 
 # SEE ALSO
- containers-auth.json(5) containers-certs.d(5)
+containers-config(5), containers-auth.json(5), containers-certs.d(5)
 
 # HISTORY
 Dec 2019, Warning added for unqualified image names by Tom Sweeney <tsweeney@redhat.com>

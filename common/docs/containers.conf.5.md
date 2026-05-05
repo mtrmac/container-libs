@@ -9,18 +9,28 @@ Container engines like Podman & Buildah read containers.conf file, if it exists
 and modify the defaults for running containers on the host. containers.conf uses
 a TOML format that can be easily modified and versioned.
 
-Container engines read the __/usr/share/containers/containers.conf__,
-__/etc/containers/containers.conf__, and __/etc/containers/containers.conf.d/\*.conf__
-for global configuration that affects all users.
-For global configuration that only affects rootless users use __/etc/containers/containers.rootless.conf__,
-__/etc/containers/containers.rootless.d/\*.conf__ and __/etc/containers/containers.rootless.d/\$UID/\*.conf__. The UID is the user's uid which podman runs under so it can be used to specify a certain config for only a single user without having to put the config into the user's home directory.
-For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
-__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
+By default, the configuration is read from `$XDG_CONFIG_HOME/containers/containers.conf` (or from `$HOME/.config/containers/containers.conf` if `$XDG_CONFIG_HOME` is unset), if it exists; otherwise from `/etc/containers/containers.conf`;  otherwise from `/usr/share/containers/containers.conf`.
+
+In addition to containers.conf, drop-in files using the same format from the following directories are also read:
+ - `$XDG_CONFIG_HOME/containers/containers.conf.d` (or from `$HOME/.config/containers/containers.conf.d` if `$XDG_CONFIG_HOME` is unset)
+ - `/etc/containers/containers.conf.d`
+ - `/etc/containers/containers.rootful.conf.d` (only when running as uid 0)
+ - `/etc/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/etc/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/containers.conf.d`
+ - `/usr/share/containers/containers.rootful.conf.d` (only when running as uid 0)
+ - `/usr/share/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/usr/share/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
+
+The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
+All files from these paths will be first collected and then sorted in alpha-numerical order.
+If the same filename is used twice then only the first match from the directory list above is
+used. Then the files will be parsed in the sorted order.
 
 Fields specified in containers conf override the default options, as well as
 options in previously read containers.conf files.
 
-Config files in the `.d` directories, are added in alpha numeric sorted order and must end in `.conf`.
+See **containers-config(5)** for a more detailed description on how the files are loaded.
 
 Not all options are supported in all container engines.
 
@@ -1063,33 +1073,7 @@ The default value is `podmansh`.
 Number of seconds to wait for podmansh logins. This value if favoured over the deprecated field `engine.podmansh_timeout` if set.
 The default value is 30.
 
-
-# FILES
-
-**containers.conf**
-
-Distributions often provide a __/usr/share/containers/containers.conf__ file to
-provide a default configuration. Administrators can override fields in this
-file by creating __/etc/containers/containers.conf__ to specify their own
-configuration. They may also drop `.conf` files in
-__/etc/containers/containers.conf.d__ which will be loaded in alphanumeric order.
-For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
-__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
-
-Fields specified in a containers.conf file override the default options, as
-well as options in previously loaded containers.conf files.
-
-**storage.conf**
-
-The `/etc/containers/storage.conf` file is the default storage configuration file.
-Rootless users can override fields in the storage config by creating
-__$HOME/.config/containers/storage.conf__.
-
-If the `CONTAINERS_STORAGE_CONF` path environment variable is set, this path
-is used for the storage.conf file rather than the default.
-This is primarily used for testing.
-
 # SEE ALSO
-containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
+containers-config(5), containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
 
 [toml]: https://github.com/toml-lang/toml
