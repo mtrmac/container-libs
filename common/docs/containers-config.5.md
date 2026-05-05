@@ -16,6 +16,9 @@ Refer to their individual man pages for more details on the file formats.
 In the following paths `<name>` is a placeholder for either `containers`, `storage`, or `registries`
 depending on the specific config file.
 
+The paths are listed from lowest to highest precedence (i.e. later paths override / are preferred
+over the earlier paths, see below for details).
+
 ## Linux and macOS
 
 System defaults:
@@ -81,12 +84,11 @@ User overrides:
 
 The search locations are split into two file categories, the main files and the drop-in directories.
 
-Only one main file will be loaded in the order of "User override", if the file does not exist
-then load the "Admin override", if that also does not exist then load the "System default"
-location, if that also does not exist no main file is loaded which is valid too.
+Only one main file, `<name>.conf`, will be loaded: the highest-precedence file that exists.
+If no `<name>.conf` file exists, no main file is loaded, which is valid too.
 
-After the main file, drop-in directories are loaded, thus the files have higher precedence than
-the main file. Files within the directory must be suffixed with `.conf`, otherwise they get ignored.
+After the main file, drop-in directories are loaded. Each file can override settings
+set in earlier files. Files within the directory must be suffixed with `.conf`, otherwise they get ignored.
 
 All drop-in files will be sorted in the lexicographic order of the file name, if there are two or more
 drop-in files with the same file name only the one with the highest precedence will be used and thus
