@@ -21,6 +21,7 @@ In addition to registries.conf, drop-in files using the same format from the fol
  - `/etc/containers/registries.rootful.conf.d` (only when running as uid 0)
  - `/etc/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/etc/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/registries.conf.d`
  - `/usr/share/containers/registries.rootful.conf.d` (only when running as uid 0)
  - `/usr/share/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/usr/share/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
