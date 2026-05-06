@@ -17,14 +17,15 @@ is set then the following drop-in directories will not be read.
 
 In addition to registries.conf, drop-in files using the same format from the following directories are also read:
  - `$XDG_CONFIG_HOME/containers/registries.conf.d` (or from `$HOME/.config/containers/registries.conf.d` if `$XDG_CONFIG_HOME` is unset)
- - `/etc/containers/registries.conf.d`
  - `/etc/containers/registries.rootful.conf.d` (only when running as uid 0)
- - `/etc/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/etc/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
- - `/usr/share/containers/registries.conf.d`
+ - `/etc/containers/registries.rootless.conf.d` (only when running as uid > 0)
+ - `/etc/containers/registries.conf.d`
  - `/usr/share/containers/registries.rootful.conf.d` (only when running as uid 0)
- - `/usr/share/containers/registries.rootless.conf.d` (only when running as uid > 0)
  - `/usr/share/containers/registries.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/registries.rootless.conf.d` (only when running as uid > 0)
+ - `/usr/share/containers/registries.conf.d`
+
 
 The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
 All files from these paths will be first collected and then sorted in alpha-numerical order.

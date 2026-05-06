@@ -9,19 +9,20 @@ Directories are consulted in this order (highest priority first):
 
 - For both rootful and rootless:
   - `$XDG_CONFIG_HOME/containers/certs.d/` (or `$HOME/.config/containers/certs.d/` if `XDG_CONFIG_HOME` is unset)
-  - `/etc/containers/certs.d/`
 - For rootful (UID == 0):
   - `/etc/containers/certs.rootful.d/`
 - For rootless (UID > 0):
-  - `/etc/containers/certs.rootless.d/`
   - `/etc/containers/certs.rootless.d/<UID>/`
+  - `/etc/containers/certs.rootless.d/`
 - For both rootful and rootless:
-  - `/usr/share/containers/certs.d/`
+  - `/etc/containers/certs.d/`
 - For rootful (UID == 0):
   - `/usr/share/containers/certs.rootful.d/`
 - For rootless (UID > 0):
-  - `/usr/share/containers/certs.rootless.d/`
   - `/usr/share/containers/certs.rootless.d/<UID>/`
+  - `/usr/share/containers/certs.rootless.d/`
+- For both rootful and rootless:
+  - `/usr/share/containers/certs.d/`
 - Compatibility fallback:
   - `/etc/docker/certs.d/`
 
