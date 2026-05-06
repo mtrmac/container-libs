@@ -59,6 +59,12 @@ func TestMain(m *testing.M) {
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+
+	// Make the tests independent of storage.conf in /usr or /etc.
+	// This must be done early, not in an individual test,
+	// because the config file is read inside a sync.Once.
+	os.Setenv("CONTAINERS_STORAGE_CONF", "/dev/null")
+
 	os.Exit(m.Run())
 }
 
