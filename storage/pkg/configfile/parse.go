@@ -400,7 +400,6 @@ func readDropInsFromPaths(paths []string, suffix string) ([]string, error) {
 
 func getDropInPathsUnderMain(mainPath, suffix string, uid int) []string {
 	paths := make([]string, 0, 3)
-	paths = append(paths, mainPath+dropInSuffix)
 
 	// Extra condition for windows where uid is always -1 per os.Getuid().
 	// In this case it makes no sense to give the rootful path, just ignore
@@ -420,11 +419,13 @@ func getDropInPathsUnderMain(mainPath, suffix string, uid int) []string {
 			specialPath += suffix
 		}
 		specialPath += dropInSuffix
-		paths = append(paths, specialPath)
 		if rootless {
 			paths = append(paths, filepath.Join(specialPath, strconv.Itoa(uid)))
 		}
+		paths = append(paths, specialPath)
 	}
+
+	paths = append(paths, mainPath+dropInSuffix)
 	return paths
 }
 

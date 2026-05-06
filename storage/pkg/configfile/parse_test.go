@@ -27,63 +27,63 @@ func Test_getDropInPathsUnderMain(t *testing.T) {
 			mainPath: "/etc/containers/containers.conf",
 			suffix:   ".conf",
 			uid:      0,
-			want:     []string{"/etc/containers/containers.conf.d", "/etc/containers/containers.rootful.conf.d"},
+			want:     []string{"/etc/containers/containers.rootful.conf.d", "/etc/containers/containers.conf.d"},
 		},
 		{
 			name:     "basic rootless uid 500",
 			mainPath: "/etc/containers/containers.conf",
 			suffix:   ".conf",
 			uid:      500,
-			want:     []string{"/etc/containers/containers.conf.d", "/etc/containers/containers.rootless.conf.d", "/etc/containers/containers.rootless.conf.d/500"},
+			want:     []string{"/etc/containers/containers.rootless.conf.d/500", "/etc/containers/containers.rootless.conf.d", "/etc/containers/containers.conf.d"},
 		},
 		{
 			name:     "basic rootless uid 1234",
 			mainPath: "/etc/containers/containers.conf",
 			suffix:   ".conf",
 			uid:      1234,
-			want:     []string{"/etc/containers/containers.conf.d", "/etc/containers/containers.rootless.conf.d", "/etc/containers/containers.rootless.conf.d/1234"},
+			want:     []string{"/etc/containers/containers.rootless.conf.d/1234", "/etc/containers/containers.rootless.conf.d", "/etc/containers/containers.conf.d"},
 		},
 		{
 			name:     "path with extra dots",
 			mainPath: "/path.with.dots/containers.conf",
 			suffix:   ".conf",
 			uid:      0,
-			want:     []string{"/path.with.dots/containers.conf.d", "/path.with.dots/containers.rootful.conf.d"},
+			want:     []string{"/path.with.dots/containers.rootful.conf.d", "/path.with.dots/containers.conf.d"},
 		},
 		{
 			name:     "/usr rootful",
 			mainPath: "/usr/share/containers/containers.conf",
 			suffix:   ".conf",
 			uid:      0,
-			want:     []string{"/usr/share/containers/containers.conf.d", "/usr/share/containers/containers.rootful.conf.d"},
+			want:     []string{"/usr/share/containers/containers.rootful.conf.d", "/usr/share/containers/containers.conf.d"},
 		},
 		{
 			name:     "storage.conf",
 			mainPath: "/usr/share/containers/storage.conf",
 			suffix:   ".conf",
 			uid:      0,
-			want:     []string{"/usr/share/containers/storage.conf.d", "/usr/share/containers/storage.rootful.conf.d"},
+			want:     []string{"/usr/share/containers/storage.rootful.conf.d", "/usr/share/containers/storage.conf.d"},
 		},
 		{
 			name:     "storage.conf",
 			mainPath: "/usr/share/containers/storage.conf",
 			suffix:   ".conf",
 			uid:      0,
-			want:     []string{"/usr/share/containers/storage.conf.d", "/usr/share/containers/storage.rootful.conf.d"},
+			want:     []string{"/usr/share/containers/storage.rootful.conf.d", "/usr/share/containers/storage.conf.d"},
 		},
 		{
 			name:     "registries.d",
 			mainPath: "/usr/share/containers/registries",
 			suffix:   ".yaml",
 			uid:      0,
-			want:     []string{"/usr/share/containers/registries.d", "/usr/share/containers/registries.rootful.d"},
+			want:     []string{"/usr/share/containers/registries.rootful.d", "/usr/share/containers/registries.d"},
 		},
 		{
 			name:     "registries.d rootless",
 			mainPath: "/usr/share/containers/registries",
 			suffix:   ".yaml",
 			uid:      99,
-			want:     []string{"/usr/share/containers/registries.d", "/usr/share/containers/registries.rootless.d", "/usr/share/containers/registries.rootless.d/99"},
+			want:     []string{"/usr/share/containers/registries.rootless.d/99", "/usr/share/containers/registries.rootless.d", "/usr/share/containers/registries.d"},
 		},
 		{
 			name:     "uid -1 (like on windows)",
@@ -806,6 +806,63 @@ func Test_Read(t *testing.T) {
 			// it only reads the main .conf.d locations.
 			want: []string{"true-1", "true-2"},
 		},
+		{
+			name: "rootless drop-in order",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+				UserId:    10,
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf.d/b.conf":             "b1",
+					"containers.rootless.conf.d/b.conf":    "b2",
+					"containers.rootless.conf.d/10/b.conf": "b3",
+				},
+				etc: map[string]string{
+					"containers.conf.d/a.conf":             "a1",
+					"containers.rootless.conf.d/a.conf":    "a2",
+					"containers.rootless.conf.d/10/a.conf": "a3",
+				},
+			},
+			want: []string{"a3", "b3"},
+		},
+		{
+			name: "rootful drop-in order",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+				UserId:    0,
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf.d/b.conf":         "b1",
+					"containers.rootful.conf.d/b.conf": "b2",
+				},
+				etc: map[string]string{
+					"containers.conf.d/a.conf":         "a1",
+					"containers.rootful.conf.d/a.conf": "a2",
+				},
+			},
+			want: []string{"a2", "b2"},
+		},
+		{
+			name: "drop-in order etc overwrites specific usr path",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+				UserId:    10,
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.rootless.conf.d/10/a.conf": "usr",
+				},
+				etc: map[string]string{
+					"containers.conf.d/a.conf": "etc",
+				},
+			},
+			want: []string{"etc"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1011,10 +1068,10 @@ func TestGetSearchPaths(t *testing.T) {
 				},
 				DropInDirectories: []string{
 					"/home/containers/containers.conf.d",
-					adminOverrideConfigPath + "/containers.conf.d",
 					adminOverrideConfigPath + "/containers.rootful.conf.d",
-					systemConfigPath + "/containers.conf.d",
+					adminOverrideConfigPath + "/containers.conf.d",
 					systemConfigPath + "/containers.rootful.conf.d",
+					systemConfigPath + "/containers.conf.d",
 				},
 			},
 		},
