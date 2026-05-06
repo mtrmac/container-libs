@@ -85,6 +85,13 @@ func Test_getDropInPathsUnderMain(t *testing.T) {
 			uid:      99,
 			want:     []string{"/usr/share/containers/registries.d", "/usr/share/containers/registries.rootless.d", "/usr/share/containers/registries.rootless.d/99"},
 		},
+		{
+			name:     "uid -1 (like on windows)",
+			mainPath: "/etc/containers/containers.conf",
+			suffix:   ".conf",
+			uid:      -1,
+			want:     []string{"/etc/containers/containers.conf.d"},
+		},
 	}
 	t.Parallel()
 	for _, tt := range tests {
@@ -773,6 +780,31 @@ func Test_Read(t *testing.T) {
 				t.Setenv("CONTAINERS_CONF_OVERRIDE", file2)
 			},
 			want: []string{"explicit path", "explicit dir"},
+		},
+		{
+			name: "windows with user id -1",
+			arg: File{
+				Name:      "containers",
+				Extension: "conf",
+				UserId:    -1,
+			},
+			files: testfiles{
+				usr: map[string]string{
+					"containers.conf.d/true-1.conf":        "true-1",
+					"containers.rootless.conf.d/-1/a.conf": "a",
+					"containers.rootless.conf.d/b.conf":    "b",
+					"containers.rootful.conf.d/x.conf":     "x",
+				},
+				etc: map[string]string{
+					"containers.conf.d/true-2.conf":        "true-2",
+					"containers.rootless.conf.d/-1/c.conf": "c",
+					"containers.rootless.conf.d/d.conf":    "d",
+					"containers.rootful.conf.d/z.conf":     "z",
+				},
+			},
+			// Special drops in must be ignored for uid < 0,
+			// it only reads the main .conf.d locations.
+			want: []string{"true-1", "true-2"},
 		},
 	}
 
