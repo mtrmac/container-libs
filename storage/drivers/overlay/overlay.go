@@ -2058,7 +2058,7 @@ func (g *overlayFileGetter) Get(path string) (io.ReadCloser, error) {
 	for _, d := range g.diffDirs {
 		if f, found := g.composefsMounts[d]; found {
 			cfd, err := unix.Openat2(int(f.Fd()), path, &unix.OpenHow{
-				Flags:   unix.O_CLOEXEC | unix.O_PATH,
+				Flags:   unix.O_RDONLY | unix.O_CLOEXEC,
 				Resolve: unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_BENEATH,
 			})
 			if err != nil {
