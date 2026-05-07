@@ -13,14 +13,14 @@ By default, the configuration is read from `$XDG_CONFIG_HOME/containers/containe
 
 In addition to containers.conf, drop-in files using the same format from the following directories are also read:
  - `$XDG_CONFIG_HOME/containers/containers.conf.d` (or from `$HOME/.config/containers/containers.conf.d` if `$XDG_CONFIG_HOME` is unset)
- - `/etc/containers/containers.conf.d`
  - `/etc/containers/containers.rootful.conf.d` (only when running as uid 0)
- - `/etc/containers/containers.rootless.conf.d` (only when running as uid > 0)
  - `/etc/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
- - `/usr/share/containers/containers.conf.d`
+ - `/etc/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/etc/containers/containers.conf.d`
  - `/usr/share/containers/containers.rootful.conf.d` (only when running as uid 0)
- - `/usr/share/containers/containers.rootless.conf.d` (only when running as uid > 0)
  - `/usr/share/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/usr/share/containers/containers.conf.d`
 
 The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
 All files from these paths will be first collected and then sorted in alpha-numerical order.
