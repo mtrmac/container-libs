@@ -98,18 +98,19 @@ func TestTransportParseReference(t *testing.T) {
 	store := newStore(t)
 	driver := store.GraphDriverName()
 	root := store.GraphRoot()
+	runRoot := store.RunRoot()
 
 	for _, c := range []struct{ prefix, expectedDriver, expectedRoot, expectedRunRoot string }{
-		{"", driver, root, ""},                                             // Implicit store location prefix
-		{"[unterminated", "", "", ""},                                      // Unterminated store specifier
-		{"[]", "", "", ""},                                                 // Empty store specifier
-		{"[relative/path]", "", "", ""},                                    // Non-absolute graph root path
-		{"[" + driver + "@relative/path]", "", "", ""},                     // Non-absolute graph root path
-		{"[@" + root + "suffix2]", "", "", ""},                             // Empty graph driver
-		{"[" + driver + "@]", "", "", ""},                                  // Empty root path
-		{"[thisisunknown@" + root + "suffix2]", "", "", ""},                // Unknown graph driver
-		{"[" + root + "suffix1]", "", "", ""},                              // A valid root path, but no run dir
-		{"[" + driver + "@" + root + "suffix3+relative/path]", "", "", ""}, // Non-absolute run dir
+		{"", driver, root, runRoot},                                            // Implicit store location prefix
+		{"[unterminated", "", "", ""},                                          // Unterminated store specifier
+		{"[]", "", "", ""},                                                     // Empty store specifier
+		{"[relative/path]", "", "", ""},                                        // Non-absolute graph root path
+		{"[" + driver + "@relative/path]", "", "", ""},                         // Non-absolute graph root path
+		{"[@" + root + "suffix2]", "", "", ""},                                 // Empty graph driver
+		{"[" + driver + "@]", "", "", ""},                                      // Empty root path
+		{"[thisisunknown@" + root + "suffix2]", "", "", ""},                    // Unknown graph driver
+		{"[" + driver + "@" + root + "suffix1]", driver, root + "suffix1", ""}, // A valid root path; no run dir = uses c/storage defaults
+		{"[" + driver + "@" + root + "suffix3+relative/path]", "", "", ""},     // Non-absolute run dir
 		{
 			"[" + driver + "@" + root + "suffix3+" + root + "suffix4]",
 			driver,
