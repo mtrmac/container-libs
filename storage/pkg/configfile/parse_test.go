@@ -65,11 +65,11 @@ func Test_getDropInPathsUnderMain(t *testing.T) {
 			want:     []string{"/usr/share/containers/storage.rootful.conf.d", "/usr/share/containers/storage.conf.d"},
 		},
 		{
-			name:     "storage.conf",
+			name:     "storage.conf rootless",
 			mainPath: "/usr/share/containers/storage.conf",
 			suffix:   ".conf",
-			uid:      0,
-			want:     []string{"/usr/share/containers/storage.rootful.conf.d", "/usr/share/containers/storage.conf.d"},
+			uid:      1000,
+			want:     []string{"/usr/share/containers/storage.rootless.conf.d/1000", "/usr/share/containers/storage.rootless.conf.d", "/usr/share/containers/storage.conf.d"},
 		},
 		{
 			name:     "registries.d",
