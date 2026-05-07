@@ -98,9 +98,10 @@ func TestTransportParseReference(t *testing.T) {
 	store := newStore(t)
 	driver := store.GraphDriverName()
 	root := store.GraphRoot()
+	runRoot := store.RunRoot()
 
 	for _, c := range []struct{ prefix, expectedDriver, expectedRoot, expectedRunRoot string }{
-		{"", driver, root, ""},                                                 // Implicit store location prefix
+		{"", driver, root, runRoot},                                            // Implicit store location prefix
 		{"[unterminated", "", "", ""},                                          // Unterminated store specifier
 		{"[]", "", "", ""},                                                     // Empty store specifier
 		{"[relative/path]", "", "", ""},                                        // Non-absolute graph root path
