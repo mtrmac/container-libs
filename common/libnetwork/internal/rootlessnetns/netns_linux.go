@@ -202,12 +202,19 @@ func (n *Netns) cleanup() error {
 
 func (n *Netns) setupPasta(nsPath string) error {
 	pidPath := n.getPath(rootlessNetNsConnPidFile)
-	socketPath := n.getPath(pestoSocketFile)
+
+	extraOpts := []string{"--pid", pidPath}
+
+	var socketPath string
+	if n.config.Network.RootlessPortForwarder == config.RootlessPortForwarderPasta {
+		socketPath = n.getPath(pestoSocketFile)
+		extraOpts = append(extraOpts, "-c", socketPath)
+	}
 
 	pastaOpts := pasta.SetupOptions{
 		Config:       n.config,
 		Netns:        nsPath,
-		ExtraOptions: []string{"--pid", pidPath, "-c", socketPath},
+		ExtraOptions: extraOpts,
 	}
 	res, err := pasta.Setup(&pastaOpts)
 	if err != nil {

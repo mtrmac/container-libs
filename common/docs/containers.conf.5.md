@@ -488,6 +488,15 @@ default_subnet_pools = [
 Configure which rootless network program to use by default. Valid options are
 `slirp4netns` and `pasta` (default).
 
+**rootless_port_forwarder**="rootlessport"
+
+Select the port forwarding mechanism for rootless bridge networks.
+Valid options are `rootlessport` (default) and `pasta`.
+`rootlessport` uses a userspace TCP/UDP proxy.
+`pasta` uses pasta's control socket to add port forwarding rules via kernel splice,
+which preserves the original source IP address inside the container.
+The `pasta` option is **experimental** and subject to change.
+
 **network_config_dir**="/etc/containers/networks"
 
 Path to the directory where network configuration files are located.
