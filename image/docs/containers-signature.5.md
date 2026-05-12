@@ -70,7 +70,7 @@ the consumer MUST verify at least the following aspects of the signature
 - The blob MUST be a “Signed Message” as defined in RFC 4880 section 11.3.
   (e.g. it MUST NOT be an unsigned “Literal Message”,
   a “Cleartext Signature” as defined in RFC 4880 section 7,
-  or any other non-signature format).
+  any other non-signature format, and MUST NOT use ASCII Armor as defined in RFC 4880 section 6).
 - The blob MUST NOT contain more than one "Signature Packet" as defined in RFC 4880 section 5.2.
 - The signature MUST have been made by an expected key trusted for the purpose (and the specific container image).
 - The signature MUST be correctly formed and pass the cryptographic validation.
