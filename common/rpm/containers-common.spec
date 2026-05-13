@@ -139,7 +139,7 @@ done
 ln -s containerignore.5 %{buildroot}%{_mandir}/man5/.containerignore.5
 
 # install config files for mounts, containers and seccomp
-install -m0644 common/pkg/subscriptions/mounts.conf %{buildroot}%{_datadir}/containers/mounts.conf
+install -m0644 common/contrib/redhat/mounts.conf %{buildroot}%{_datadir}/containers/mounts.conf
 install -m0644 common/pkg/seccomp/seccomp.json %{buildroot}%{_datadir}/containers/seccomp.json
 install -m0644 common/pkg/config/containers.conf %{buildroot}%{_datadir}/containers/containers.conf
 
