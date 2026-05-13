@@ -971,29 +971,34 @@ func TestArtifactStore_withLockedLayout(t *testing.T) {
 }
 
 func TestArtifactStore_EventChannel(t *testing.T) {
-	as, _ := setupTestStore(t)
-	ch := as.EventChannel()
-	require.NotNil(t, ch)
-
 	t.Run("Add", func(t *testing.T) {
+		as, _ := setupTestStore(t)
+		ch := as.EventChannel()
+		require.NotNil(t, ch)
+
 		refName := "quay.io/test/event-add:v1"
 		fileNames := map[string]int{"add.txt": 64}
 
 		digest, _ := helperAddArtifact(t, as, refName, fileNames, nil)
 
-		event := <-as.eventChannel
+		event := <-ch
 		require.NotNil(t, event)
 		assert.Equal(t, EventTypeArtifactAdd, event.Type)
 		assert.Equal(t, refName, event.Name)
 		assert.Equal(t, digest.String(), event.ID)
 		assert.NoError(t, event.Error)
+		as.CloseEventChannel()
 	})
 
 	t.Run("Remove", func(t *testing.T) {
+		as, _ := setupTestStore(t)
+		ch := as.EventChannel()
+		require.NotNil(t, ch)
+
 		refName := "quay.io/test/event-remove:v1"
 		fileNames := map[string]int{"remove.txt": 32}
 		digest, _ := helperAddArtifact(t, as, refName, fileNames, nil)
-		<-as.eventChannel // consume AddEvent
+		<-ch // consume AddEvent
 
 		asr, err := NewArtifactStorageReference(refName)
 		require.NoError(t, err)
@@ -1002,11 +1007,34 @@ func TestArtifactStore_EventChannel(t *testing.T) {
 		assert.Equal(t, digest, removedDigest)
 		require.NoError(t, err)
 
-		event := <-as.eventChannel
+		event := <-ch
 		require.NotNil(t, event)
 		assert.Equal(t, EventTypeArtifactRemove, event.Type)
 		assert.Equal(t, refName, event.Name)
 		assert.Equal(t, digest.String(), event.ID)
 		assert.NoError(t, event.Error)
+		as.CloseEventChannel()
+	})
+
+	t.Run("Close the event channel", func(t *testing.T) {
+		as, _ := setupTestStore(t)
+		ch := as.EventChannel()
+		require.NotNil(t, ch)
+
+		refName := "quay.io/test/event-add:v1"
+		fileNames := map[string]int{"add.txt": 64}
+
+		helperAddArtifact(t, as, refName, fileNames, nil)
+
+		event := <-ch
+		require.NotNil(t, event)
+		assert.NoError(t, event.Error)
+
+		as.CloseEventChannel()
+		assert.Nil(t, as.eventChannel)
+
+		event, ok := <-ch
+		assert.False(t, ok)
+		assert.Nil(t, event)
 	})
 }
