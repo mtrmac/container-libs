@@ -904,12 +904,6 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		dockerRef, err := dockerReference.ParseNormalizedNamed(c.queryRepo)
 		require.NoError(t, err)
 		dockerRef = dockerReference.TagNameOnly(dockerRef)
-		configKey := dockerReference.Domain(dockerRef)
-		// github.com/docker/cli/command.RetrieveAuthTokenFromImage’s getAuthConfigKey internally hard-codes
-		// these strings.
-		if configKey == "docker.io" || configKey == "index.docker.io" {
-			configKey = "https://index.docker.io/v1/" // github.com/docker/cli/command.authConfigKey
-		}
 
 		if c.otherContents {
 			err := os.WriteFile(configPath, []byte(`{"auths":{"unmodified-domain.example":{"identitytoken":"identity"}},`+
@@ -922,7 +916,7 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// Initially, there are no credentials
 		configFile, err := config.Load(configDir)
 		require.NoError(t, err)
-		creds, err := configFile.GetAuthConfig(configKey)
+		creds, err := configFile.GetAuthConfig(dockerReference.Domain(dockerRef))
 		require.NoError(t, err)
 		assert.Equal(t, configtypes.AuthConfig{}, creds)
 
@@ -936,8 +930,14 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// We can find the credentials.
 		configFile, err = config.Load(configDir)
 		require.NoError(t, err)
-		creds, err = configFile.GetAuthConfig(configKey)
+		creds, err = configFile.GetAuthConfig(dockerReference.Domain(dockerRef))
 		require.NoError(t, err)
+		configKey := dockerReference.Domain(dockerRef)
+		// github.com/docker/cli/config/configfile.ConfigFile.GetAuthConfig’s getAuthConfigKey internally hard-codes
+		// these strings.
+		if configKey == "docker.io" || configKey == "index.docker.io" {
+			configKey = "https://index.docker.io/v1/" // github.com/docker/cli/config/configfile.authConfigKey
+		}
 		assert.Equal(t, configtypes.AuthConfig{
 			ServerAddress: configKey,
 			Username:      testUser,
@@ -950,7 +950,7 @@ func TestSetCredentialsInteroperability(t *testing.T) {
 		// We can’t find the credentials any more.
 		configFile, err = config.Load(configDir)
 		require.NoError(t, err)
-		creds, err = configFile.GetAuthConfig(configKey)
+		creds, err = configFile.GetAuthConfig(dockerReference.Domain(dockerRef))
 		require.NoError(t, err)
 		assert.Equal(t, configtypes.AuthConfig{}, creds)
 
