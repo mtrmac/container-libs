@@ -12,7 +12,7 @@ require (
 	github.com/containers/ocicrypt v1.3.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.4.3+incompatible
+	github.com/docker/cli v29.5.0+incompatible
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker-credential-helpers v0.9.7
 	github.com/docker/go-connections v0.7.0
@@ -96,7 +96,7 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
