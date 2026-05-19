@@ -117,6 +117,7 @@ func TestDumpNode(t *testing.T) {
 		expected            string
 		skipAddingRootEntry bool
 		expectError         bool
+		verityDigests       map[string]string
 	}{
 		{
 			name: "root entry",
@@ -153,12 +154,34 @@ func TestDumpNode(t *testing.T) {
 			expected: "/example.txt 100 100000 1 1000 1000 0 1672531200.0 01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef - - user.key1=value1\n",
 		},
 		{
+			name: "regular file with verity",
+			entries: []*minimal.FileMetadata{
+				regularFileEntry,
+			},
+			verityDigests: map[string]string{
+				"/01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef": "f4499a32b0292945caa054fe7a01780089da44b1cd9b1acf7c51bc21e5748b64",
+			},
+			expected: "/example.txt 100 100000 1 1000 1000 0 1672531200.0 01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef - f4499a32b0292945caa054fe7a01780089da44b1cd9b1acf7c51bc21e5748b64 user.key1=value1\n",
+		},
+		{
 			name: "root entry with file",
 			entries: []*minimal.FileMetadata{
 				rootEntry,
 				regularFileEntry,
 			},
 			expected:            "/ 0 40000 1 0 0 0 1672531200.0 - - -\n/example.txt 100 100000 1 1000 1000 0 1672531200.0 01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef - - user.key1=value1\n",
+			skipAddingRootEntry: true,
+		},
+		{
+			name: "root entry with file and verity",
+			entries: []*minimal.FileMetadata{
+				rootEntry,
+				regularFileEntry,
+			},
+			verityDigests: map[string]string{
+				"/01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef": "f4499a32b0292945caa054fe7a01780089da44b1cd9b1acf7c51bc21e5748b64",
+			},
+			expected:            "/ 0 40000 1 0 0 0 1672531200.0 - - -\n/example.txt 100 100000 1 1000 1000 0 1672531200.0 01/23456789abcdef1123456789abcdef2123456789abcdef3123456789abcdef - f4499a32b0292945caa054fe7a01780089da44b1cd9b1acf7c51bc21e5748b64 user.key1=value1\n",
 			skipAddingRootEntry: true,
 		},
 		{
@@ -210,7 +233,7 @@ func TestDumpNode(t *testing.T) {
 		}
 		var foundErr error
 		for _, entry := range testCase.entries {
-			err := dumpNode(&buf, added, map[string]int{}, map[string]string{}, entry)
+			err := dumpNode(&buf, added, map[string]int{}, testCase.verityDigests, entry)
 			if err != nil {
 				foundErr = err
 			}
