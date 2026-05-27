@@ -866,6 +866,9 @@ func (c *chunkedDiffer) recordFsVerity(path string, roFile *os.File) error {
 		case c.useFsVerity == graphdriver.DifferFsVerityIfAvailable &&
 			(errors.Is(err, unix.ENOTSUP) || errors.Is(err, unix.ENOTTY)):
 			return nil
+
+		default:
+			return err
 		}
 	}
 	verity, err := fsverity.MeasureVerity(path, int(roFile.Fd()))
