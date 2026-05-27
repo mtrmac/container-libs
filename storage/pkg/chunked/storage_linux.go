@@ -858,12 +858,13 @@ func (c *chunkedDiffer) recordFsVerity(path string, roFile *os.File) error {
 	// enabled on the file.
 	err := fsverity.EnableVerity(path, int(roFile.Fd()))
 	if err != nil {
-		if c.useFsVerity == graphdriver.DifferFsVerityRequired {
+		switch {
+		case c.useFsVerity == graphdriver.DifferFsVerityRequired:
 			return err
-		}
 
 		// If it is not required, ignore the error if the filesystem does not support it.
-		if errors.Is(err, unix.ENOTSUP) || errors.Is(err, unix.ENOTTY) {
+		case c.useFsVerity == graphdriver.DifferFsVerityIfAvailable &&
+			(errors.Is(err, unix.ENOTSUP) || errors.Is(err, unix.ENOTTY)):
 			return nil
 		}
 	}
