@@ -2,7 +2,7 @@ module go.podman.io/common
 
 // Warning: Ensure the "go" and "toolchain" versions match exactly to prevent unwanted auto-updates
 
-go 1.25.6
+go 1.25.7
 
 require (
 	github.com/checkpoint-restore/checkpointctl v1.5.0
@@ -78,7 +78,7 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.21.1 // indirect
+	github.com/google/go-containerregistry v0.21.5 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -103,8 +103,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/proglottis/gpgme v0.1.6 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
-	github.com/sigstore/fulcio v1.8.5 // indirect
-	github.com/sigstore/protobuf-specs v0.5.0 // indirect
+	github.com/sigstore/fulcio v1.8.6 // indirect
+	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/sigstore/sigstore v1.10.6 // indirect
 	github.com/smallstep/pkcs7 v0.2.1 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
@@ -126,9 +126,9 @@ require (
 	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

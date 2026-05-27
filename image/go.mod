@@ -1,6 +1,6 @@
 module go.podman.io/image/v5
 
-go 1.25.6
+go 1.25.7
 
 // Warning: Ensure the "go" and "toolchain" versions match exactly to prevent unwanted auto-updates.
 // That generally means there should be no toolchain directive present.
@@ -29,7 +29,7 @@ require (
 	github.com/proglottis/gpgme v0.1.6
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0
-	github.com/sigstore/fulcio v1.8.5
+	github.com/sigstore/fulcio v1.8.6
 	github.com/sigstore/sigstore v1.10.6
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
@@ -66,7 +66,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-containerregistry v0.21.1 // indirect
+	github.com/google/go-containerregistry v0.21.5 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
-	github.com/sigstore/protobuf-specs v0.5.0 // indirect
+	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/smallstep/pkcs7 v0.2.1 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
@@ -99,9 +99,9 @@ require (
 	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
