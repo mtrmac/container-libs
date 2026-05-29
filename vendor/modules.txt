@@ -391,7 +391,7 @@ github.com/seccomp/libseccomp-golang
 github.com/secure-systems-lab/go-securesystemslib/encrypted
 # github.com/sergi/go-diff v1.4.0
 ## explicit; go 1.13
-# github.com/sigstore/fulcio v1.8.6
+# github.com/sigstore/fulcio v1.8.7
 ## explicit; go 1.25.7
 github.com/sigstore/fulcio/pkg/api
 github.com/sigstore/fulcio/pkg/certificate
