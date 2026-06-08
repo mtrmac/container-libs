@@ -27,7 +27,7 @@ require (
 	github.com/ulikunitz/xz v0.5.15
 	github.com/vbatts/tar-split v0.12.3
 	golang.org/x/sync v0.21.0
-	golang.org/x/sys v0.45.0
+	golang.org/x/sys v0.46.0
 )
 
 require (
