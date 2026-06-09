@@ -441,6 +441,10 @@ func makeCopyBuffer() []byte {
 func copyFileFromOtherLayer(file *fileMetadata, source string, name string, dirfd int, useHardLinks bool) (bool, *os.File, int64, error) {
 	srcDirfd, err := unix.Open(source, unix.O_RDONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
+		if errors.Is(err, unix.ENOENT) {
+			// Source layer was removed; skip reuse, fetch from remote instead.
+			return false, nil, 0, nil
+		}
 		return false, nil, 0, &fs.PathError{Op: "open", Path: source, Err: err}
 	}
 	defer unix.Close(srcDirfd)
