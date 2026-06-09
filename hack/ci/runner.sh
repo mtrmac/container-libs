@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SKOPEO_CI_BRANCH=main
+
 # This script is only intended to be run inside the Lima VM to configure it and start the tests.
 # Do not run locally.
 
@@ -70,6 +72,8 @@ install_deps_common() {
 ###############################################################################
 
 prepare_storage_env() {
+    # /tmp is a tmpfs, and as of 2025-09-11 we are using Debian images with Linux 6.1, where tmpfs does not support extended attributes.
+    # That prevents testing various graph drivers; so, use ext4 there.
     truncate -s 10G /var/tmp/test-fs.img
     sudo mkfs.ext4 -q /var/tmp/test-fs.img
     sudo mount -o loop /var/tmp/test-fs.img /tmp
@@ -180,12 +184,24 @@ run_image() {
     git config --global --add safe.directory "$GOSRC"
 
     # Run root tests for storage-dependent tests
+
+    # Hacky solution to find test that must be run as root.
+    # This looks for the ensureTestCanCreateImages() test function call and gets the
+    # function name where it is called via git grep,
+    # then trims the line to only show the actual function name and add "^$" around it
+    # since go test commands only accepts a single regex.
+    # Then join all names with "|" with paste to again build up a single regex string
+    # that matches all these names.
+    #
+    # test_filter must have the $ duplicated because make expands the value
+    # (and there seems to be no trivial way to avoid that while defining the variable
+    # as an argument?!)
     test_filter=$(git grep -h --show-function ensureTestCanCreateImages ./storage |
-        sed -n 's/func \(Test[[:alnum:]]*\)(.*/^\1$/p' |
+        sed -n 's/func \(Test[[:alnum:]]*\)(.*/^\1$$/p' |
         paste -sd "|" -)
     if [ -n "$test_filter" ]; then
         sudo -E env "PATH=$PATH" "GOPATH=$GOPATH_DIR" "HOME=$HOME" \
-            make test "BUILDTAGS=$BUILDTAGS" "TESTFLAGS=-v -run $test_filter" TEST_PACKAGES=./storage
+            make test "BUILDTAGS=$BUILDTAGS" "TESTFLAGS=-v -run '$test_filter'" TEST_PACKAGES=./storage
     fi
 
     # Run rootless tests
@@ -216,7 +232,7 @@ run_image_skopeo() {
 
     GOSRC="$(pwd)"
     SKOPEO_PATH="/var/tmp/skopeo"
-    SKOPEO_CIDEV_CONTAINER_FQIN="quay.io/libpod/skopeo_cidev:latest"
+    SKOPEO_CIDEV_CONTAINER_FQIN="ghcr.io/podman-container-tools/skopeo_cidev:20260603t174659z" # FIXME: should be Renovate-managed
 
     sudo podman pull --quiet "$SKOPEO_CIDEV_CONTAINER_FQIN"
     ctr_id=$(sudo podman create "$SKOPEO_CIDEV_CONTAINER_FQIN")
@@ -227,7 +243,7 @@ run_image_skopeo() {
     sudo podman umount --latest
     sudo podman rm --latest
 
-    git clone -b main https://github.com/containers/skopeo.git "$SKOPEO_PATH"
+    git clone -b "$SKOPEO_CI_BRANCH" https://github.com/containers/skopeo.git "$SKOPEO_PATH"
     cd "$SKOPEO_PATH"
     go mod edit -replace "go.podman.io/storage=$GOSRC/storage"
     go mod edit -replace "go.podman.io/image/v5=$GOSRC/image"
@@ -267,35 +283,24 @@ run_common() {
 # Main dispatch
 ###############################################################################
 
-echo
-echo "#################"
-echo "Installing dependencies for $MODULE"
-echo "#################"
 
 # Normalize module name for function dispatch (image-skopeo -> image_skopeo)
 MODULE_FUNC="${MODULE//-/_}"
 
+echo "::group::Installing dependencies for $MODULE"
 install_deps_${MODULE_FUNC}
+echo "::endgroup::"
 
 if type -t prepare_${MODULE_FUNC}_env &>/dev/null; then
-    echo
-    echo "#################"
-    echo "Preparing environment for $MODULE"
-    echo "#################"
+    echo "::group::Preparing environment for $MODULE"
     prepare_${MODULE_FUNC}_env
+    echo "::endgroup::"
 fi
 
-echo
-echo "#################"
-echo "Logging system info"
-echo "#################"
-
+echo "::group::Logging system info"
 "$SCRIPT_DIR/logcollector.sh" packages
 "$SCRIPT_DIR/logcollector.sh" ip
+echo "::endgroup::"
 
-echo
-echo "#################"
 echo "Starting tests: $MODULE $VARIANT"
-echo "#################"
-
 run_${MODULE_FUNC}
