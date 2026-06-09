@@ -256,12 +256,12 @@ func TestNewProgressReader(t *testing.T) {
 	sut := newSUT(t, nil, time.Second, channel)
 	assert.NotNil(t, sut)
 
-	// When/Then
-	go func() {
-		res := <-channel
-		assert.Equal(t, res.Event, types.ProgressEventDone)
-	}()
+	// When
 	sut.reportSuccess()
+
+	// Then
+	res := <-channel
+	assert.Equal(t, res.Event, types.ProgressEventDone)
 }
 
 func TestReadWithoutEvent(t *testing.T) {
@@ -273,7 +273,7 @@ func TestReadWithoutEvent(t *testing.T) {
 
 	// When
 	b := []byte{0, 1, 2, 3, 4}
-	read, err := reader.Read(b)
+	read, err := sut.Read(b)
 
 	// Then
 	assert.Nil(t, err)
@@ -288,14 +288,15 @@ func TestReadWithEvent(t *testing.T) {
 	assert.NotNil(t, sut)
 	b := []byte{0, 1, 2, 3, 4}
 
-	// When/Then
-	go func() {
-		res := <-channel
-		assert.Equal(t, res.Event, types.ProgressEventRead)
-		assert.Equal(t, res.Offset, uint64(5))
-		assert.Equal(t, res.OffsetUpdate, uint64(5))
-	}()
-	read, err := reader.Read(b)
+	// When
+	read, err := sut.Read(b)
+
+	// Then
 	assert.Equal(t, read, 5)
 	assert.Nil(t, err)
+
+	res := <-channel
+	assert.Equal(t, res.Event, types.ProgressEventRead)
+	assert.Equal(t, res.Offset, uint64(5))
+	assert.Equal(t, res.OffsetUpdate, uint64(5))
 }
