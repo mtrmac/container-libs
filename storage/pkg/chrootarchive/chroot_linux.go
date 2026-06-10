@@ -9,6 +9,7 @@ import (
 
 	"github.com/moby/sys/capability"
 	"go.podman.io/storage/pkg/mount"
+	"go.podman.io/storage/pkg/unshare"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,6 +27,10 @@ func chroot(path string) (err error) {
 	if err := caps.Load(); err != nil {
 		return err
 	}
+
+	// NOTE: this must happen before the chroot as IsRootless needs access to /proc and
+	// because IsRootless caches the result in memory this will make callers later work.
+	_ = unshare.IsRootless()
 
 	// initialize nss libraries in Glibc so that the dynamic libraries are loaded in the host
 	// environment not in the chroot from untrusted files.
