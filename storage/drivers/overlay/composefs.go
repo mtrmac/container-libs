@@ -153,7 +153,7 @@ func openBlobFile(blobFile string, hasACL, useLoopDevice bool) (int, error) {
 		blobFile = loop.Name()
 	}
 
-	fsfd, err := unix.Fsopen("erofs", 0)
+	fsfd, err := unix.Fsopen("erofs", unix.FSOPEN_CLOEXEC)
 	if err != nil {
 		return -1, fmt.Errorf("failed to open erofs filesystem: %w", err)
 	}
