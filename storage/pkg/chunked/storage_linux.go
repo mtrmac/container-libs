@@ -451,6 +451,10 @@ func copyFileFromOtherLayer(file *fileMetadata, source string, name string, dirf
 
 	srcFile, err := openFileUnderRoot(srcDirfd, name, unix.O_RDONLY|syscall.O_CLOEXEC, 0)
 	if err != nil {
+		if errors.Is(err, unix.ENOENT) {
+			// Source layer is probably being removed and the file is already gone.
+			return false, nil, 0, nil
+		}
 		return false, nil, 0, err
 	}
 	defer srcFile.Close()
