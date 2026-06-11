@@ -1,11 +1,23 @@
 package ssh
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestDialNetContext_CancelledContext(t *testing.T) {
+	u, err := url.Parse("ssh://testhost/run/podman/podman.sock")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err = DialNetContext(ctx, nil, "tcp", u)
+	require.ErrorIs(t, err, context.Canceled)
+}
 
 func TestValidate(t *testing.T) {
 	// Test adding ssh port
