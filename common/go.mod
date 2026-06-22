@@ -39,7 +39,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
-	go.etcd.io/bbolt v1.4.3
+	go.etcd.io/bbolt v1.5.0
 	go.podman.io/image/v5 v5.40.0
 	go.podman.io/storage v1.63.0
 	golang.org/x/crypto v0.53.0
