@@ -43,6 +43,7 @@ linters:
     - makezero
     - mirror
     - misspell
+    - modernize
     - nilnesserr
     - nosprintfhostport
     - perfsprint
