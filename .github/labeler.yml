@@ -9,3 +9,7 @@ image:
 storage:
   - changed-files:
     - any-glob-to-any-file: storage/**
+CI:
+  - changed-files:
+    - any-glob-to-any-file: .github/**
+    - any-glob-to-any-file: hack/ci/**
