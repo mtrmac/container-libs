@@ -2,6 +2,7 @@ package storage
 
 import (
 	"archive/tar"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,6 +65,33 @@ func TestCheckDirectory(t *testing.T) {
 			assert.ElementsMatch(t, vectors[i].expected, actual)
 		})
 	}
+}
+
+func TestCheckParentLayerInROStore(t *testing.T) {
+	roStore := newTestStore(t, StoreOptions{})
+	_, err := roStore.CreateLayer("ro-parent-layer", "", nil, "", false, nil)
+	require.NoError(t, err)
+	roStoreRoot := roStore.GraphRoot()
+	_, err = roStore.Shutdown(false)
+	require.NoError(t, err)
+
+	// Copy the graph root to a fresh path so the global lock file cache
+	// doesn't conflict (the first store registered these locks as RW).
+	roStoreCopy := t.TempDir()
+	require.NoError(t, os.CopyFS(roStoreCopy, os.DirFS(roStoreRoot)))
+
+	rwStore := newTestStore(t, StoreOptions{
+		GraphDriverOptions: []string{"imagestore=" + roStoreCopy},
+	})
+	t.Cleanup(func() { _, _ = rwStore.Shutdown(true) })
+
+	_, err = rwStore.CreateLayer("rw-child-layer", "ro-parent-layer", nil, "", true, nil)
+	require.NoError(t, err)
+
+	report, err := rwStore.Check(nil)
+	require.NoError(t, err)
+	assert.Empty(t, report.Layers, "RW child layer with RO parent should not be flagged")
+	assert.Empty(t, report.ROLayers, "RO parent layer should not be flagged")
 }
 
 func TestCheckDetectWriteable(t *testing.T) {
