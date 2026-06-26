@@ -10,46 +10,38 @@ on:
       - main
       - podman-*
 
-permissions: read-all
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  LIMA_VERSION: "v2.1.1"
-
 jobs:
   path-filter:
     runs-on: ubuntu-24.04
     outputs:
+      all: ${{ steps.filter.outputs.all }}
       storage: ${{ steps.filter.outputs.storage }}
       image: ${{ steps.filter.outputs.image }}
+      common: ${{ steps.filter.outputs.common }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
-          filters: |
-            storage:
-              - '.github/workflows/ci.yml'
-              - 'hack/ci/**'
-              - 'go.work'
-              - 'go.work.sum'
-              - 'storage/**'
-            image:
-              - '.github/workflows/ci.yml'
-              - 'hack/ci/**'
-              - 'go.work'
-              - 'go.work.sum'
-              - 'storage/**'
-              - 'image/**'
+          filters: .github/filters.yaml
+
+  validate:
+    uses: ./.github/workflows/validate.yml
 
   storage-test:
-    needs: path-filter
-    if: github.event_name == 'push' || needs.path-filter.outputs.storage == 'true'
-    runs-on: cncf-ubuntu-8-32-x86
-    timeout-minutes: 30
+    needs: [path-filter, validate]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.path-filter.outputs.all == 'true' ||
+      needs.path-filter.outputs.storage == 'true'
+    name: "storage ${{ matrix.distro }} ${{ matrix.driver }}"
     strategy:
       fail-fast: false
       matrix:
@@ -58,36 +50,26 @@ jobs:
         exclude:
           - distro: debian-sid
             driver: overlay-transient
-    name: "Storage: ${{ matrix.distro }} ${{ matrix.driver }}"
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          persist-credentials: false
-      - uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
-        with:
-          version: ${{ env.LIMA_VERSION }}
-      - name: Run tests
-        run: ./hack/ci/ci.sh storage ${{ matrix.distro }} ${{ matrix.driver }}
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: "logs-storage-${{ matrix.distro }}-${{ matrix.driver }}"
-          path: |
-            ./hack/ci/journal.log
-            ./hack/ci/audit.log
-            ./hack/ci/df.log
-          if-no-files-found: ignore
+    uses: ./.github/workflows/lima.yml
+    with:
+      runner: cncf-ubuntu-2-8-x86
+      module: storage
+      distro: ${{ matrix.distro }}
+      variant: ${{ matrix.driver }}
+      timeout: 20
 
   storage-cross:
-    needs: path-filter
-    if: github.event_name == 'push' || needs.path-filter.outputs.storage == 'true'
+    needs: [path-filter, validate]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.path-filter.outputs.all == 'true' ||
+      needs.path-filter.outputs.storage == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     name: "Storage: Cross"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: stable
           cache-dependency-path: "./storage/go.sum"
@@ -96,14 +78,17 @@ jobs:
         run: make cross
 
   image-cross:
-    needs: path-filter
-    if: github.event_name == 'push' || needs.path-filter.outputs.image == 'true'
+    needs: [path-filter, validate]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.path-filter.outputs.all == 'true' ||
+      needs.path-filter.outputs.image == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     name: "Image: Cross"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: stable
           cache-dependency-path: "./image/go.sum"
@@ -116,99 +101,50 @@ jobs:
         run: make cross
 
   image-test:
-    needs: path-filter
-    if: github.event_name == 'push' || needs.path-filter.outputs.image == 'true'
-    runs-on: cncf-ubuntu-8-32-x86
-    timeout-minutes: 30
+    needs: [path-filter, validate]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.path-filter.outputs.all == 'true' ||
+      needs.path-filter.outputs.image == 'true'
+    name: "${{ matrix.module }} fedora-current ${{ matrix.variant }}"
     strategy:
       fail-fast: false
       matrix:
         variant: [default, openpgp, sequoia]
-    name: "Image: Test ${{ matrix.variant }}"
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          persist-credentials: false
-      - uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
-        with:
-          version: ${{ env.LIMA_VERSION }}
-      - name: Run tests
-        run: ./hack/ci/ci.sh image fedora-current ${{ matrix.variant }}
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: "logs-image-${{ matrix.variant }}"
-          path: |
-            ./hack/ci/journal.log
-            ./hack/ci/audit.log
-            ./hack/ci/df.log
-          if-no-files-found: ignore
-
-  image-test-skopeo:
-    needs: path-filter
-    if: github.event_name == 'push' || needs.path-filter.outputs.image == 'true'
-    runs-on: cncf-ubuntu-8-32-x86
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [default, openpgp, sequoia]
-    name: "Image: Skopeo ${{ matrix.variant }}"
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          persist-credentials: false
-      - uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
-        with:
-          version: ${{ env.LIMA_VERSION }}
-      - name: Run tests
-        run: ./hack/ci/ci.sh image-skopeo fedora-current ${{ matrix.variant }}
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: "logs-image-skopeo-${{ matrix.variant }}"
-          path: |
-            ./hack/ci/journal.log
-            ./hack/ci/audit.log
-            ./hack/ci/df.log
-          if-no-files-found: ignore
+        module: [image, image-skopeo]
+    uses: ./.github/workflows/lima.yml
+    with:
+      runner: cncf-ubuntu-2-8-x86
+      module: ${{ matrix.module }}
+      distro: fedora-current
+      variant: ${{ matrix.variant }}
+      timeout: 20
 
   common-test:
-    runs-on: cncf-ubuntu-8-32-x86
-    timeout-minutes: 45
-    name: "Common: Test"
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          persist-credentials: false
-      - uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
-        with:
-          version: ${{ env.LIMA_VERSION }}
-      - name: Run tests
-        run: ./hack/ci/ci.sh common fedora-current
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: "logs-common"
-          path: |
-            ./hack/ci/journal.log
-            ./hack/ci/audit.log
-            ./hack/ci/df.log
-          if-no-files-found: ignore
+    needs: [path-filter, validate]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.path-filter.outputs.all == 'true' ||
+      needs.path-filter.outputs.common == 'true'
+    name: "common fedora-current"
+    uses: ./.github/workflows/lima.yml
+    with:
+      runner: cncf-ubuntu-2-8-x86
+      module: common
+      distro: fedora-current
+      timeout: 20
 
   # N/B: GitHub merge protection is configured for this exact job name, DO NOT CHANGE IT.
   success:
     name: "Total Success"
     if: always()
     needs:
+      - path-filter
+      - validate
       - storage-test
       - storage-cross
       - image-cross
       - image-test
-      - image-test-skopeo
       - common-test
     runs-on: ubuntu-24.04
     steps:
