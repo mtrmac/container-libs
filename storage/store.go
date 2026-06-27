@@ -3040,7 +3040,17 @@ func (s *store) MountImage(id string, mountOpts []string, mountLabel string) (st
 		MountLabel: mountLabel,
 		Options:    append(mountOpts, "ro"),
 	}
-	return rlstore.Mount(ilayer.ID, options)
+	if rlstore.Exists(ilayer.ID) {
+		return rlstore.Mount(ilayer.ID, options)
+	}
+	// check if the layer is in a read-only store, and return a better error message
+	for _, store := range lstores {
+		// required read lock is acquired earlier in this function
+		if store.Exists(ilayer.ID) {
+			return "", fmt.Errorf("mounting read/only store images is not allowed: %w", ErrStoreIsReadOnly)
+		}
+	}
+	return "", ErrLayerUnknown
 }
 
 func (s *store) Mount(id, mountLabel string) (string, error) {
