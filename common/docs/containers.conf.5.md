@@ -496,6 +496,10 @@ Valid options are `rootlessport` (default) and `pasta`.
 which preserves the original source IP address inside the container.
 The `pasta` option is **experimental** and subject to change.
 
+**Important:** This option must only be changed when no containers are running.
+Switching while containers are active leads to port-forwarding rules being leaked
+or cleanup failures because the running netns was created with the previous setting.
+
 **network_config_dir**="/etc/containers/networks"
 
 Path to the directory where network configuration files are located.
