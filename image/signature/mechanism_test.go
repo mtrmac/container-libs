@@ -17,7 +17,8 @@ const (
 	testGPGHomeDirectory = "./fixtures"
 )
 
-// Many of the tests use two fixtures: V4 signature packets (*.signature), and V3 signature packets (*.signature-v3)
+// Many of the tests use two fixtures: V4 signature packets (*.signature), and V3 signature packets (*.signature-v3).
+// Note that V3 signature packets are not supported by openpgpSigningMechanism.
 
 type fixtureVariant struct {
 	path  string
@@ -103,7 +104,9 @@ func TestNewGPGSigningMechanismInDirectory(t *testing.T) {
 	defer mech.Close()
 	for _, variant := range signatures {
 		_, _, err := mech.Verify(variant.bytes)
-		assert.NoError(t, err, variant.path)
+		if !variant.isV3 { // V3 signatures might be entirely unsupported and rejected.
+			assert.NoError(t, err, variant.path)
+		}
 	}
 
 	// If we use the default directory mechanism, GNUPGHOME is respected.
@@ -113,7 +116,9 @@ func TestNewGPGSigningMechanismInDirectory(t *testing.T) {
 	defer mech.Close()
 	for _, variant := range signatures {
 		_, _, err := mech.Verify(variant.bytes)
-		assert.NoError(t, err, variant.path)
+		if !variant.isV3 { // V3 signatures might be entirely unsupported and rejected.
+			assert.NoError(t, err, variant.path)
+		}
 	}
 }
 
@@ -140,9 +145,13 @@ func TestNewEphemeralGPGSigningMechanism(t *testing.T) {
 	// After import, the signature should validate.
 	for _, variant := range signatures {
 		content, signingFingerprint, err := mech.Verify(variant.bytes)
-		require.NoError(t, err, variant.path)
-		assert.Equal(t, []byte("This is not JSON\n"), content, variant.path)
-		assert.Equal(t, TestKeyFingerprint, signingFingerprint, variant.path)
+		if !variant.isV3 { // V3 signatures might be entirely unsupported and rejected.
+			require.NoError(t, err, variant.path)
+		}
+		if err == nil {
+			assert.Equal(t, []byte("This is not JSON\n"), content, variant.path)
+			assert.Equal(t, TestKeyFingerprint, signingFingerprint, variant.path)
+		}
 	}
 
 	// Import of a key with a subkey
@@ -248,33 +257,45 @@ func TestGPGSigningMechanismVerify(t *testing.T) {
 	require.NoError(t, err)
 	defer mech.Close()
 
+	// For extra paranoia, test that we return nil data on error.
+
 	// Successful verification
 	signatures := fixtureVariants(t, "./fixtures/invalid-blob.signature")
 	for _, variant := range signatures {
 		content, signingFingerprint, err := mech.Verify(variant.bytes)
-		require.NoError(t, err, variant.path)
-		assert.Equal(t, []byte("This is not JSON\n"), content, variant.path)
-		assert.Equal(t, TestKeyFingerprint, signingFingerprint, variant.path)
+		if !variant.isV3 { // V3 signatures might be entirely unsupported and rejected.
+			require.NoError(t, err, variant.path)
+		}
+		if err == nil {
+			assert.Equal(t, []byte("This is not JSON\n"), content, variant.path)
+			assert.Equal(t, TestKeyFingerprint, signingFingerprint, variant.path)
+		} else {
+			assertSigningError(t, content, signingFingerprint, err)
+		}
 	}
 	// Successful verification of a signature using a subkey
 	signatures = fixtureVariants(t, "./fixtures/subkey.signature")
 	for _, variant := range signatures {
 		content, signingFingerprint, err := mech.Verify(variant.bytes)
-		require.NoError(t, err, variant.path)
-		assert.Equal(t, []byte(`{"critical":{"identity":{"docker-reference":"testing/manifest:latest"},"image":{"docker-manifest-digest":"sha256:20bf21ed457b390829cdbeec8795a7bea1626991fda603e0d01b4e7f60427e55"},"type":"atomic container signature"},"optional":{}}`), content, variant.path)
-		if signingFingerprint != TestKeyFingerprintPrimaryWithSubkey {
-			assert.Equal(t, TestKeyFingerprintSubkeyWithSubkey, signingFingerprint, variant.path)
-			withLookup, ok := mech.(signingMechanismWithVerificationIdentityLookup)
-			require.True(t, ok, variant.path)
-
-			primaryKey, err := withLookup.keyIdentityForVerificationKeyIdentity(signingFingerprint)
+		if !variant.isV3 { // V3 signatures might be entirely unsupported and rejected.
 			require.NoError(t, err, variant.path)
-			signingFingerprint = primaryKey
 		}
-		assert.Equal(t, TestKeyFingerprintPrimaryWithSubkey, signingFingerprint, variant.path)
-	}
+		if err == nil {
+			assert.Equal(t, []byte(`{"critical":{"identity":{"docker-reference":"testing/manifest:latest"},"image":{"docker-manifest-digest":"sha256:20bf21ed457b390829cdbeec8795a7bea1626991fda603e0d01b4e7f60427e55"},"type":"atomic container signature"},"optional":{}}`), content, variant.path)
+			if signingFingerprint != TestKeyFingerprintPrimaryWithSubkey {
+				assert.Equal(t, TestKeyFingerprintSubkeyWithSubkey, signingFingerprint, variant.path)
+				withLookup, ok := mech.(signingMechanismWithVerificationIdentityLookup)
+				require.True(t, ok, variant.path)
 
-	// For extra paranoia, test that we return nil data on error.
+				primaryKey, err := withLookup.keyIdentityForVerificationKeyIdentity(signingFingerprint)
+				require.NoError(t, err, variant.path)
+				signingFingerprint = primaryKey
+			}
+			assert.Equal(t, TestKeyFingerprintPrimaryWithSubkey, signingFingerprint, variant.path)
+		} else {
+			assertSigningError(t, content, signingFingerprint, err)
+		}
+	}
 
 	// Completely invalid signature.
 	content, signingFingerprint, err := mech.Verify([]byte{})
