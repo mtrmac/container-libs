@@ -21,7 +21,7 @@ require (
 	github.com/klauspost/compress v1.19.0
 	github.com/klauspost/pgzip v1.2.6
 	github.com/manifoldco/promptui v0.9.0
-	github.com/mattn/go-sqlite3 v1.14.47
+	github.com/mattn/go-sqlite3 v1.14.48
 	github.com/moby/moby/api v1.55.0
 	github.com/moby/moby/client v0.5.0
 	github.com/opencontainers/go-digest v1.0.0
