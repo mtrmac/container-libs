@@ -28,9 +28,9 @@ MANPAGES_MD = $(wildcard docs/*.5.md)
 MANPAGES ?= $(MANPAGES_MD:%.md=%)
 
 ifeq ($(shell uname -s),FreeBSD)
-CONTAINERSCONFDIR ?= /usr/local/etc/containers
+CONTAINERSCONFDIR ?= /usr/local/share/containers
 else
-CONTAINERSCONFDIR ?= /etc/containers
+CONTAINERSCONFDIR ?= /usr/share/containers
 endif
 REGISTRIESDDIR ?= ${CONTAINERSCONFDIR}/registries.d
 
