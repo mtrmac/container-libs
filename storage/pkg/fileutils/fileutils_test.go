@@ -617,3 +617,159 @@ func TestMatchesAmount(t *testing.T) {
 		assert.Equal(t, testCase.isMatch, isMatch, desc)
 	}
 }
+
+func TestShouldDescendExcludedDir(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		patterns []string
+		want     bool
+	}{
+		{
+			name:     "no exclusions",
+			path:     "cmd",
+			patterns: []string{"*"},
+			want:     false,
+		},
+		{
+			name:     "literal prefix match",
+			path:     "cmd",
+			patterns: []string{"*", "!cmd/main.go"},
+			want:     true,
+		},
+		{
+			name:     "literal prefix no match",
+			path:     "other",
+			patterns: []string{"*", "!cmd/main.go"},
+			want:     false,
+		},
+		{
+			name:     "double star at start matches any dir",
+			path:     "cmd",
+			patterns: []string{"**", "!**/*.go"},
+			want:     true,
+		},
+		{
+			name:     "double star at start matches nested dir",
+			path:     "cmd/sub",
+			patterns: []string{"**", "!**/*.go"},
+			want:     true,
+		},
+		{
+			name:     "double star with prefix matches dir under prefix",
+			path:     "cmd/sub",
+			patterns: []string{"**", "!cmd/**/*.go"},
+			want:     true,
+		},
+		{
+			name:     "double star with prefix no match for other dir",
+			path:     "other",
+			patterns: []string{"**", "!cmd/**/*.go"},
+			want:     false,
+		},
+		{
+			name:     "single star at start matches any dir",
+			path:     "cmd",
+			patterns: []string{"*", "!*/*.go"},
+			want:     true,
+		},
+		{
+			name:     "single star at start matches nested dir",
+			path:     "cmd/sub",
+			patterns: []string{"*", "!*/*.go"},
+			want:     true,
+		},
+		{
+			name:     "single star with prefix matches dir under prefix",
+			path:     "src/pkg",
+			patterns: []string{"**", "!src/*/*.go"},
+			want:     true,
+		},
+		{
+			name:     "single star with prefix no match for other dir",
+			path:     "other",
+			patterns: []string{"**", "!src/*/*.go"},
+			want:     false,
+		},
+		{
+			name:     "leading slash is stripped",
+			path:     "/cmd",
+			patterns: []string{"*", "!cmd/main.go"},
+			want:     true,
+		},
+		{
+			name:     "deep nested with double star prefix",
+			path:     "src/internal/pkg",
+			patterns: []string{"**", "!src/**/*.go"},
+			want:     true,
+		},
+		{
+			name:     "dir prefix match is not a partial match",
+			path:     "cmds",
+			patterns: []string{"*", "!cmd/main.go"},
+			want:     false,
+		},
+		{
+			name:     "wildcard mid-segment descends parent dir",
+			path:     "cmd/images",
+			patterns: []string{"**", "!cmd/image*/main.go"},
+			want:     true,
+		},
+		{
+			name:     "wildcard mid-segment matches parent",
+			path:     "cmd",
+			patterns: []string{"**", "!cmd/image*"},
+			want:     true,
+		},
+		{
+			name:     "question mark wildcard matches any dir",
+			path:     "cmd",
+			patterns: []string{"**", "!cm?/*.go"},
+			want:     true,
+		},
+		{
+			name:     "question mark wildcard no literal prefix matches any dir",
+			path:     "other",
+			patterns: []string{"**", "!?md/*.go"},
+			want:     true,
+		},
+		{
+			name:     "bracket wildcard matches dir",
+			path:     "cmd",
+			patterns: []string{"**", "!cm[d]/*.go"},
+			want:     true,
+		},
+		{
+			name:     "bracket wildcard no literal prefix matches any dir",
+			path:     "other",
+			patterns: []string{"**", "![c]md/*.go"},
+			want:     true,
+		},
+		{
+			name:     "bracket wildcard with prefix matches dir under prefix",
+			path:     "src/cmd",
+			patterns: []string{"**", "!src/cm[d]/*.go"},
+			want:     true,
+		},
+		{
+			name:     "bracket wildcard with prefix no match for other dir",
+			path:     "other",
+			patterns: []string{"**", "!src/cm[d]/*.go"},
+			want:     false,
+		},
+		{
+			name:     "non-exclusion patterns are ignored",
+			path:     "cmd",
+			patterns: []string{"cmd/**/*.go"},
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pm, err := NewPatternMatcher(tt.patterns)
+			require.NoError(t, err)
+			got := pm.ShouldDescendExcludedDir(tt.path)
+			assert.Equal(t, tt.want, got, "ShouldDescendExcludedDir(%q)", tt.path)
+		})
+	}
+}
