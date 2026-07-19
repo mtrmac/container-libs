@@ -35,7 +35,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/sylabs/sif/v2 v2.24.1
 	github.com/ulikunitz/xz v0.5.15
-	github.com/vbauerster/mpb/v8 v8.12.1
+	github.com/vbauerster/mpb/v8 v8.13.0
 	go.etcd.io/bbolt v1.5.0
 	go.podman.io/storage v1.63.0
 	go.yaml.in/yaml/v3 v3.0.4
