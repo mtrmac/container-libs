@@ -35,7 +35,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/sylabs/sif/v2 v2.24.1
-	github.com/ulikunitz/xz v0.5.15
+	github.com/ulikunitz/xz v0.5.16
 	github.com/vbauerster/mpb/v8 v8.13.0
 	go.etcd.io/bbolt v1.5.0
 	go.podman.io/storage v1.63.0
