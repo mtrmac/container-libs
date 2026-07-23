@@ -156,7 +156,7 @@ run_image_skopeo() {
     sudo podman umount --latest
     sudo podman rm --latest
 
-    git clone -b "$SKOPEO_CI_BRANCH" https://github.com/containers/skopeo.git "$SKOPEO_PATH"
+    git clone -b "$SKOPEO_CI_BRANCH" https://github.com/podman-container-tools/skopeo.git "$SKOPEO_PATH"
     cd "$SKOPEO_PATH"
     go mod edit -replace "go.podman.io/storage=$GOSRC/storage"
     go mod edit -replace "go.podman.io/image/v5=$GOSRC/image"
