@@ -39,7 +39,7 @@ require (
 	github.com/vbauerster/mpb/v8 v8.13.0
 	go.etcd.io/bbolt v1.5.0
 	go.podman.io/storage v1.63.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/term v0.45.0
