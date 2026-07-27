@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"go.podman.io/common/libnetwork/pasta"
 	"go.podman.io/common/libnetwork/types"
 	"go.podman.io/common/pkg/config"
 )
@@ -143,7 +144,105 @@ func (n *netavarkNetwork) Setup(namespacePath string, options types.SetupOptions
 		return nil, fmt.Errorf("unexpected netavark result length, want (%d), got (%d) networks", len(options.Networks), len(result))
 	}
 
+	if n.rootlessPortForwarder == config.RootlessPortForwarderPasta && n.networkRootless && len(options.NetworkOptions.PortMappings) > 0 {
+		// If NetworkStatus was already populated by the caller, pesto setup
+		// already happened on a prior network connect — skip to avoid duplicate rules.
+		if options.NetworkOptions.NetworkStatus != nil {
+			return result, nil
+		}
+		opts := options.NetworkOptions
+		opts.NetworkStatus = result
+		if len(opts.NetworkOrder) == 0 {
+			opts.NetworkOrder = make([]string, 0, len(opts.Networks))
+			for _, net := range opts.Networks {
+				opts.NetworkOrder = append(opts.NetworkOrder, net.Name)
+			}
+		}
+		if err := n.pestoSetup(opts); err != nil {
+			return nil, err
+		}
+	}
+
 	return result, err
+}
+
+// pestoSetup publishes port mappings via pesto with target address mapping.
+// PestoAddPorts is idempotent so this is safe to call on every Setup.
+func (n *netavarkNetwork) pestoSetup(opts types.NetworkOptions) error {
+	if n.rootlessNetns == nil {
+		return nil
+	}
+
+	ipv4, _, ipv6, _ := firstIPsFromStatus(opts.NetworkStatus, opts.NetworkOrder)
+	if ipv4 == "" && ipv6 == "" {
+		return nil
+	}
+	return pasta.PestoAddPorts(n.config, n.PestoSocketPath(), opts.PortMappings, ipv4, ipv6)
+}
+
+// pestoTeardown handles pesto port mapping removal on network disconnect.
+// It derives the active forwarding IPs from the caller-provided NetworkStatus
+// (the podman db state) rather than maintaining a separate state file.
+//   - If NetworkStatus is empty: nothing to do.
+//   - If this is the last network: delete all mappings.
+//   - If the disconnected network supplied the active IP: delete old mappings,
+//     pick a replacement IP from the remaining networks, and re-add.
+//   - Otherwise: no port changes needed.
+func (n *netavarkNetwork) pestoTeardown(opts types.NetworkOptions) error {
+	if n.rootlessNetns == nil {
+		return nil
+	}
+
+	if len(opts.NetworkStatus) == 0 {
+		return nil
+	}
+
+	// Determine current active IPs from the full set of connected networks,
+	// respecting connection-time ordering from NetworkOrder.
+	activeIPv4, activeIPv4Net, activeIPv6, activeIPv6Net := firstIPsFromStatus(opts.NetworkStatus, opts.NetworkOrder)
+
+	// Build the set of networks being disconnected and the remaining status.
+	remaining := make(map[string]types.StatusBlock, len(opts.NetworkStatus))
+	disconnectedNets := make(map[string]struct{}, len(opts.Networks))
+	for _, namedNet := range opts.Networks {
+		disconnectedNets[namedNet.Name] = struct{}{}
+	}
+	for name, sb := range opts.NetworkStatus {
+		if _, removed := disconnectedNets[name]; !removed {
+			remaining[name] = sb
+		}
+	}
+
+	// Last network: remove all port mappings.
+	if len(remaining) == 0 {
+		return pasta.PestoDeletePorts(n.config, n.PestoSocketPath(), opts.PortMappings,
+			activeIPv4, activeIPv6)
+	}
+
+	// Check whether any active IP came from a network being disconnected.
+	_, v4Lost := disconnectedNets[activeIPv4Net]
+	v4Lost = v4Lost && activeIPv4Net != ""
+	_, v6Lost := disconnectedNets[activeIPv6Net]
+	v6Lost = v6Lost && activeIPv6Net != ""
+
+	if !v4Lost && !v6Lost {
+		return nil
+	}
+
+	// Remap: delete old mappings, pick new IPs from remaining networks, re-add.
+	if err := pasta.PestoDeletePorts(n.config, n.PestoSocketPath(), opts.PortMappings,
+		activeIPv4, activeIPv6); err != nil {
+		return fmt.Errorf("deleting port mappings for remap: %w", err)
+	}
+
+	newIPv4, _, newIPv6, _ := firstIPsFromStatus(remaining, opts.NetworkOrder)
+	if newIPv4 != "" || newIPv6 != "" {
+		if err := pasta.PestoAddPorts(n.config, n.PestoSocketPath(), opts.PortMappings,
+			newIPv4, newIPv6); err != nil {
+			return fmt.Errorf("re-adding port mappings after remap: %w", err)
+		}
+	}
+	return nil
 }
 
 // Teardown will teardown the container network namespace.
@@ -161,6 +260,19 @@ func (n *netavarkNetwork) Teardown(namespacePath string, options types.TeardownO
 		// when there is an error getting the ips we should still continue
 		// to call teardown for netavark to prevent leaking network interfaces
 		logrus.Error(err)
+	}
+
+	if n.rootlessPortForwarder == config.RootlessPortForwarderPasta && n.networkRootless && len(options.NetworkOptions.PortMappings) > 0 {
+		opts := options.NetworkOptions
+		if len(opts.NetworkOrder) == 0 {
+			opts.NetworkOrder = make([]string, 0, len(opts.Networks))
+			for _, net := range opts.Networks {
+				opts.NetworkOrder = append(opts.NetworkOrder, net.Name)
+			}
+		}
+		if err := n.pestoTeardown(opts); err != nil {
+			logrus.Errorf("pesto: %v", err)
+		}
 	}
 
 	netavarkOpts, needPlugin, err := n.convertNetOpts(options.NetworkOptions)
@@ -206,18 +318,6 @@ func (n *netavarkNetwork) getCommonNetavarkOptions(needPlugin bool) []string {
 }
 
 func (n *netavarkNetwork) convertNetOpts(opts types.NetworkOptions) (*netavarkOptions, bool, error) {
-	// In pasta mode, strip HostIP from port mappings. Pasta handles host-side
-	// address binding; netavark only needs DNAT rules inside the netns without
-	// "ip daddr" constraints (pasta's splice changes the destination IP).
-	if n.rootlessPortForwarder == config.RootlessPortForwarderPasta && n.networkRootless && len(opts.PortMappings) > 0 {
-		stripped := make([]types.PortMapping, len(opts.PortMappings))
-		copy(stripped, opts.PortMappings)
-		for i := range stripped {
-			stripped[i].HostIP = ""
-		}
-		opts.PortMappings = stripped
-	}
-
 	netavarkOptions := netavarkOptions{
 		NetworkOptions: opts,
 		Networks:       make(map[string]*types.Network, len(opts.Networks)),
@@ -265,4 +365,32 @@ func (n *netavarkNetwork) PestoSocketPath() string {
 		return ""
 	}
 	return n.rootlessNetns.PestoSocketPath()
+}
+
+// firstIPsFromStatus picks the first IPv4 and IPv6 container addresses from a
+// set of network StatusBlocks, iterating in the order given by networkOrder
+// (connection time). Returns the IP strings and the owning network name.
+func firstIPsFromStatus(status map[string]types.StatusBlock, networkOrder []string) (ipv4, ipv4Net, ipv6, ipv6Net string) {
+	for _, name := range networkOrder {
+		sb, ok := status[name]
+		if !ok {
+			continue
+		}
+		for _, netInt := range sb.Interfaces {
+			for _, netAddr := range netInt.Subnets {
+				ip := netAddr.IPNet.IP
+				if ip.To4() != nil && ipv4 == "" {
+					ipv4 = ip.String()
+					ipv4Net = name
+				} else if ip.To4() == nil && ipv6 == "" {
+					ipv6 = ip.String()
+					ipv6Net = name
+				}
+			}
+		}
+		if ipv4 != "" && ipv6 != "" {
+			break
+		}
+	}
+	return
 }
