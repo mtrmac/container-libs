@@ -145,20 +145,15 @@ func (n *netavarkNetwork) Setup(namespacePath string, options types.SetupOptions
 	}
 
 	if n.rootlessPortForwarder == config.RootlessPortForwarderPasta && n.networkRootless && len(options.NetworkOptions.PortMappings) > 0 {
-		// If NetworkStatus was already populated by the caller, pesto setup
-		// already happened on a prior network connect — skip to avoid duplicate rules.
-		if options.NetworkOptions.NetworkStatus != nil {
-			return result, nil
-		}
 		opts := options.NetworkOptions
-		opts.NetworkStatus = result
+
 		if len(opts.NetworkOrder) == 0 {
 			opts.NetworkOrder = make([]string, 0, len(opts.Networks))
 			for _, net := range opts.Networks {
 				opts.NetworkOrder = append(opts.NetworkOrder, net.Name)
 			}
 		}
-		if err := n.pestoSetup(opts); err != nil {
+		if err := n.pestoSetup(opts, result); err != nil {
 			return nil, err
 		}
 	}
@@ -168,15 +163,34 @@ func (n *netavarkNetwork) Setup(namespacePath string, options types.SetupOptions
 
 // pestoSetup publishes port mappings via pesto with target address mapping.
 // PestoAddPorts is idempotent so this is safe to call on every Setup.
-func (n *netavarkNetwork) pestoSetup(opts types.NetworkOptions) error {
+func (n *netavarkNetwork) pestoSetup(opts types.NetworkOptions, newResult map[string]types.StatusBlock) error {
 	if n.rootlessNetns == nil {
 		return nil
 	}
 
-	ipv4, _, ipv6, _ := firstIPsFromStatus(opts.NetworkStatus, opts.NetworkOrder)
-	if ipv4 == "" && ipv6 == "" {
+	// First check if the ports are already published on an existing network.
+	// Because a port can only bound once on the host we need to skip the adding the ports several times
+	// on things like podman network connect.
+	oldIPv4, _, oldIPv6, _ := firstIPsFromStatus(opts.NetworkStatus, opts.NetworkOrder)
+	if oldIPv4 != "" && oldIPv6 != "" {
+		// We are already connected to an v4 and v6 address, do nothing here.
 		return nil
 	}
+	ipv4, _, ipv6, _ := firstIPsFromStatus(newResult, opts.NetworkOrder)
+	if oldIPv4 != "" {
+		// Already connected to a v4 address, we cannot connect more than once so skip it.
+		ipv4 = ""
+	}
+	if oldIPv6 != "" {
+		// Same but for ipv6.
+		ipv6 = ""
+	}
+
+	if ipv4 == "" && ipv6 == "" {
+		// Still no new ips to forward so do nothing.
+		return nil
+	}
+
 	return pasta.PestoAddPorts(n.config, n.PestoSocketPath(), opts.PortMappings, ipv4, ipv6)
 }
 
