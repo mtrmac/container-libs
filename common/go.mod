@@ -40,7 +40,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.5.0
-	go.podman.io/image/v5 v5.40.0
+	go.podman.io/image/v5 v5.41.0
 	go.podman.io/storage v1.64.0
 	golang.org/x/crypto v0.54.0
 	golang.org/x/sync v0.22.0
@@ -71,7 +71,6 @@ require (
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.6.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.8 // indirect
 	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
