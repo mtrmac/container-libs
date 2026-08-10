@@ -146,10 +146,8 @@ func (s storageTransport) ParseStoreReference(store storage.Store, ref string) (
 
 	// The reference may end with an image ID.  Image IDs and digests use the same "@" separator;
 	// here we only peel away an image ID, and leave digests alone.
-	split := strings.LastIndex(ref, "@")
 	id := ""
-	if split != -1 {
-		possibleID := ref[split+1:]
+	if possibleRef, possibleID, ok := strings.CutLast(ref, "@"); ok {
 		if possibleID == "" {
 			return nil, fmt.Errorf("empty trailing digest or ID in %q: %w", ref, ErrInvalidReference)
 		}
@@ -166,7 +164,7 @@ func (s storageTransport) ParseStoreReference(store storage.Store, ref string) (
 				return nil, fmt.Errorf("%q does not look like an image ID or digest: %w", possibleID, ErrInvalidReference)
 			}
 			// We have recognized an image ID; peel it off.
-			ref = ref[:split]
+			ref = possibleRef
 		}
 	}
 
