@@ -3,7 +3,7 @@
 package netavark
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -116,7 +116,7 @@ func (n *netavarkNetwork) Setup(namespacePath string, options types.SetupOptions
 
 	// trace output to get the json
 	if logrus.IsLevelEnabled(logrus.TraceLevel) {
-		b, err := json.Marshal(&netavarkOpts)
+		b, err := jsonv1.Marshal(&netavarkOpts)
 		if err != nil {
 			return nil, err
 		}

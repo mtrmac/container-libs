@@ -7,7 +7,7 @@
 package seccomp
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -27,7 +27,7 @@ func GetDefaultProfile(rs *specs.Spec) (*specs.LinuxSeccomp, error) {
 // LoadProfile takes a json string and decodes the seccomp profile.
 func LoadProfile(body string, rs *specs.Spec) (*specs.LinuxSeccomp, error) {
 	var config Seccomp
-	if err := json.Unmarshal([]byte(body), &config); err != nil {
+	if err := jsonv1.Unmarshal([]byte(body), &config); err != nil {
 		return nil, fmt.Errorf("decoding seccomp profile failed: %v", err)
 	}
 	return setupSeccomp(&config, rs)
@@ -36,7 +36,7 @@ func LoadProfile(body string, rs *specs.Spec) (*specs.LinuxSeccomp, error) {
 // LoadProfileFromBytes takes a byte slice and decodes the seccomp profile.
 func LoadProfileFromBytes(body []byte, rs *specs.Spec) (*specs.LinuxSeccomp, error) {
 	config := &Seccomp{}
-	if err := json.Unmarshal(body, config); err != nil {
+	if err := jsonv1.Unmarshal(body, config); err != nil {
 		return nil, fmt.Errorf("decoding seccomp profile failed: %v", err)
 	}
 	return setupSeccomp(config, rs)

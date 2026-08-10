@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"slices"
 
@@ -178,7 +178,7 @@ func (list *Schema2ListPublic) ChooseInstance(ctx *types.SystemContext) (digest.
 // Serialize returns the list in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (list *Schema2ListPublic) Serialize() ([]byte, error) {
-	buf, err := json.Marshal(list)
+	buf, err := jsonv1.Marshal(list)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Schema2List %#v: %w", list, err)
 	}
@@ -250,7 +250,7 @@ func Schema2ListPublicFromManifest(manifest []byte) (*Schema2ListPublic, error) 
 	list := Schema2ListPublic{
 		Manifests: []Schema2ManifestDescriptor{},
 	}
-	if err := json.Unmarshal(manifest, &list); err != nil {
+	if err := jsonv1.Unmarshal(manifest, &list); err != nil {
 		return nil, fmt.Errorf("unmarshaling Schema2List %q: %w", string(manifest), err)
 	}
 	if err := ValidateUnambiguousManifestFormat(manifest, DockerV2ListMediaType,

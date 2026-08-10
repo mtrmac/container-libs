@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -23,7 +23,7 @@ const RekorHashedRekordV001APIVersion = "0.0.1"
 // This corresponds to github.com/sigstore/cosign/bundle.RekorBundle, but we impose a stricter decoder.
 type UntrustedRekorSET struct {
 	UntrustedSignedEntryTimestamp []byte // A signature over some canonical JSON form of UntrustedPayload
-	UntrustedPayload              json.RawMessage
+	UntrustedPayload              jsonv1.RawMessage
 }
 
 type UntrustedRekorPayload struct {
@@ -33,10 +33,10 @@ type UntrustedRekorPayload struct {
 	LogID          string
 }
 
-// A compile-time check that UntrustedRekorSET implements json.Unmarshaler
-var _ json.Unmarshaler = (*UntrustedRekorSET)(nil)
+// A compile-time check that UntrustedRekorSET implements jsonv1.Unmarshaler
+var _ jsonv1.Unmarshaler = (*UntrustedRekorSET)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface
 func (s *UntrustedRekorSET) UnmarshalJSON(data []byte) error {
 	return JSONFormatToInvalidSignatureError(s.strictUnmarshalJSON(data))
 }
@@ -50,24 +50,24 @@ func (s *UntrustedRekorSET) strictUnmarshalJSON(data []byte) error {
 	})
 }
 
-// A compile-time check that UntrustedRekorSET and *UntrustedRekorSET implements json.Marshaler
+// A compile-time check that UntrustedRekorSET and *UntrustedRekorSET implements jsonv1.Marshaler
 var (
-	_ json.Marshaler = UntrustedRekorSET{}
-	_ json.Marshaler = (*UntrustedRekorSET)(nil)
+	_ jsonv1.Marshaler = UntrustedRekorSET{}
+	_ jsonv1.Marshaler = (*UntrustedRekorSET)(nil)
 )
 
-// MarshalJSON implements the json.Marshaler interface.
+// MarshalJSON implements the jsonv1.Marshaler interface.
 func (s UntrustedRekorSET) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any{
+	return jsonv1.Marshal(map[string]any{
 		"SignedEntryTimestamp": s.UntrustedSignedEntryTimestamp,
 		"Payload":              s.UntrustedPayload,
 	})
 }
 
-// A compile-time check that UntrustedRekorPayload implements json.Unmarshaler
-var _ json.Unmarshaler = (*UntrustedRekorPayload)(nil)
+// A compile-time check that UntrustedRekorPayload implements jsonv1.Unmarshaler
+var _ jsonv1.Unmarshaler = (*UntrustedRekorPayload)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface
 func (p *UntrustedRekorPayload) UnmarshalJSON(data []byte) error {
 	return JSONFormatToInvalidSignatureError(p.strictUnmarshalJSON(data))
 }
@@ -83,15 +83,15 @@ func (p *UntrustedRekorPayload) strictUnmarshalJSON(data []byte) error {
 	})
 }
 
-// A compile-time check that UntrustedRekorPayload and *UntrustedRekorPayload implements json.Marshaler
+// A compile-time check that UntrustedRekorPayload and *UntrustedRekorPayload implements jsonv1.Marshaler
 var (
-	_ json.Marshaler = UntrustedRekorPayload{}
-	_ json.Marshaler = (*UntrustedRekorPayload)(nil)
+	_ jsonv1.Marshaler = UntrustedRekorPayload{}
+	_ jsonv1.Marshaler = (*UntrustedRekorPayload)(nil)
 )
 
-// MarshalJSON implements the json.Marshaler interface.
+// MarshalJSON implements the jsonv1.Marshaler interface.
 func (p UntrustedRekorPayload) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any{
+	return jsonv1.Marshal(map[string]any{
 		"body":           p.Body,
 		"integratedTime": p.IntegratedTime,
 		"logIndex":       p.LogIndex,
@@ -107,7 +107,7 @@ func VerifyRekorSET(publicKeys []*ecdsa.PublicKey, unverifiedRekorSET []byte, un
 	// == Parse SET bytes
 	var untrustedSET UntrustedRekorSET
 	// Sadly. we need to parse and transform untrusted data before verifying a cryptographic signature...
-	if err := json.Unmarshal(unverifiedRekorSET, &untrustedSET); err != nil {
+	if err := jsonv1.Unmarshal(unverifiedRekorSET, &untrustedSET); err != nil {
 		return time.Time{}, NewInvalidSignatureError(err.Error())
 	}
 	// == Verify SET signature
@@ -135,12 +135,12 @@ func VerifyRekorSET(publicKeys []*ecdsa.PublicKey, unverifiedRekorSET []byte, un
 	// could have exploited the parsing of unverifiedRekorSET above already; so this, at best, ensures more consistent processing
 	// of the SET payload.
 	var rekorPayload UntrustedRekorPayload
-	if err := json.Unmarshal(untrustedSETPayloadCanonicalBytes, &rekorPayload); err != nil {
+	if err := jsonv1.Unmarshal(untrustedSETPayloadCanonicalBytes, &rekorPayload); err != nil {
 		return time.Time{}, NewInvalidSignatureError(fmt.Sprintf("parsing Rekor SET payload: %v", err.Error()))
 	}
 	// FIXME: Consider being much more strict about decoding JSON.
 	var hashedRekord RekorHashedrekord
-	if err := json.Unmarshal(rekorPayload.Body, &hashedRekord); err != nil {
+	if err := jsonv1.Unmarshal(rekorPayload.Body, &hashedRekord); err != nil {
 		return time.Time{}, NewInvalidSignatureError(fmt.Sprintf("decoding the body of a Rekor SET payload: %v", err))
 	}
 	// The decode of HashedRekord validates the "kind": "hashedrecord" field, which is otherwise invisible to us.
@@ -151,7 +151,7 @@ func VerifyRekorSET(publicKeys []*ecdsa.PublicKey, unverifiedRekorSET []byte, un
 		return time.Time{}, NewInvalidSignatureError(fmt.Sprintf("unsupported Rekor SET Payload hashedrekord version %#v", hashedRekord.APIVersion))
 	}
 	var hashedRekordV001 RekorHashedrekordV001Schema
-	if err := json.Unmarshal(hashedRekord.Spec, &hashedRekordV001); err != nil {
+	if err := jsonv1.Unmarshal(hashedRekord.Spec, &hashedRekordV001); err != nil {
 		return time.Time{}, NewInvalidSignatureError(fmt.Sprintf("decoding hashedrekod spec: %v", err))
 	}
 

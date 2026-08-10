@@ -3,7 +3,7 @@ package tarfile
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -167,7 +167,7 @@ func (d *Destination) PutManifest(ctx context.Context, m []byte, instanceDigest 
 	// We do not bother with types.ManifestTypeRejectedError; our .SupportedManifestMIMETypes() above is already providing only one alternative,
 	// so the caller trying a different manifest kind would be pointless.
 	var man manifest.Schema2
-	if err := json.Unmarshal(m, &man); err != nil {
+	if err := jsonv1.Unmarshal(m, &man); err != nil {
 		return fmt.Errorf("parsing manifest: %w", err)
 	}
 	if man.SchemaVersion != 2 || man.MediaType != manifest.DockerV2Schema2MediaType {

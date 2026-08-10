@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -104,7 +104,7 @@ func createStorageLayer(flags *mflag.FlagSet, action string, m storage.Store, ar
 		}
 	}
 	if jsonOutput {
-		if err := json.NewEncoder(os.Stdout).Encode(paramID); err != nil {
+		if err := jsonv1.NewEncoder(os.Stdout).Encode(paramID); err != nil {
 			return 1, err
 		}
 	} else {

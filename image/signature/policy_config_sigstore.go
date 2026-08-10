@@ -1,7 +1,7 @@
 package signature
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 
 	"go.podman.io/image/v5/signature/internal"
@@ -228,10 +228,10 @@ func NewPRSigstoreSignedKeyData(keyData []byte, signedIdentity PolicyReferenceMa
 	)
 }
 
-// Compile-time check that prSigstoreSigned implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prSigstoreSigned)(nil)
+// Compile-time check that prSigstoreSigned implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prSigstoreSigned)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (pr *prSigstoreSigned) UnmarshalJSON(data []byte) error {
 	*pr = prSigstoreSigned{}
 	var tmp prSigstoreSigned
@@ -239,7 +239,7 @@ func (pr *prSigstoreSigned) UnmarshalJSON(data []byte) error {
 	var gotRekorPublicKeyPath, gotRekorPublicKeyPaths, gotRekorPublicKeyData, gotRekorPublicKeyDatas bool
 	var fulcio prSigstoreSignedFulcio
 	var pki prSigstoreSignedPKI
-	var signedIdentity json.RawMessage
+	var signedIdentity jsonv1.RawMessage
 	if err := internal.ParanoidUnmarshalJSONObject(data, func(key string) any {
 		switch key {
 		case "type":
@@ -414,8 +414,8 @@ func NewPRSigstoreSignedFulcio(options ...PRSigstoreSignedFulcioOption) (PRSigst
 	return newPRSigstoreSignedFulcio(options...)
 }
 
-// Compile-time check that prSigstoreSignedFulcio implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prSigstoreSignedFulcio)(nil)
+// Compile-time check that prSigstoreSignedFulcio implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prSigstoreSignedFulcio)(nil)
 
 func (f *prSigstoreSignedFulcio) UnmarshalJSON(data []byte) error {
 	*f = prSigstoreSignedFulcio{}
@@ -566,8 +566,8 @@ func NewPRSigstoreSignedPKI(options ...PRSigstoreSignedPKIOption) (PRSigstoreSig
 	return newPRSigstoreSignedPKI(options...)
 }
 
-// Compile-time check that prSigstoreSignedPKI implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prSigstoreSignedPKI)(nil)
+// Compile-time check that prSigstoreSignedPKI implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prSigstoreSignedPKI)(nil)
 
 func (p *prSigstoreSignedPKI) UnmarshalJSON(data []byte) error {
 	*p = prSigstoreSignedPKI{}

@@ -2,7 +2,7 @@ package internal
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 
@@ -25,12 +25,12 @@ func (err JSONFormatError) Error() string {
 func ParanoidUnmarshalJSONObject(data []byte, fieldResolver func(string) any) error {
 	seenKeys := set.New[string]()
 
-	dec := json.NewDecoder(bytes.NewReader(data))
+	dec := jsonv1.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()
 	if err != nil {
 		return JSONFormatError(err.Error())
 	}
-	if t != json.Delim('{') {
+	if t != jsonv1.Delim('{') {
 		return JSONFormatError(fmt.Sprintf("JSON object expected, got %#v", t))
 	}
 	for {
@@ -38,7 +38,7 @@ func ParanoidUnmarshalJSONObject(data []byte, fieldResolver func(string) any) er
 		if err != nil {
 			return JSONFormatError(err.Error())
 		}
-		if t == json.Delim('}') {
+		if t == jsonv1.Delim('}') {
 			break
 		}
 
@@ -56,7 +56,7 @@ func ParanoidUnmarshalJSONObject(data []byte, fieldResolver func(string) any) er
 		if valuePtr == nil {
 			return JSONFormatError(fmt.Sprintf("Unknown key %q", key))
 		}
-		// This works like json.Unmarshal, in particular it allows us to implement UnmarshalJSON to implement strict parsing of the field value.
+		// This works like jsonv1.Unmarshal, in particular it allows us to implement UnmarshalJSON to implement strict parsing of the field value.
 		if err := dec.Decode(valuePtr); err != nil {
 			return JSONFormatError(err.Error())
 		}

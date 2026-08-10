@@ -2,7 +2,7 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -86,7 +86,7 @@ func GetRepositoryTags(ctx context.Context, sys *types.SystemContext, ref types.
 		var tagsHolder struct {
 			Tags []string
 		}
-		if err = json.NewDecoder(res.Body).Decode(&tagsHolder); err != nil {
+		if err = jsonv1.NewDecoder(res.Body).Decode(&tagsHolder); err != nil {
 			return nil, fmt.Errorf("decoding tag list response: %w", err)
 		}
 		for _, tag := range tagsHolder.Tags {

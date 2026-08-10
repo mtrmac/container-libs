@@ -2,7 +2,7 @@ package formats
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"strings"
 	"text/template"
 )
@@ -12,7 +12,7 @@ import (
 var basicFunctions = template.FuncMap{
 	"json": func(v any) string {
 		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
+		enc := jsonv1.NewEncoder(buf)
 		enc.SetEscapeHTML(false)
 		_ = enc.Encode(v)
 		// Remove the trailing new line added by the encoder

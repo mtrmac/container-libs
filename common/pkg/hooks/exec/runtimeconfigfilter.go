@@ -3,7 +3,7 @@ package exec
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -49,7 +49,7 @@ func RuntimeConfigFilter(ctx context.Context, hooks []spec.Hook, config *spec.Sp
 // RuntimeConfigFilterWithOptions passes the proposed runtime configuration (and
 // reads back a possibly-altered form from their standard output).
 func RuntimeConfigFilterWithOptions(ctx context.Context, options RuntimeConfigFilterOptions) (hookErr, err error) {
-	data, err := json.Marshal(options.Config)
+	data, err := jsonv1.Marshal(options.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func RuntimeConfigFilterWithOptions(ctx context.Context, options RuntimeConfigFi
 
 		newData := stdout.Bytes()
 		var newConfig spec.Spec
-		err = json.Unmarshal(newData, &newConfig)
+		err = jsonv1.Unmarshal(newData, &newConfig)
 		if err != nil {
 			logrus.Debugf("invalid JSON from config-filter hook %d:\n%s", i, string(newData))
 			return nil, fmt.Errorf("unmarshal output from config-filter hook %d: %w", i, err)

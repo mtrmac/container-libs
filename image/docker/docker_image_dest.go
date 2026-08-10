@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -725,7 +725,7 @@ func (d *dockerImageDestination) putSignaturesToSigstoreAttachments(ctx context.
 		if err != nil {
 			return err
 		}
-		if err := json.Unmarshal(configBlob, &ociConfig); err != nil {
+		if err := jsonv1.Unmarshal(configBlob, &ociConfig); err != nil {
 			return fmt.Errorf("parsing sigstore attachment config %s in %s: %w", ociManifest.Config.Digest.String(),
 				d.ref.ref.Name(), err)
 		}
@@ -733,7 +733,7 @@ func (d *dockerImageDestination) putSignaturesToSigstoreAttachments(ctx context.
 
 	// To make sure we can safely append to the slices of ociManifest, without adding a remote dependency on the code that creates it.
 	ociManifest.Layers = slices.Clone(ociManifest.Layers)
-	// We don’t need to ^^^ for ociConfig.RootFS.DiffIDs because we have created it empty ourselves, and json.Unmarshal is documented to append() to
+	// We don’t need to ^^^ for ociConfig.RootFS.DiffIDs because we have created it empty ourselves, and jsonv1.Unmarshal is documented to append() to
 	// the slice in the original object (or in a newly allocated object).
 	for _, sig := range signatures {
 		mimeType := sig.UntrustedMIMEType()
@@ -770,7 +770,7 @@ func (d *dockerImageDestination) putSignaturesToSigstoreAttachments(ctx context.
 		logrus.Debugf("Adding new signature, digest %s", sigDesc.Digest.String())
 	}
 
-	configBlob, err := json.Marshal(ociConfig)
+	configBlob, err := jsonv1.Marshal(ociConfig)
 	if err != nil {
 		return err
 	}
@@ -908,7 +908,7 @@ func (d *dockerImageDestination) putSignaturesToAPIExtension(ctx context.Context
 			Type:    extensionSignatureTypeAtomic,
 			Content: newSig,
 		}
-		body, err := json.Marshal(sig)
+		body, err := jsonv1.Marshal(sig)
 		if err != nil {
 			return err
 		}

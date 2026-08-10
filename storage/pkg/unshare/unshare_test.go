@@ -4,7 +4,7 @@ package unshare
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"os"
 	"strconv"
 	"strings"
@@ -92,7 +92,7 @@ func report() {
 	report.UIDMappings = append(report.UIDMappings, uidmap...)
 	report.GIDMappings = append(report.GIDMappings, gidmap...)
 
-	if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
+	if err := jsonv1.NewEncoder(os.Stdout).Encode(report); err != nil {
 		logrus.Error(err.Error())
 		os.Exit(1)
 	}
@@ -112,7 +112,7 @@ func TestUnshareNamespaces(t *testing.T) {
 		if err != nil {
 			t.Fatalf("run %q: %v: %s", name, err, buf.String())
 		}
-		if err = json.Unmarshal(buf.Bytes(), &report); err != nil {
+		if err = jsonv1.Unmarshal(buf.Bytes(), &report); err != nil {
 			t.Fatalf("error parsing results: %v", err)
 		}
 		for ns := range CloneFlags {
@@ -145,7 +145,7 @@ func TestUnsharePgrp(t *testing.T) {
 		if err != nil {
 			t.Fatalf("run: %v: %s", err, buf.String())
 		}
-		if err = json.Unmarshal(buf.Bytes(), &report); err != nil {
+		if err = jsonv1.Unmarshal(buf.Bytes(), &report); err != nil {
 			t.Fatalf("error parsing results: %v", err)
 		}
 		if (report.Pgrp == syscall.Getpgrp()) != same {
@@ -170,7 +170,7 @@ func TestUnshareSid(t *testing.T) {
 		if err != nil {
 			t.Fatalf("run: %v: %s", err, buf.String())
 		}
-		if err = json.Unmarshal(buf.Bytes(), &report); err != nil {
+		if err = jsonv1.Unmarshal(buf.Bytes(), &report); err != nil {
 			t.Fatalf("error parsing results: %v", err)
 		}
 		if (report.Sid == sid) != same {
@@ -191,7 +191,7 @@ func TestUnshareOOMScoreAdj(t *testing.T) {
 		if err != nil {
 			t.Fatalf("run: %v: %s", err, buf.String())
 		}
-		if err = json.Unmarshal(buf.Bytes(), &report); err != nil {
+		if err = jsonv1.Unmarshal(buf.Bytes(), &report); err != nil {
 			t.Fatalf("error parsing results: %v", err)
 		}
 		if report.OOMScoreAdj != adj {
@@ -213,7 +213,7 @@ func TestUnshareIDMappings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run: %v: %s", err, buf.String())
 	}
-	if err = json.Unmarshal(buf.Bytes(), &report); err != nil {
+	if err = jsonv1.Unmarshal(buf.Bytes(), &report); err != nil {
 		t.Fatalf("error parsing results: %v", err)
 	}
 	if len(cmd.UidMappings) != len(report.UIDMappings) {

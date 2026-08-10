@@ -2,7 +2,7 @@ package openshift
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -141,7 +141,7 @@ func (s *openshiftImageSource) ensureImageIsResolved(ctx context.Context) error 
 	}
 	// Note: This does absolutely no kind/version checking or conversions.
 	var is imageStream
-	if err := json.Unmarshal(body, &is); err != nil {
+	if err := jsonv1.Unmarshal(body, &is); err != nil {
 		return err
 	}
 	var te *tagEvent

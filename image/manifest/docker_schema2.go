@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"time"
 
@@ -158,7 +158,7 @@ type Schema2Image struct {
 // Schema2FromManifest creates a Schema2 manifest instance from a manifest blob.
 func Schema2FromManifest(manifestBlob []byte) (*Schema2, error) {
 	s2 := Schema2{}
-	if err := json.Unmarshal(manifestBlob, &s2); err != nil {
+	if err := jsonv1.Unmarshal(manifestBlob, &s2); err != nil {
 		return nil, err
 	}
 	if err := manifest.ValidateUnambiguousManifestFormat(manifestBlob, DockerV2Schema2MediaType,
@@ -258,7 +258,7 @@ func (m *Schema2) UpdateLayerInfos(layerInfos []types.BlobInfo) error {
 // Serialize returns the manifest in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *Schema2) Serialize() ([]byte, error) {
-	return json.Marshal(*m)
+	return jsonv1.Marshal(*m)
 }
 
 // Inspect returns various information for (skopeo inspect) parsed from the manifest and configuration.
@@ -268,7 +268,7 @@ func (m *Schema2) Inspect(configGetter func(types.BlobInfo) ([]byte, error)) (*t
 		return nil, err
 	}
 	s2 := &Schema2Image{}
-	if err := json.Unmarshal(config, s2); err != nil {
+	if err := jsonv1.Unmarshal(config, s2); err != nil {
 		return nil, err
 	}
 	layerInfos := m.LayerInfos()

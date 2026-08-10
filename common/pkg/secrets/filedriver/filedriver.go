@@ -1,7 +1,7 @@
 package filedriver
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -84,7 +84,7 @@ func (d *Driver) Store(id string, data []byte) error {
 		return fmt.Errorf("%s: %w", id, define.ErrSecretIDExists)
 	}
 	secretData[id] = data
-	marshalled, err := json.MarshalIndent(secretData, "", "  ")
+	marshalled, err := jsonv1.MarshalIndent(secretData, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (d *Driver) Delete(id string) error {
 	} else {
 		return fmt.Errorf("%s: %w", id, define.ErrNoSuchSecret)
 	}
-	marshalled, err := json.MarshalIndent(secretData, "", "  ")
+	marshalled, err := jsonv1.MarshalIndent(secretData, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (d *Driver) getAllData() (map[string][]byte, error) {
 		return nil, err
 	}
 	secretData := new(map[string][]byte)
-	err = json.Unmarshal(byteValue, secretData)
+	err = jsonv1.Unmarshal(byteValue, secretData)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@
 package docker
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -75,7 +75,7 @@ func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
 	var detailsErr struct {
 		Details string `json:"details"`
 	}
-	err = json.Unmarshal(body, &detailsErr)
+	err = jsonv1.Unmarshal(body, &detailsErr)
 	if err == nil && detailsErr.Details != "" {
 		switch statusCode {
 		case http.StatusUnauthorized:
@@ -87,7 +87,7 @@ func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
 		}
 	}
 
-	if err := json.Unmarshal(body, &errors); err != nil {
+	if err := jsonv1.Unmarshal(body, &errors); err != nil {
 		return &unexpectedHTTPResponseError{
 			ParseErr:   err,
 			StatusCode: statusCode,

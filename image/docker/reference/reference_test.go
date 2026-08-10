@@ -3,7 +3,7 @@ package reference
 import (
 	_ "crypto/sha256"
 	_ "crypto/sha512"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -382,13 +382,13 @@ func TestSerialization(t *testing.T) {
 			"Description": testcase.description,
 			"Field":       testcase.input,
 		}
-		b, err := json.Marshal(m)
+		b, err := jsonv1.Marshal(m)
 		if err != nil {
 			failf("error marshaling: %v", err)
 		}
 		t := serializationType{}
 
-		if err := json.Unmarshal(b, &t); err != nil {
+		if err := jsonv1.Unmarshal(b, &t); err != nil {
 			if testcase.err == nil {
 				failf("error unmarshaling: %v", err)
 			}
@@ -446,7 +446,7 @@ func TestSerialization(t *testing.T) {
 			Field:       AsField(ref),
 		}
 
-		b2, err := json.Marshal(t)
+		b2, err := jsonv1.Marshal(t)
 		if err != nil {
 			failf("error marshaling serialization type: %v", err)
 		}

@@ -2,7 +2,7 @@ package manifest
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"maps"
 	"math"
@@ -287,7 +287,7 @@ func (index *OCI1IndexPublic) ChooseInstance(ctx *types.SystemContext) (digest.D
 // Serialize returns the index in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (index *OCI1IndexPublic) Serialize() ([]byte, error) {
-	buf, err := json.Marshal(index)
+	buf, err := jsonv1.Marshal(index)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling OCI1Index %#v: %w", index, err)
 	}
@@ -396,7 +396,7 @@ func OCI1IndexPublicFromManifest(manifest []byte) (*OCI1IndexPublic, error) {
 			Annotations: make(map[string]string),
 		},
 	}
-	if err := json.Unmarshal(manifest, &index); err != nil {
+	if err := jsonv1.Unmarshal(manifest, &index); err != nil {
 		return nil, fmt.Errorf("unmarshaling OCI1Index %q: %w", string(manifest), err)
 	}
 	if err := ValidateUnambiguousManifestFormat(manifest, imgspecv1.MediaTypeImageIndex,

@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 )
 
@@ -43,7 +43,7 @@ func ValidateUnambiguousManifestFormat(manifest []byte, expectedMIMEType string,
 		Layers    any `json:"layers"`
 		Manifests any `json:"manifests"`
 	}{}
-	if err := json.Unmarshal(manifest, &detectedFields); err != nil {
+	if err := jsonv1.Unmarshal(manifest, &detectedFields); err != nil {
 		// The caller was supposed to already validate version numbers, so this should not happen;
 		// let’s not bother with making this error “nice”.
 		return err

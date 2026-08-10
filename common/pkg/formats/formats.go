@@ -2,7 +2,7 @@ package formats
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -57,8 +57,8 @@ type YAMLStruct struct {
 	Output any
 }
 
-func setJSONFormatEncoder(isTerminal bool, w io.Writer) *json.Encoder {
-	enc := json.NewEncoder(w)
+func setJSONFormatEncoder(isTerminal bool, w io.Writer) *jsonv1.Encoder {
+	enc := jsonv1.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if isTerminal {
 		enc.SetEscapeHTML(false)
@@ -122,7 +122,7 @@ func (t StdoutTemplateArray) Out() error {
 
 // Out method for JSON struct.
 func (j JSONStruct) Out() error {
-	data, err := json.MarshalIndent(j.Output, "", "    ")
+	data, err := jsonv1.MarshalIndent(j.Output, "", "    ")
 	if err != nil {
 		return err
 	}

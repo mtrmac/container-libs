@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"os"
 
@@ -26,7 +26,7 @@ func main() {
 	case "create":
 		if err := create(); err != nil {
 			out := Error{Msg: err.Error()}
-			_ = json.NewEncoder(os.Stdout).Encode(out)
+			_ = jsonv1.NewEncoder(os.Stdout).Encode(out)
 			os.Exit(1)
 		}
 	case "setup", "teardown":
@@ -38,7 +38,7 @@ func main() {
 
 func create() error {
 	network := types.Network{}
-	d := json.NewDecoder(os.Stdin)
+	d := jsonv1.NewDecoder(os.Stdin)
 	err := d.Decode(&network)
 	if err != nil {
 		return fmt.Errorf("failed to decode network input: %w", err)
@@ -64,6 +64,6 @@ func create() error {
 		network.Driver = driver
 	}
 
-	e := json.NewEncoder(os.Stdout)
+	e := jsonv1.NewEncoder(os.Stdout)
 	return e.Encode(network)
 }

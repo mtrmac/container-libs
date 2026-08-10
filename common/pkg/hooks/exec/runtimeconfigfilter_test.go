@@ -2,7 +2,7 @@ package exec
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -16,7 +16,7 @@ import (
 
 func TestRuntimeConfigFilter(t *testing.T) {
 	var discardedParsingDestination map[string]any
-	unexpectedEndOfJSONInput := json.Unmarshal([]byte("{\n"), &discardedParsingDestination) // this should force the error
+	unexpectedEndOfJSONInput := jsonv1.Unmarshal([]byte("{\n"), &discardedParsingDestination) // this should force the error
 	fileMode := os.FileMode(0o600)
 	rootUint32 := uint32(0)
 	for _, tt := range []struct {
@@ -348,10 +348,10 @@ func TestRuntimeConfigFilterOutputRedirection(t *testing.T) {
 				hooks = []spec.Hook{{Path: path, Args: []string{"sh", "-c", test.hookScript}}}
 			}
 
-			expectedJSON, err := json.Marshal(input)
+			expectedJSON, err := jsonv1.Marshal(input)
 			require.NoError(t, err)
 			inputBefore := &spec.Spec{}
-			require.NoError(t, json.Unmarshal(expectedJSON, inputBefore))
+			require.NoError(t, jsonv1.Unmarshal(expectedJSON, inputBefore))
 
 			hookErr, err := RuntimeConfigFilterWithOptions(t.Context(), RuntimeConfigFilterOptions{Hooks: hooks, Config: input, PostKillTimeout: DefaultPostKillTimeout})
 			if test.expectedErr != "" {

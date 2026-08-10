@@ -2,7 +2,7 @@ package image
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -94,7 +94,7 @@ func (m *manifestOCI1) OCIConfig(ctx context.Context) (*imgspecv1.Image, error) 
 		return nil, err
 	}
 	configOCI := &imgspecv1.Image{}
-	if err := json.Unmarshal(cb, configOCI); err != nil {
+	if err := jsonv1.Unmarshal(cb, configOCI); err != nil {
 		return nil, err
 	}
 	return configOCI, nil

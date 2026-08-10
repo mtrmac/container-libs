@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -88,7 +88,7 @@ func (m *manifestSchema2) OCIConfig(ctx context.Context) (*imgspecv1.Image, erro
 	// than OCI v1. This unmarshal makes sure we drop docker v2s2
 	// fields that aren't needed in OCI v1.
 	configOCI := &imgspecv1.Image{}
-	if err := json.Unmarshal(configBlob, configOCI); err != nil {
+	if err := jsonv1.Unmarshal(configBlob, configOCI); err != nil {
 		return nil, err
 	}
 	return configOCI, nil
@@ -209,7 +209,7 @@ func (m *manifestSchema2) convertToManifestOCI1(ctx context.Context, _ *types.Ma
 	if err != nil {
 		return nil, err
 	}
-	configOCIBytes, err := json.Marshal(configOCI)
+	configOCIBytes, err := jsonv1.Marshal(configOCI)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (m *manifestSchema2) convertToManifestSchema1(ctx context.Context, options 
 		return nil, err
 	}
 	imageConfig := &manifest.Schema2Image{}
-	if err := json.Unmarshal(configBytes, imageConfig); err != nil {
+	if err := jsonv1.Unmarshal(configBytes, imageConfig); err != nil {
 		return nil, err
 	}
 
@@ -332,7 +332,7 @@ func (m *manifestSchema2) convertToManifestSchema1(ctx context.Context, options 
 			ThrowAway: historyEntry.EmptyLayer,
 		}
 		fakeImage.ContainerConfig.Cmd = []string{historyEntry.CreatedBy}
-		v1CompatibilityBytes, err := json.Marshal(&fakeImage)
+		v1CompatibilityBytes, err := jsonv1.Marshal(&fakeImage)
 		if err != nil {
 			return nil, fmt.Errorf("Internal error: Error creating v1compatibility for %#v", fakeImage)
 		}
@@ -374,9 +374,9 @@ func v1IDFromBlobDigestAndComponents(blobDigest digest.Digest, others ...string)
 
 func v1ConfigFromConfigJSON(configJSON []byte, v1ID, parentV1ID string, throwaway bool) ([]byte, error) {
 	// Preserve everything we don't specifically know about.
-	// (This must be a *json.RawMessage, even though *[]byte is fairly redundant, because only *RawMessage implements json.Marshaler.)
-	rawContents := map[string]*json.RawMessage{}
-	if err := json.Unmarshal(configJSON, &rawContents); err != nil { // We have already unmarshaled it before, using a more detailed schema?!
+	// (This must be a *jsonv1.RawMessage, even though *[]byte is fairly redundant, because only *RawMessage implements jsonv1.Marshaler.)
+	rawContents := map[string]*jsonv1.RawMessage{}
+	if err := jsonv1.Unmarshal(configJSON, &rawContents); err != nil { // We have already unmarshaled it before, using a more detailed schema?!
 		return nil, err
 	}
 	delete(rawContents, "rootfs")
@@ -390,13 +390,13 @@ func v1ConfigFromConfigJSON(configJSON []byte, v1ID, parentV1ID string, throwawa
 		updates["throwaway"] = throwaway
 	}
 	for field, value := range updates {
-		encoded, err := json.Marshal(value)
+		encoded, err := jsonv1.Marshal(value)
 		if err != nil {
 			return nil, err
 		}
-		rawContents[field] = (*json.RawMessage)(&encoded)
+		rawContents[field] = (*jsonv1.RawMessage)(&encoded)
 	}
-	return json.Marshal(rawContents)
+	return jsonv1.Marshal(rawContents)
 }
 
 // SupportsEncryption returns if encryption is supported for the manifest type

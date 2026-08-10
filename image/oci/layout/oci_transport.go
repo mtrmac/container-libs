@@ -2,7 +2,7 @@ package layout
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -207,7 +207,7 @@ func parseJSON[T any](path string) (*T, error) {
 	defer content.Close()
 
 	obj := new(T)
-	if err := json.NewDecoder(content).Decode(obj); err != nil {
+	if err := jsonv1.NewDecoder(content).Decode(obj); err != nil {
 		return nil, err
 	}
 	return obj, nil

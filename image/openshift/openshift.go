@@ -3,7 +3,7 @@ package openshift
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -105,7 +105,7 @@ func (c *openshiftClient) doRequest(ctx context.Context, method, path string, re
 
 	var status status
 	statusValid := false
-	if err := json.Unmarshal(body, &status); err == nil && len(status.Status) > 0 {
+	if err := jsonv1.Unmarshal(body, &status); err == nil && len(status.Status) > 0 {
 		statusValid = true
 	}
 
@@ -136,7 +136,7 @@ func (c *openshiftClient) getImage(ctx context.Context, imageStreamImageName str
 	}
 	// Note: This does absolutely no kind/version checking or conversions.
 	var isi imageStreamImage
-	if err := json.Unmarshal(body, &isi); err != nil {
+	if err := jsonv1.Unmarshal(body, &isi); err != nil {
 		return nil, err
 	}
 	return &isi.Image, nil

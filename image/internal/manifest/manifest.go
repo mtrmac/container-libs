@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"slices"
 
 	"github.com/containers/libtrust"
@@ -41,14 +41,14 @@ const (
 // but we may not have such metadata available (e.g. when the manifest is a local file).
 // This is publicly visible as c/image/manifest.GuessMIMEType.
 func GuessMIMEType(manifest []byte) string {
-	// A subset of manifest fields; the rest is silently ignored by json.Unmarshal.
+	// A subset of manifest fields; the rest is silently ignored by jsonv1.Unmarshal.
 	// Also docker/distribution/manifest.Versioned.
 	meta := struct {
 		MediaType     string `json:"mediaType"`
 		SchemaVersion int    `json:"schemaVersion"`
 		Signatures    any    `json:"signatures"`
 	}{}
-	if err := json.Unmarshal(manifest, &meta); err != nil {
+	if err := jsonv1.Unmarshal(manifest, &meta); err != nil {
 		return ""
 	}
 
@@ -73,7 +73,7 @@ func GuessMIMEType(manifest []byte) string {
 				MediaType string `json:"mediaType"`
 			} `json:"config"`
 		}{}
-		if err := json.Unmarshal(manifest, &ociMan); err != nil {
+		if err := jsonv1.Unmarshal(manifest, &ociMan); err != nil {
 			return ""
 		}
 		switch ociMan.Config.MediaType {
@@ -89,7 +89,7 @@ func GuessMIMEType(manifest []byte) string {
 		ociIndex := struct {
 			Manifests []imgspecv1.Descriptor `json:"manifests"`
 		}{}
-		if err := json.Unmarshal(manifest, &ociIndex); err != nil {
+		if err := jsonv1.Unmarshal(manifest, &ociIndex); err != nil {
 			return ""
 		}
 		if len(ociIndex.Manifests) != 0 {

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -79,7 +79,7 @@ func readConnectionConf(path string) (*ConnectionsFile, error) {
 	}
 	defer f.Close()
 
-	err = json.NewDecoder(f).Decode(conf)
+	err = jsonv1.NewDecoder(f).Decode(conf)
 	if err != nil {
 		return nil, fmt.Errorf("parse %q: %w", path, err)
 	}
@@ -98,7 +98,7 @@ func writeConnectionConf(path string, conf *ConnectionsFile) error {
 	}
 	defer configFile.Close()
 
-	err = json.NewEncoder(configFile).Encode(conf)
+	err = jsonv1.NewEncoder(configFile).Encode(conf)
 	if err != nil {
 		return err
 	}

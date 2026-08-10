@@ -3,7 +3,7 @@ package manifests
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -279,7 +279,7 @@ func TestAddArtifact(t *testing.T) {
 			if annotations != nil {
 				m.Annotations = make(map[string]string)
 			}
-			err = json.Unmarshal(manifestBytes, &m)
+			err = jsonv1.Unmarshal(manifestBytes, &m)
 			require.NoError(t, err)
 			// check that the artifact manifest looks right
 			assert.Equal(t, v1.MediaTypeImageManifest, manifestType)
@@ -367,7 +367,7 @@ func TestAddArtifact(t *testing.T) {
 				subjectManifestDigest, err := manifest.Digest(subjectManifestBytes)
 				require.NoError(t, err)
 				var s v1.Manifest
-				err = json.Unmarshal(subjectManifestBytes, &s)
+				err = jsonv1.Unmarshal(subjectManifestBytes, &s)
 				require.NoError(t, err)
 				assert.Equal(t, m.Subject.Digest, subjectManifestDigest)
 				assert.Equal(t, m.Subject.MediaType, subjectManifestType)

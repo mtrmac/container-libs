@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -151,7 +151,7 @@ func main() {
 // outputJSON formats its input as JSON to stdout, and returns values suitable
 // for directly returning from command.action
 func outputJSON(data any) (int, error) {
-	if err := json.NewEncoder(os.Stdout).Encode(data); err != nil {
+	if err := jsonv1.NewEncoder(os.Stdout).Encode(data); err != nil {
 		return 1, err
 	}
 	return 0, nil

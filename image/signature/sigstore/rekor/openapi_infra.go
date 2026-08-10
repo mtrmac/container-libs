@@ -20,7 +20,7 @@ package rekor
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"io"
 	"net/http"
 	"path"
@@ -36,7 +36,7 @@ func (r *rekorClient) makeRequest(ctx context.Context, method, requestPath strin
 		buf := bytes.NewBuffer(nil)
 		body = buf
 		headers.Set("Content-Type", "application/json")
-		enc := json.NewEncoder(buf)
+		enc := jsonv1.NewEncoder(buf)
 		enc.SetEscapeHTML(false)
 		if err := enc.Encode(bodyContent); err != nil {
 			return nil, err
@@ -64,7 +64,7 @@ func (r *rekorClient) makeRequest(ctx context.Context, method, requestPath strin
 
 // decodeHTTPResponseBodyAsJSON decodes the body of a HTTP response in a manner compatible with github.com/go-openapi/runtime.
 func decodeHTTPResponseBodyAsJSON(res *http.Response, data any) error {
-	dec := json.NewDecoder(res.Body)
+	dec := jsonv1.NewDecoder(res.Body)
 	dec.UseNumber()
 	err := dec.Decode(data)
 	if err == io.EOF {

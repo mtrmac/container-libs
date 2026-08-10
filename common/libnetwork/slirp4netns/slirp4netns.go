@@ -4,7 +4,7 @@ package slirp4netns
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -560,7 +560,7 @@ func SetupRootlessPortMappingViaRLK(opts *SetupOptions, slirpSubnet *net.IPNet, 
 		ContainerID: opts.ContainerID,
 		RootlessCNI: netStatus != nil,
 	}
-	cfgJSON, err := json.Marshal(cfg)
+	cfgJSON, err := jsonv1.Marshal(cfg)
 	if err != nil {
 		return err
 	}
@@ -673,7 +673,7 @@ func openSlirp4netnsPort(apiSocket, proto, hostip string, hostport, guestport ui
 	}
 	// create the JSON payload and send it.  Mark the end of request shutting down writes
 	// to the socket, as requested by slirp4netns.
-	data, err := json.Marshal(&apiCmd)
+	data, err := jsonv1.Marshal(&apiCmd)
 	if err != nil {
 		return fmt.Errorf("cannot marshal JSON for slirp4netns: %w", err)
 	}
@@ -695,7 +695,7 @@ func openSlirp4netnsPort(apiSocket, proto, hostip string, hostport, guestport ui
 	// if there is no 'error' key in the received JSON data, then the operation was
 	// successful.
 	var y map[string]any
-	if err := json.Unmarshal(buf[0:readLength], &y); err != nil {
+	if err := jsonv1.Unmarshal(buf[0:readLength], &y); err != nil {
 		return fmt.Errorf("parsing error status from slirp4netns: %w", err)
 	}
 	if e, found := y["error"]; found {

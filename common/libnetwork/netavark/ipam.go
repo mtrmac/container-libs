@@ -3,7 +3,7 @@
 package netavark
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -155,7 +155,7 @@ func (n *netavarkNetwork) allocIPs(opts *types.NetworkOptions) error {
 				return newIPAMError(err, "failed to create/get id bucket for network %s", namedNet.Name)
 			}
 
-			ipsBytes, err := json.Marshal(requestIPs)
+			ipsBytes, err := jsonv1.Marshal(requestIPs)
 			if err != nil {
 				return newIPAMError(err, "failed to marshal ips")
 			}
@@ -284,7 +284,7 @@ func (n *netavarkNetwork) getAssignedIPs(opts *types.NetworkOptions) error {
 			// assignedIPs is the list of ips which should be used for this container
 			assignedIPs := make([]net.IP, 0, len(network.Subnets))
 
-			err = json.Unmarshal(ipJSON, &assignedIPs)
+			err = jsonv1.Unmarshal(ipJSON, &assignedIPs)
 			if err != nil {
 				return newIPAMError(err, "failed to unmarshal ips from database")
 			}

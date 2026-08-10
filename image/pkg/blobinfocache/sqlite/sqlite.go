@@ -3,7 +3,7 @@ package sqlite
 
 import (
 	"database/sql"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -524,7 +524,7 @@ func (sqc *cache) RecordDigestCompressorData(anyDigest digest.Digest, data blobi
 					logrus.Warnf("Specific compressor for blob with digest %s previously recorded as %s, now %s", anyDigest, prevSVC, data.SpecificVariantCompressor)
 				}
 			}
-			annotations, err := json.Marshal(data.SpecificVariantAnnotations)
+			annotations, err := jsonv1.Marshal(data.SpecificVariantAnnotations)
 			if err != nil {
 				return void{}, err
 			}
@@ -563,7 +563,7 @@ func (sqc *cache) appendReplacementCandidates(candidates []prioritize.CandidateW
 			compressionData.BaseVariantCompressor = baseVariantCompressor
 			if specificVariantCompressor.Valid && annotationBytes != nil {
 				compressionData.SpecificVariantCompressor = specificVariantCompressor.String
-				if err := json.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
+				if err := jsonv1.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
 					return nil, err
 				}
 			}
