@@ -32,7 +32,7 @@ func chownByMapsMain() {
 		fmt.Fprintf(os.Stderr, "error reading configuration: %v", err)
 		os.Exit(1)
 	}
-	if err := json.Unmarshal(config.Bytes(), &discreteMaps); err != nil {
+	if err := jsonIT.Unmarshal(config.Bytes(), &discreteMaps); err != nil {
 		fmt.Fprintf(os.Stderr, "error decoding configuration: %v", err)
 		os.Exit(1)
 	}
@@ -82,7 +82,7 @@ func ChownPathByMaps(path string, toContainer, toHost *idtools.IDMappings) error
 		toHost = &idtools.IDMappings{}
 	}
 
-	config, err := json.Marshal([4][]idtools.IDMap{toContainer.UIDs(), toContainer.GIDs(), toHost.UIDs(), toHost.GIDs()})
+	config, err := jsonIT.Marshal([4][]idtools.IDMap{toContainer.UIDs(), toContainer.GIDs(), toHost.UIDs(), toHost.GIDs()})
 	if err != nil {
 		return err
 	}

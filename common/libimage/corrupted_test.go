@@ -51,12 +51,12 @@ func TestCorruptedLayers(t *testing.T) {
 	data, err := os.ReadFile(indexPath)
 	require.NoError(t, err, "loading layers.json")
 	layers := []*storage.Layer{}
-	err = json.Unmarshal(data, &layers)
+	err = jsonIT.Unmarshal(data, &layers)
 	require.NoError(t, err, "unmarshaling layers.json")
 	require.LessOrEqual(t, 1, len(layers), "at least one layer must be present")
 
 	// Now write back the layers without the first layer!
-	data, err = json.Marshal(layers[1:])
+	data, err = jsonIT.Marshal(layers[1:])
 	require.NoError(t, err, "unmarshaling layers.json")
 	err = ioutils.AtomicWriteFile(indexPath, data, 0o600) // nolint
 	require.NoError(t, err, "writing back layers.json")

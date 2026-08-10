@@ -116,7 +116,7 @@ func ImageConfigFromChanges(changes []string) (*ImageConfig, error) { // nolint:
 			// argument to `sh -c`, unless empty, in which case we
 			// just use a blank entrypoint.
 			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
+			if err := jsonIT.Unmarshal([]byte(value), &testUnmarshal); err != nil {
 				// It ain't valid JSON, so assume it's an
 				// argument to sh -c if not empty.
 				if value != "" {
@@ -134,7 +134,7 @@ func ImageConfigFromChanges(changes []string) (*ImageConfig, error) { // nolint:
 			// means no entrypoint, CMD assumes it is 'sh -c' with
 			// no third argument.
 			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
+			if err := jsonIT.Unmarshal([]byte(value), &testUnmarshal); err != nil {
 				// It ain't valid JSON, so assume it's an
 				// argument to sh -c.
 				// Only include volume if it's not ""
@@ -152,7 +152,7 @@ func ImageConfigFromChanges(changes []string) (*ImageConfig, error) { // nolint:
 			// Acts rather similar to ENTRYPOINT and CMD, but always
 			// appends rather than replacing, and no sh -c prepend.
 			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
+			if err := jsonIT.Unmarshal([]byte(value), &testUnmarshal); err != nil {
 				// Not valid JSON, so split on spaces
 				testUnmarshal = strings.Split(value, " ")
 			}

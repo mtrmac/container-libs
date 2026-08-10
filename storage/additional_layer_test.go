@@ -45,7 +45,7 @@ func TestLookupAdditionalLayerSuccess(t *testing.T) {
 		CompressedSize: 42,
 		TOCDigest:      tocDigest,
 	}
-	infoJSON, err := json.Marshal(info)
+	infoJSON, err := jsonIT.Marshal(info)
 	require.NoError(t, err)
 
 	alsPath := setupAdditionalLayerStore(t, tocDigest, imageRef, string(infoJSON))

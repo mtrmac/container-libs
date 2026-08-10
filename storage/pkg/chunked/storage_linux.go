@@ -1534,8 +1534,8 @@ func (c *chunkedDiffer) ApplyDiff(dest string, options *archive.TarOptions, diff
 		Format: differOpts.Format,
 	}
 
-	json := jsoniter.ConfigCompatibleWithStandardLibrary
-	lcdBigData, err := json.Marshal(lcd)
+	jsonIT := jsoniter.ConfigCompatibleWithStandardLibrary
+	lcdBigData, err := jsonIT.Marshal(lcd)
 	if err != nil {
 		return graphdriver.DriverWithDifferOutput{}, err
 	}

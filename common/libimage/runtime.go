@@ -25,7 +25,7 @@ import (
 )
 
 // Faster than the standard library, see https://github.com/json-iterator/go.
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+var jsonIT = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // tmpdir returns a path to a temporary directory.
 func tmpdir() (string, error) {

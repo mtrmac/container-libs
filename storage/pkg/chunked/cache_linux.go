@@ -226,9 +226,9 @@ func (c *layersCache) createCacheFileFromTOC(layerID string) (*layer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("open manifest file: %w", err)
 		}
-		json := jsoniter.ConfigCompatibleWithStandardLibrary
+		jsonIT := jsoniter.ConfigCompatibleWithStandardLibrary
 
-		if err := json.Unmarshal(cl, &lcd); err != nil {
+		if err := jsonIT.Unmarshal(cl, &lcd); err != nil {
 			return nil, err
 		}
 	}
