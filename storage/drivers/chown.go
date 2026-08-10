@@ -2,6 +2,7 @@ package graphdriver
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -27,13 +28,8 @@ func chownByMapsMain() {
 	}
 	// Read and decode our configuration.
 	discreteMaps := [4][]idtools.IDMap{}
-	config := bytes.Buffer{}
-	if _, err := config.ReadFrom(os.Stdin); err != nil {
+	if err := json.UnmarshalRead(os.Stdin, &discreteMaps); err != nil {
 		fmt.Fprintf(os.Stderr, "error reading configuration: %v", err)
-		os.Exit(1)
-	}
-	if err := jsonIT.Unmarshal(config.Bytes(), &discreteMaps); err != nil {
-		fmt.Fprintf(os.Stderr, "error decoding configuration: %v", err)
 		os.Exit(1)
 	}
 	// Try to chroot.  This may not be possible, and on some systems that
@@ -82,7 +78,7 @@ func ChownPathByMaps(path string, toContainer, toHost *idtools.IDMappings) error
 		toHost = &idtools.IDMappings{}
 	}
 
-	config, err := jsonIT.Marshal([4][]idtools.IDMap{toContainer.UIDs(), toContainer.GIDs(), toHost.UIDs(), toHost.GIDs()})
+	config, err := json.Marshal(&[4][]idtools.IDMap{toContainer.UIDs(), toContainer.GIDs(), toHost.UIDs(), toHost.GIDs()})
 	if err != nil {
 		return err
 	}

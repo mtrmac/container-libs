@@ -4,6 +4,7 @@ package chrootarchive
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -56,7 +57,7 @@ func untar() {
 	var options archive.TarOptions
 
 	// read the options from the pipe "ExtraFiles"
-	if err := jsonIT.NewDecoder(os.NewFile(tarOptionsDescriptor, "options")).Decode(&options); err != nil {
+	if err := json.UnmarshalRead(os.NewFile(tarOptionsDescriptor, "options"), &options); err != nil {
 		fatal(err)
 	}
 
@@ -154,7 +155,7 @@ func invokeUnpack(decompressedArchive io.Reader, dest *unpackDestination, option
 	}
 
 	// write the options to the pipe for the untar exec to read
-	if err := jsonIT.NewEncoder(w).Encode(options); err != nil {
+	if err := json.MarshalWrite(w, options); err != nil {
 		w.Close()
 		return fmt.Errorf("untar json encode to pipe failed: %w", err)
 	}
@@ -197,7 +198,7 @@ func tar() {
 	}
 
 	var options archive.TarOptions
-	if err := jsonIT.NewDecoder(os.Stdin).Decode(&options); err != nil {
+	if err := json.UnmarshalRead(os.Stdin, &options); err != nil {
 		fatal(err)
 	}
 
@@ -260,7 +261,7 @@ func invokePack(srcPath string, options *archive.TarOptions, root string) (io.Re
 		tarW.CloseWithError(err)
 	}()
 
-	if err := jsonIT.NewEncoder(stdin).Encode(options); err != nil {
+	if err := json.MarshalWrite(stdin, options); err != nil {
 		stdin.Close()
 		return nil, fmt.Errorf("tar json encode to pipe failed: %w", err)
 	}
