@@ -1,7 +1,7 @@
 package types_test
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"reflect"
 	"testing"
 
@@ -66,7 +66,7 @@ func TestUnmarshalMacAddress(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			mac := types.HardwareAddr{}
-			err := jsonv1.Unmarshal([]byte(test.json), &mac)
+			err := json.Unmarshal([]byte(test.json), &mac)
 			if (err != nil) != test.wantErr {
 				t.Errorf("types.HardwareAddress Unmarshal() error = %v, wantErr %v", err, test.wantErr)
 				return
@@ -98,7 +98,7 @@ func TestMarshalMacAddress(t *testing.T) {
 	for _, tt := range tests {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
-			g, err := jsonv1.Marshal(test.arg)
+			g, err := json.Marshal(&test.arg)
 			got := string(g)
 			if (err != nil) != test.wantErr {
 				t.Errorf("types.HardwareAddress Marshal() (got = %v) error = %v, wantErr %v", got, err, test.wantErr)

@@ -1,7 +1,7 @@
 package config
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -846,7 +846,7 @@ func TestRemoveAuthentication(t *testing.T) {
 			},
 		},
 	} {
-		content, err := jsonv1.Marshal(&tc.config)
+		content, err := json.Marshal(&tc.config)
 		require.NoError(t, err)
 
 		tmpFile := filepath.Join(t.TempDir(), "auth.json")

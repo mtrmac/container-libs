@@ -2,6 +2,7 @@ package signature
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -408,7 +409,7 @@ func TestNewPRSigstoreSignedKeyData(t *testing.T) {
 // Return the result of modifying validJSON with fn and unmarshaling it into *pr
 func tryUnmarshalModifiedSigstoreSigned(t *testing.T, pr *prSigstoreSigned, validJSON []byte, modifyFn func(mSA)) error {
 	var tmp mSA
-	err := jsonv1.Unmarshal(validJSON, &tmp)
+	err := json.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)

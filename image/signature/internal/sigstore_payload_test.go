@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"encoding/base64"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"os"
 	"testing"
@@ -81,7 +81,7 @@ func TestUntrustedSigstorePayloadMarshalJSON(t *testing.T) {
 		assert.Equal(t, []byte(c.expected), marshaled)
 
 		// Also call MarshalJSON through the JSON package.
-		marshaled, err = jsonv1.Marshal(c.input)
+		marshaled, err = json.Marshal(c.input)
 		assert.NoError(t, err)
 		assert.Equal(t, []byte(c.expected), marshaled)
 	}
@@ -90,7 +90,7 @@ func TestUntrustedSigstorePayloadMarshalJSON(t *testing.T) {
 // Verify that input can be unmarshaled as an UntrustedSigstorePayload.
 func successfullyUnmarshalUntrustedSigstorePayload(t *testing.T, input []byte) UntrustedSigstorePayload {
 	var s UntrustedSigstorePayload
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	require.NoError(t, err, string(input))
 
 	return s
@@ -99,7 +99,7 @@ func successfullyUnmarshalUntrustedSigstorePayload(t *testing.T, input []byte) U
 // Verify that input can't be unmarshaled as an UntrustedSigstorePayload.
 func assertUnmarshalUntrustedSigstorePayloadFails(t *testing.T, input []byte) {
 	var s UntrustedSigstorePayload
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	assert.Error(t, err, string(input))
 }
 

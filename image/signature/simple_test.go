@@ -2,7 +2,7 @@ package signature
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"os"
 	"path/filepath"
@@ -67,7 +67,7 @@ func TestMarshalJSON(t *testing.T) {
 		assert.Equal(t, []byte(c.expected), marshaled)
 
 		// Also call MarshalJSON through the JSON package.
-		marshaled, err = jsonv1.Marshal(c.input)
+		marshaled, err = json.Marshal(&c.input)
 		assert.NoError(t, err)
 		assert.Equal(t, []byte(c.expected), marshaled)
 	}
@@ -76,12 +76,12 @@ func TestMarshalJSON(t *testing.T) {
 // Return the result of modifying validJSON with fn
 func modifiedJSON(t *testing.T, validJSON []byte, modifyFn func(mSA)) []byte {
 	var tmp mSA
-	err := jsonv1.Unmarshal(validJSON, &tmp)
+	err := json.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
 
-	modifiedJSON, err := jsonv1.Marshal(tmp)
+	modifiedJSON, err := json.Marshal(&tmp)
 	require.NoError(t, err)
 	return modifiedJSON
 }
@@ -91,7 +91,7 @@ func successfullyUnmarshalUntrustedSignature(t *testing.T, schema *jsonschema.Sc
 	inputString := string(input)
 
 	var s untrustedSignature
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	require.NoError(t, err, inputString)
 
 	rawInput, err := jsonschema.UnmarshalJSON(bytes.NewReader(input))
@@ -107,7 +107,7 @@ func assertUnmarshalUntrustedSignatureFails(t *testing.T, schema *jsonschema.Sch
 	inputString := string(input)
 
 	var s untrustedSignature
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	assert.Error(t, err, inputString)
 
 	rawInput, err := jsonschema.UnmarshalJSON(bytes.NewReader(input))
