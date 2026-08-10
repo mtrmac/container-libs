@@ -34,9 +34,9 @@ func testValidManifestWithExtraFieldsIsRejected(t *testing.T, parser func([]byte
 	for _, field := range fields {
 		// end (the final '}') is not always at len(validManifest)-1 because the manifest can end with
 		// white space.
-		end := bytes.LastIndexByte(validManifest, '}')
-		require.NotEqual(t, end, -1)
-		updatedManifest := []byte(string(validManifest[:end]) +
+		retained, _, ok := bytes.CutLast(validManifest, []byte{'}'})
+		require.True(t, ok)
+		updatedManifest := []byte(string(retained) +
 			fmt.Sprintf(`,"%s":[]}`, field))
 		err := parser(updatedManifest)
 		// Make sure it is the error from validateUnambiguousManifestFormat, not something that
