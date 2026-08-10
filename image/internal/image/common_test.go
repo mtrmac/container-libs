@@ -1,7 +1,7 @@
 package image
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,14 +17,14 @@ import (
 // possibly ignoring ignoreFields
 func assertJSONEqualsFixture(t *testing.T, jsonBytes []byte, fixture string, ignoreFields ...string) {
 	var contents map[string]any
-	err := jsonv1.Unmarshal(jsonBytes, &contents)
+	err := json.Unmarshal(jsonBytes, &contents)
 	require.NoError(t, err)
 
 	fixtureBytes, err := os.ReadFile(filepath.Join("fixtures", fixture))
 	require.NoError(t, err)
 	var fixtureContents map[string]any
 
-	err = jsonv1.Unmarshal(fixtureBytes, &fixtureContents)
+	err = json.Unmarshal(fixtureBytes, &fixtureContents)
 	require.NoError(t, err)
 	for _, f := range ignoreFields {
 		delete(contents, f)

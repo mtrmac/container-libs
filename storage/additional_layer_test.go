@@ -4,6 +4,7 @@ package storage
 
 import (
 	"encoding/base64"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,7 +46,7 @@ func TestLookupAdditionalLayerSuccess(t *testing.T) {
 		CompressedSize: 42,
 		TOCDigest:      tocDigest,
 	}
-	infoJSON, err := jsonIT.Marshal(info)
+	infoJSON, err := json.Marshal(&info)
 	require.NoError(t, err)
 
 	alsPath := setupAdditionalLayerStore(t, tocDigest, imageRef, string(infoJSON))

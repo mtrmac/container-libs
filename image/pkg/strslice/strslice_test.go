@@ -2,6 +2,7 @@ package strslice
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"reflect"
 	"testing"
 )
@@ -17,7 +18,7 @@ func TestStrSliceMarshalJSON(t *testing.T) {
 		{StrSlice{}, "[]"},
 		{StrSlice{"/bin/sh", "-c", "echo"}, `["/bin/sh","-c","echo"]`},
 	} {
-		data, err := jsonv1.Marshal(testcase.input)
+		data, err := json.Marshal(&testcase.input, jsonv1.DefaultOptionsV1())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,11 +50,11 @@ func TestStrSliceUnmarshalJSON(t *testing.T) {
 
 func TestStrSliceUnmarshalString(t *testing.T) {
 	var e StrSlice
-	echo, err := jsonv1.Marshal("echo")
+	echo, err := json.Marshal("echo")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := jsonv1.Unmarshal(echo, &e); err != nil {
+	if err := json.Unmarshal(echo, &e); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,11 +69,11 @@ func TestStrSliceUnmarshalString(t *testing.T) {
 
 func TestStrSliceUnmarshalSlice(t *testing.T) {
 	var e StrSlice
-	echo, err := jsonv1.Marshal([]string{"echo"})
+	echo, err := json.Marshal(&[]string{"echo"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := jsonv1.Unmarshal(echo, &e); err != nil {
+	if err := json.Unmarshal(echo, &e); err != nil {
 		t.Fatal(err)
 	}
 

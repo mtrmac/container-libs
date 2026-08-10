@@ -3,6 +3,7 @@ package signature
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -371,12 +372,12 @@ func TestNewPolicyFromBytes(t *testing.T) {
 
 // FIXME? There is quite a bit of duplication below. Factor some of it out?
 
-// jsonUnmarshalFromObject is like jsonv1.Unmarshal(), but the input is an arbitrary object
+// jsonUnmarshalFromObject is like json.Unmarshal(), but the input is an arbitrary object
 // that is JSON-marshalled first (as a convenient way to create an invalid/unusual JSON input)
 func jsonUnmarshalFromObject(t *testing.T, object any, dest any) error {
-	testJSON, err := jsonv1.Marshal(object)
+	testJSON, err := json.Marshal(&object)
 	require.NoError(t, err)
-	return jsonv1.Unmarshal(testJSON, dest)
+	return json.Unmarshal(testJSON, dest)
 }
 
 // assertJSONUnmarshalFromObjectFails checks that unmarshaling the JSON-marshaled version
@@ -405,7 +406,7 @@ func testInvalidJSONInput(t *testing.T, dest jsonv1.Unmarshaler) {
 // possibly with a duplicate name, to encoded.
 // Errors, if any, are reported through t.
 func addExtraJSONMember(t *testing.T, encoded []byte, name string, extra any) []byte {
-	extraJSON, err := jsonv1.Marshal(extra)
+	extraJSON, err := json.Marshal(&extra)
 	require.NoError(t, err)
 
 	preserved, ok := bytes.CutSuffix(encoded, []byte("}"))
@@ -424,18 +425,18 @@ func addExtraJSONMember(t *testing.T, encoded []byte, name string, extra any) []
 // tests in this file, and allows sharing the test implementation.
 type policyJSONUmarshallerTests[T any] struct {
 	newDest         func() jsonv1.Unmarshaler // Create a new jsonv1.Unmarshaler to test against
-	newValidObject  func() (T, error)       // A function that generates a valid object, used as a base for other tests
-	otherJSONParser func([]byte) (T, error) // Another function that must accept the result of encoding validObject
-	invalidObjects  []mSA                   // mSA values that are invalid for this unmarshaller; a simpler alternative to breakFns
-	breakFns        []func(mSA)             // Functions that edit a mSA from newValidObject() to make it invalid
-	duplicateFields []string                // Names of fields in the return value of newValidObject() that should not be duplicated
+	newValidObject  func() (T, error)         // A function that generates a valid object, used as a base for other tests
+	otherJSONParser func([]byte) (T, error)   // Another function that must accept the result of encoding validObject
+	invalidObjects  []mSA                     // mSA values that are invalid for this unmarshaller; a simpler alternative to breakFns
+	breakFns        []func(mSA)               // Functions that edit a mSA from newValidObject() to make it invalid
+	duplicateFields []string                  // Names of fields in the return value of newValidObject() that should not be duplicated
 }
 
 // validObjectAndJSON returns an object created by d.newValidObject() and its JSON representation.
 func (d policyJSONUmarshallerTests[T]) validObjectAndJSON(t *testing.T) (T, []byte) {
 	validObject, err := d.newValidObject()
 	require.NoError(t, err)
-	validJSON, err := jsonv1.Marshal(validObject)
+	validJSON, err := json.Marshal(&validObject)
 	require.NoError(t, err)
 	return validObject, validJSON
 }
@@ -448,7 +449,7 @@ func (d policyJSONUmarshallerTests[T]) run(t *testing.T) {
 
 	// Success
 	dest = d.newDest()
-	err := jsonv1.Unmarshal(validJSON, dest)
+	err := json.Unmarshal(validJSON, dest)
 	require.NoError(t, err)
 	assert.Equal(t, validObject, dest)
 
@@ -468,7 +469,7 @@ func (d policyJSONUmarshallerTests[T]) run(t *testing.T) {
 	for index, fn := range d.breakFns {
 		t.Run(fmt.Sprintf("breakFns[%d]", index), func(t *testing.T) {
 			var tmp mSA
-			err := jsonv1.Unmarshal(validJSON, &tmp)
+			err := json.Unmarshal(validJSON, &tmp)
 			require.NoError(t, err)
 
 			fn(tmp)
@@ -481,13 +482,13 @@ func (d policyJSONUmarshallerTests[T]) run(t *testing.T) {
 	// Duplicated fields
 	for _, field := range d.duplicateFields {
 		var tmp mSA
-		err := jsonv1.Unmarshal(validJSON, &tmp)
+		err := json.Unmarshal(validJSON, &tmp)
 		require.NoError(t, err)
 
 		testJSON := addExtraJSONMember(t, validJSON, field, tmp[field])
 
 		dest := d.newDest()
-		err = jsonv1.Unmarshal(testJSON, dest)
+		err = json.Unmarshal(testJSON, dest)
 		assert.Error(t, err)
 	}
 }
@@ -578,7 +579,7 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 	}
 	for _, fn := range allowedModificationFns {
 		var tmp mSA
-		err := jsonv1.Unmarshal(validJSON, &tmp)
+		err := json.Unmarshal(validJSON, &tmp)
 		require.NoError(t, err)
 
 		fn(tmp)
@@ -608,7 +609,7 @@ func tryUnmarshalModifiedPTS(t *testing.T, pts *PolicyTransportScopes, transport
 	validJSON []byte, modifyFn func(mSA),
 ) error {
 	var tmp mSA
-	err := jsonv1.Unmarshal(validJSON, &tmp)
+	err := json.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
@@ -642,7 +643,7 @@ func TestPolicyTransportScopesWithTransportUnmarshalJSON(t *testing.T) {
 			xNewPRSignedByKeyData(SBKeyTypeGPGKeys, []byte("global"), NewPRMMatchRepoDigestOrExact()),
 		},
 	}
-	validJSON, err := jsonv1.Marshal(validPTS)
+	validJSON, err := json.Marshal(&validPTS)
 	require.NoError(t, err)
 
 	// Success
@@ -651,7 +652,7 @@ func TestPolicyTransportScopesWithTransportUnmarshalJSON(t *testing.T) {
 		transport: docker.Transport,
 		dest:      &pts,
 	}
-	err = jsonv1.Unmarshal(validJSON, &dest)
+	err = json.Unmarshal(validJSON, &dest)
 	require.NoError(t, err)
 	assert.Equal(t, validPTS, pts)
 
@@ -674,7 +675,7 @@ func TestPolicyTransportScopesWithTransportUnmarshalJSON(t *testing.T) {
 	// Duplicated fields
 	for _, field := range []string{"docker.io/library/busybox", ""} {
 		var tmp mSA
-		err := jsonv1.Unmarshal(validJSON, &tmp)
+		err := json.Unmarshal(validJSON, &tmp)
 		require.NoError(t, err)
 
 		testJSON := addExtraJSONMember(t, validJSON, field, tmp[field])
@@ -684,7 +685,7 @@ func TestPolicyTransportScopesWithTransportUnmarshalJSON(t *testing.T) {
 			transport: docker.Transport,
 			dest:      &pts,
 		}
-		err = jsonv1.Unmarshal(testJSON, &dest)
+		err = json.Unmarshal(testJSON, &dest)
 		assert.Error(t, err)
 	}
 
@@ -742,7 +743,7 @@ func TestPolicyRequirementsUnmarshalJSON(t *testing.T) {
 func TestNewPolicyRequirementFromJSON(t *testing.T) {
 	// Sample success. Others tested in the individual PolicyRequirement.UnmarshalJSON implementations.
 	validReq := NewPRInsecureAcceptAnything()
-	validJSON, err := jsonv1.Marshal(validReq)
+	validJSON, err := json.Marshal(&validReq)
 	require.NoError(t, err)
 	req, err := newPolicyRequirementFromJSON(validJSON)
 	require.NoError(t, err)
@@ -762,7 +763,7 @@ func TestNewPolicyRequirementFromJSON(t *testing.T) {
 			KeyType:  "this is invalid",
 		},
 	} {
-		testJSON, err := jsonv1.Marshal(invalid)
+		testJSON, err := json.Marshal(&invalid)
 		require.NoError(t, err)
 
 		_, err = newPolicyRequirementFromJSON(testJSON)
@@ -924,7 +925,7 @@ func TestNewPRSignedByKeyData(t *testing.T) {
 // Return the result of modifying validJSON with fn and unmarshaling it into *pr
 func tryUnmarshalModifiedSignedBy(t *testing.T, pr *prSignedBy, validJSON []byte, modifyFn func(mSA)) error {
 	var tmp mSA
-	err := jsonv1.Unmarshal(validJSON, &tmp)
+	err := json.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
@@ -1054,17 +1055,17 @@ func TestSBKeyTypeUnmarshalJSON(t *testing.T) {
 		SBKeyTypeSignedByX509CAs,
 	} {
 		kt = sbKeyType("")
-		err := jsonv1.Unmarshal([]byte(`"`+string(v)+`"`), &kt)
+		err := json.Unmarshal([]byte(`"`+string(v)+`"`), &kt)
 		assert.NoError(t, err)
 	}
 
 	// Invalid values
 	kt = sbKeyType("")
-	err := jsonv1.Unmarshal([]byte(`""`), &kt)
+	err := json.Unmarshal([]byte(`""`), &kt)
 	assert.Error(t, err)
 
 	kt = sbKeyType("")
-	err = jsonv1.Unmarshal([]byte(`"this is invalid"`), &kt)
+	err = json.Unmarshal([]byte(`"this is invalid"`), &kt)
 	assert.Error(t, err)
 }
 
@@ -1126,7 +1127,7 @@ func TestPRSignedBaseLayerUnmarshalJSON(t *testing.T) {
 func TestNewPolicyReferenceMatchFromJSON(t *testing.T) {
 	// Sample success. Others tested in the individual PolicyReferenceMatch.UnmarshalJSON implementations.
 	validPRM := NewPRMMatchRepoDigestOrExact()
-	validJSON, err := jsonv1.Marshal(validPRM)
+	validJSON, err := json.Marshal(&validPRM)
 	require.NoError(t, err)
 	prm, err := newPolicyReferenceMatchFromJSON(validJSON)
 	require.NoError(t, err)
@@ -1146,7 +1147,7 @@ func TestNewPolicyReferenceMatchFromJSON(t *testing.T) {
 			DockerReference: "",
 		},
 	} {
-		testJSON, err := jsonv1.Marshal(invalid)
+		testJSON, err := json.Marshal(&invalid)
 		require.NoError(t, err)
 
 		_, err = newPolicyReferenceMatchFromJSON(testJSON)

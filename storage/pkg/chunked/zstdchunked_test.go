@@ -5,7 +5,7 @@ package chunked
 import (
 	"bufio"
 	"bytes"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"testing"
@@ -190,7 +190,7 @@ func TestGenerateAndParseManifest(t *testing.T) {
 	require.NoError(t, err)
 
 	var toc minimal.TOC
-	if err := jsonv1.Unmarshal(manifest, &toc); err != nil {
+	if err := json.Unmarshal(manifest, &toc); err != nil {
 		t.Error(err)
 	}
 

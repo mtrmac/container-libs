@@ -11,6 +11,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"testing"
 	"time"
@@ -24,7 +26,7 @@ import (
 // Verify that input can be unmarshaled as an UntrustedRekorSET.
 func successfullyUnmarshalUntrustedRekorSET(t *testing.T, input []byte) UntrustedRekorSET {
 	var s UntrustedRekorSET
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	require.NoError(t, err, string(input))
 
 	return s
@@ -33,7 +35,7 @@ func successfullyUnmarshalUntrustedRekorSET(t *testing.T, input []byte) Untruste
 // Verify that input can't be unmarshaled as an UntrustedRekorSET.
 func assertUnmarshalUntrustedRekorSETFails(t *testing.T, input []byte) {
 	var s UntrustedRekorSET
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	assert.Error(t, err, string(input))
 }
 
@@ -51,9 +53,9 @@ func TestUntrustedRekorSETUnmarshalJSON(t *testing.T) {
 	// Start with a valid JSON.
 	validSET := UntrustedRekorSET{
 		UntrustedSignedEntryTimestamp: []byte("signedTimestamp#@!"),
-		UntrustedPayload:              jsonv1.RawMessage(`["payload#@!"]`),
+		UntrustedPayload:              jsontext.Value(`["payload#@!"]`),
 	}
-	validJSON, err := jsonv1.Marshal(validSET)
+	validJSON, err := json.Marshal(&validSET)
 	require.NoError(t, err)
 
 	// Success
@@ -92,7 +94,7 @@ func TestUntrustedRekorSETUnmarshalJSON(t *testing.T) {
 // Verify that input can be unmarshaled as an UntrustedRekorPayload.
 func successfullyUnmarshalUntrustedRekorPayload(t *testing.T, input []byte) UntrustedRekorPayload {
 	var s UntrustedRekorPayload
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	require.NoError(t, err, string(input))
 
 	return s
@@ -101,7 +103,7 @@ func successfullyUnmarshalUntrustedRekorPayload(t *testing.T, input []byte) Untr
 // Verify that input can't be unmarshaled as an UntrustedRekorPayload.
 func assertUnmarshalUntrustedRekorPayloadFails(t *testing.T, input []byte) {
 	var s UntrustedRekorPayload
-	err := jsonv1.Unmarshal(input, &s)
+	err := json.Unmarshal(input, &s)
 	assert.Error(t, err, string(input))
 }
 
@@ -224,7 +226,7 @@ func TestVerifyRekorSET(t *testing.T) {
 	require.NoError(t, err)
 	invalidSET, err := jsonv1.Marshal(UntrustedRekorSET{
 		UntrustedSignedEntryTimestamp: invalidPayloadSig,
-		UntrustedPayload:              jsonv1.RawMessage(invalidPayload),
+		UntrustedPayload:              jsontext.Value(invalidPayload),
 	})
 	require.NoError(t, err)
 	tm, err = VerifyRekorSET(testPublicKeys, invalidSET, cosignCertBytes, string(cosignSigBase64), cosignPayloadBytes)
@@ -247,7 +249,7 @@ func TestVerifyRekorSET(t *testing.T) {
 	require.NoError(t, err)
 	invalidSET, err = jsonv1.Marshal(UntrustedRekorSET{
 		UntrustedSignedEntryTimestamp: invalidPayloadSig,
-		UntrustedPayload:              jsonv1.RawMessage(invalidPayload),
+		UntrustedPayload:              jsontext.Value(invalidPayload),
 	})
 	require.NoError(t, err)
 	tm, err = VerifyRekorSET(testPublicKeys, invalidSET, cosignCertBytes, string(cosignSigBase64), cosignPayloadBytes)
@@ -258,7 +260,7 @@ func TestVerifyRekorSET(t *testing.T) {
 	cosignPayloadSHA256 := sha256.Sum256(cosignPayloadBytes)
 	cosignSigBytes, err := base64.StdEncoding.DecodeString(string(cosignSigBase64))
 	require.NoError(t, err)
-	validHashedRekordSpec, err := jsonv1.Marshal(RekorHashedrekordV001Schema{
+	validHashedRekordSpec, err := json.Marshal(&RekorHashedrekordV001Schema{
 		Data: &RekorHashedrekordV001SchemaData{
 			Hash: &RekorHashedrekordV001SchemaDataHash{
 				Algorithm: new(RekorHashedrekordV001SchemaDataHashAlgorithmSha256),
@@ -277,7 +279,7 @@ func TestVerifyRekorSET(t *testing.T) {
 		APIVersion: new(RekorHashedRekordV001APIVersion),
 		Spec:       validHashedRekordSpec,
 	}
-	validHashedRekordJSON, err := jsonv1.Marshal(validHashedRekord)
+	validHashedRekordJSON, err := json.Marshal(&validHashedRekord)
 	require.NoError(t, err)
 	for _, fn := range []func(mSA){
 		// A Hashedrekord field is missing
@@ -372,7 +374,7 @@ func TestVerifyRekorSET(t *testing.T) {
 		},
 	} {
 		testHashedRekordJSON := modifiedJSON(t, validHashedRekordJSON, fn)
-		testPayload, err := jsonv1.Marshal(UntrustedRekorPayload{
+		testPayload, err := json.Marshal(&UntrustedRekorPayload{
 			Body:           testHashedRekordJSON,
 			IntegratedTime: 1,
 			LogIndex:       2,
@@ -381,9 +383,9 @@ func TestVerifyRekorSET(t *testing.T) {
 		require.NoError(t, err)
 		testPayloadSig, err := testSigner.SignMessage(bytes.NewReader(testPayload))
 		require.NoError(t, err)
-		testSET, err := jsonv1.Marshal(UntrustedRekorSET{
+		testSET, err := json.Marshal(&UntrustedRekorSET{
 			UntrustedSignedEntryTimestamp: testPayloadSig,
-			UntrustedPayload:              jsonv1.RawMessage(testPayload),
+			UntrustedPayload:              jsontext.Value(testPayload),
 		})
 		require.NoError(t, err)
 		tm, err = VerifyRekorSET(testPublicKeys, testSET, cosignCertBytes, string(cosignSigBase64), cosignPayloadBytes)

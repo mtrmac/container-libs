@@ -3,7 +3,7 @@ package blobcache
 import (
 	"bytes"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"flag"
 	"fmt"
 	"io"
@@ -79,7 +79,7 @@ func pushImageThroughCache(t *testing.T, cacheDir string, blobBytes []byte, diff
 			DiffIDs: []digest.Digest{diffID},
 		},
 	}
-	configBytes, err := jsonv1.Marshal(&config)
+	configBytes, err := json.Marshal(&config)
 	if err != nil {
 		t.Fatalf("error encoding image configuration: %v", err)
 	}
@@ -101,7 +101,7 @@ func pushImageThroughCache(t *testing.T, cacheDir string, blobBytes []byte, diff
 			Size:      blobInfo.Size,
 		}},
 	}
-	manifestBytes, err := jsonv1.Marshal(&m)
+	manifestBytes, err := json.Marshal(&m)
 	if err != nil {
 		t.Fatalf("error encoding manifest: %v", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -341,7 +341,7 @@ func configForLayers(t *testing.T, layers []testBlob) testBlob {
 		},
 		RootFS: &rootFS,
 	}
-	configBytes, err := jsonv1.Marshal(config)
+	configBytes, err := json.Marshal(&config)
 	require.NoError(t, err)
 	configDigest := digest.Canonical.FromBytes(configBytes)
 	return testBlob{

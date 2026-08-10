@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -337,7 +338,7 @@ func TestAddArtifacts(t *testing.T) {
 		artifactType := ""
 		if !manifest.MIMETypeIsMultiImage(manifestType) {
 			var manifestContents imgspecv1.Manifest
-			require.NoError(t, jsonIT.Unmarshal(manifestBytes, &manifestContents))
+			require.NoError(t, json.Unmarshal(manifestBytes, &manifestContents))
 			artifactType = manifestContents.ArtifactType
 		}
 		return imgspecv1.Descriptor{
@@ -395,7 +396,7 @@ func TestAddArtifacts(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, manifest.MIMETypeIsMultiImage(indexType))
 			var index imgspecv1.Index
-			require.NoError(t, jsonIT.Unmarshal(indexManifest, &index))
+			require.NoError(t, json.Unmarshal(indexManifest, &index))
 			// check some things in the image index
 			assert.Equal(t, index.Annotations, indexAnnotations)
 			if index.Subject != nil {
@@ -406,7 +407,7 @@ func TestAddArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				require.False(t, manifest.MIMETypeIsMultiImage(artifactManifestType))
 				var artifact imgspecv1.Manifest
-				require.NoError(t, jsonIT.Unmarshal(artifactManifest, &artifact))
+				require.NoError(t, json.Unmarshal(artifactManifest, &artifact))
 				// check some things in the artifact manifest
 				switch artifactTypeSpec {
 				case "<nil>":

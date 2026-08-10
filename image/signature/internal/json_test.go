@@ -2,6 +2,8 @@ package internal
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,7 +87,7 @@ func TestParanoidUnmarshalJSONObject(t *testing.T) {
 func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 	var stringValue string
 	var float64Value float64
-	var rawValue jsonv1.RawMessage
+	var rawValue jsontext.Value
 	var unmarshallCalled implementsUnmarshalJSON
 	exactFields := map[string]any{
 		"string":       &stringValue,
@@ -103,7 +105,7 @@ func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "a", stringValue)
 	assert.Equal(t, 3.5, float64Value)
-	assert.Equal(t, jsonv1.RawMessage(`{"a":"b"}`), rawValue)
+	assert.Equal(t, jsontext.Value(`{"a":"b"}`), rawValue)
 	assert.Equal(t, implementsUnmarshalJSON(true), unmarshallCalled)
 
 	// Various kinds of invalid input
@@ -127,12 +129,12 @@ func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 // Return the result of modifying validJSON with fn
 func modifiedJSON(t *testing.T, validJSON []byte, modifyFn func(mSA)) []byte {
 	var tmp mSA
-	err := jsonv1.Unmarshal(validJSON, &tmp)
+	err := json.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
 
-	modifiedJSON, err := jsonv1.Marshal(tmp)
+	modifiedJSON, err := json.Marshal(&tmp)
 	require.NoError(t, err)
 	return modifiedJSON
 }
