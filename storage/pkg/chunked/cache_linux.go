@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -17,7 +19,6 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
-	jsoniter "github.com/json-iterator/go"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 	storage "go.podman.io/storage"
@@ -228,7 +229,7 @@ func (c *layersCache) createCacheFileFromTOC(layerID string) (*layer, error) {
 			return nil, fmt.Errorf("open manifest file: %w", err)
 		}
 
-		if err := json.Unmarshal(cl, &lcd); err != nil {
+		if err := json.Unmarshal(cl, &lcd, jsonv1.DefaultOptionsV1()); err != nil {
 			return nil, err
 		}
 	}
@@ -854,85 +855,177 @@ func (c *layersCache) findChunkInOtherLayers(chunk *minimal.FileMetadata) (strin
 func unmarshalToc(manifest []byte) (*minimal.TOC, error) {
 	var toc minimal.TOC
 
-	iter := jsoniter.ParseBytes(jsoniter.ConfigFastest, manifest)
-
-	for field := iter.ReadObject(); field != ""; field = iter.ReadObject() {
-		switch strings.ToLower(field) {
+	// FIXME: Is all of this faster than just a json.Unmarshal?
+	dec := jsontext.NewDecoder(bytes.NewReader(manifest))
+	if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindBeginObject {
+		return nil, fmt.Errorf("expected top-level object start: %v, %w", tok, err)
+	}
+	for dec.PeekKind() != jsontext.KindEndObject {
+		fieldVal, err := dec.ReadValue()
+		if err != nil {
+			return nil, err
+		}
+		field, err := jsontext.AppendUnquote(nil, fieldVal)
+		switch strings.ToLower(string(field)) {
 		case "version":
-			toc.Version = iter.ReadInt()
+			if err := json.UnmarshalDecode(dec, &toc.Version); err != nil {
+				return nil, fmt.Errorf("invalid version: %w", err)
+			}
 
 		case "entries":
-			for iter.ReadArray() {
+			if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindBeginArray {
+				return nil, fmt.Errorf("expected array start: %v, %w", tok, err)
+			}
+			for dec.PeekKind() != jsontext.KindEndArray {
 				var m minimal.FileMetadata
-				for field := iter.ReadObject(); field != ""; field = iter.ReadObject() {
-					switch strings.ToLower(field) {
+
+				if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindBeginObject {
+					return nil, fmt.Errorf("expected top-level object start: %v, %w", tok, err)
+				}
+				for dec.PeekKind() != jsontext.KindEndObject {
+					fieldVal, err := dec.ReadValue()
+					if err != nil {
+						return nil, err
+					}
+					field, err := jsontext.AppendUnquote(nil, fieldVal)
+					switch strings.ToLower(string(field)) {
 					case "type":
-						m.Type = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.Type); err != nil {
+							return nil, fmt.Errorf("invalid type: %w", err)
+						}
 					case "name":
-						m.Name = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.Name); err != nil {
+							return nil, fmt.Errorf("invalid name: %w", err)
+						}
 					case "linkname":
-						m.Linkname = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.Linkname); err != nil {
+							return nil, fmt.Errorf("invalid linkname: %w", err)
+						}
 					case "mode":
-						m.Mode = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.Mode); err != nil {
+							return nil, fmt.Errorf("invalid mode: %w", err)
+						}
 					case "size":
-						m.Size = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.Size); err != nil {
+							return nil, fmt.Errorf("invalid size: %w", err)
+						}
 					case "uid":
-						m.UID = iter.ReadInt()
+						if err := json.UnmarshalDecode(dec, &m.UID); err != nil {
+							return nil, fmt.Errorf("invalid uid: %w", err)
+						}
 					case "gid":
-						m.GID = iter.ReadInt()
+						if err := json.UnmarshalDecode(dec, &m.GID); err != nil {
+							return nil, fmt.Errorf("invalid gid: %w", err)
+						}
 					case "modtime":
-						time, err := time.Parse(time.RFC3339, iter.ReadString())
+						var s string
+						if err := json.UnmarshalDecode(dec, &s); err != nil {
+							return nil, fmt.Errorf("invalid modtime: %w", err)
+						}
+						time, err := time.Parse(time.RFC3339, s)
 						if err != nil {
 							return nil, err
 						}
 						m.ModTime = &time
 					case "accesstime":
-						time, err := time.Parse(time.RFC3339, iter.ReadString())
+						var s string
+						if err := json.UnmarshalDecode(dec, &s); err != nil {
+							return nil, fmt.Errorf("invalid accesstime: %w", err)
+						}
+						time, err := time.Parse(time.RFC3339, s)
 						if err != nil {
 							return nil, err
 						}
 						m.AccessTime = &time
 					case "changetime":
-						time, err := time.Parse(time.RFC3339, iter.ReadString())
+						var s string
+						if err := json.UnmarshalDecode(dec, &s); err != nil {
+							return nil, fmt.Errorf("invalid changetime: %w", err)
+						}
+						time, err := time.Parse(time.RFC3339, s)
 						if err != nil {
 							return nil, err
 						}
 						m.ChangeTime = &time
 					case "devmajor":
-						m.Devmajor = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.Devmajor); err != nil {
+							return nil, fmt.Errorf("invalid devmajor: %w", err)
+						}
 					case "devminor":
-						m.Devminor = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.Devminor); err != nil {
+							return nil, fmt.Errorf("invalid devminor: %w", err)
+						}
 					case "digest":
-						m.Digest = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.Digest); err != nil {
+							return nil, fmt.Errorf("invalid digest: %w", err)
+						}
 					case "offset":
-						m.Offset = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.Offset); err != nil {
+							return nil, fmt.Errorf("invalid offset: %w", err)
+						}
 					case "endoffset":
-						m.EndOffset = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.EndOffset); err != nil {
+							return nil, fmt.Errorf("invalid endoffset: %w", err)
+						}
 					case "chunksize":
-						m.ChunkSize = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.ChunkSize); err != nil {
+							return nil, fmt.Errorf("invalid chunksize: %w", err)
+						}
 					case "chunkoffset":
-						m.ChunkOffset = iter.ReadInt64()
+						if err := json.UnmarshalDecode(dec, &m.ChunkOffset); err != nil {
+							return nil, fmt.Errorf("invalid chunkoffset: %w", err)
+						}
 					case "chunkdigest":
-						m.ChunkDigest = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.ChunkDigest); err != nil {
+							return nil, fmt.Errorf("invalid chunkdigest: %w", err)
+						}
 					case "chunktype":
-						m.ChunkType = iter.ReadString()
+						if err := json.UnmarshalDecode(dec, &m.ChunkType); err != nil {
+							return nil, fmt.Errorf("invalid chunktype: %w", err)
+						}
 					case "xattrs":
 						m.Xattrs = make(map[string]string)
-						for key := iter.ReadObject(); key != ""; key = iter.ReadObject() {
-							m.Xattrs[key] = iter.ReadString()
+						if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindBeginObject {
+							return nil, fmt.Errorf("expected top-level object start: %v, %w", tok, err)
+						}
+						for dec.PeekKind() != jsontext.KindEndObject {
+							keyVal, err := dec.ReadValue()
+							if err != nil {
+								return nil, err
+							}
+							key, err := jsontext.AppendUnquote(nil, keyVal)
+							var s string
+							if err := json.UnmarshalDecode(dec, &s); err != nil {
+								return nil, fmt.Errorf("invalid xattrs value: %w", err)
+							}
+							m.Xattrs[string(key)] = s
+						}
+						if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindEndObject {
+							return nil, fmt.Errorf("expected object end: %v, %w", tok, err)
 						}
 					default:
-						iter.Skip()
+						if _, err := dec.ReadValue(); err != nil {
+							return nil, fmt.Errorf("invalid value for field %q: %w", field, err)
+						}
 					}
+				}
+				if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindEndObject {
+					return nil, fmt.Errorf("expected object end: %v, %w", tok, err)
 				}
 				if m.Type == TypeReg && m.Size == 0 && m.Digest == "" {
 					m.Digest = digestSha256Empty
 				}
 				toc.Entries = append(toc.Entries, m)
 			}
+			if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindEndArray {
+				return nil, fmt.Errorf("expected array end: %v, %w", tok, err)
+			}
 
 		case "tarsplitdigest": // strings.ToLower("tarSplitDigest")
-			s := iter.ReadString()
+			var s string
+			if err := json.UnmarshalDecode(dec, &s); err != nil {
+				return nil, fmt.Errorf("invalid tarSplitDigest: %w", err)
+			}
 			d, err := digest.Parse(s)
 			if err != nil {
 				return nil, fmt.Errorf("invalid tarSplitDigest %q: %w", s, err)
@@ -940,16 +1033,18 @@ func unmarshalToc(manifest []byte) (*minimal.TOC, error) {
 			toc.TarSplitDigest = d
 
 		default:
-			iter.Skip()
+			if _, err := dec.ReadValue(); err != nil {
+				return nil, fmt.Errorf("invalid value for field %q: %w", field, err)
+			}
 		}
+	}
+	if tok, err := dec.ReadToken(); err != nil || tok.Kind() != jsontext.KindEndObject {
+		return nil, fmt.Errorf("expected object end: %v, %w", tok, err)
 	}
 
 	// validate there is no extra data in the provided input.  This is a security measure to avoid
 	// that the digest we calculate for the TOC refers to the entire document.
-	if iter.Error != nil && iter.Error != io.EOF {
-		return nil, iter.Error
-	}
-	if iter.WhatIsNext() != jsoniter.InvalidValue || !errors.Is(iter.Error, io.EOF) {
+	if _, err := dec.ReadToken(); err != io.EOF {
 		return nil, fmt.Errorf("unexpected data after manifest")
 	}
 
