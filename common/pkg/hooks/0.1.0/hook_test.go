@@ -167,14 +167,13 @@ func TestHasBindMounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hasBindMounts := true
 	assert.Equal(t, &current.Hook{
 		Version: current.Version,
 		Hook: rspec.Hook{
 			Path: "/a/b/c",
 		},
 		When: current.When{
-			HasBindMounts: &hasBindMounts,
+			HasBindMounts: new(true),
 			Or:            true,
 		},
 		Stages: []string{"prestart"},
