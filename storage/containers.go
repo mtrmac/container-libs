@@ -472,7 +472,7 @@ func (r *containerStore) load(lockedForWriting bool) (bool, error) {
 
 		locationContainers := []*Container{}
 		if len(data) != 0 {
-			if err := json.Unmarshal(data, &locationContainers); err != nil {
+			if err := jsonIT.Unmarshal(data, &locationContainers); err != nil {
 				return false, fmt.Errorf("loading %q: %w", rpath, err)
 			}
 		}
@@ -550,7 +550,7 @@ func (r *containerStore) save(saveLocations containerLocations) error {
 			}
 		}
 
-		jdata, err := json.Marshal(&subsetContainers)
+		jdata, err := jsonIT.Marshal(&subsetContainers)
 		if err != nil {
 			return err
 		}

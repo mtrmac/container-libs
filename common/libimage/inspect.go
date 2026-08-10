@@ -171,7 +171,7 @@ func (i *Image) Inspect(ctx context.Context, options *InspectOptions) (*ImageDat
 	// OCI image
 	case ociv1.MediaTypeImageManifest:
 		var ociManifest ociv1.Manifest
-		if err := json.Unmarshal(manifestRaw, &ociManifest); err != nil {
+		if err := jsonIT.Unmarshal(manifestRaw, &ociManifest); err != nil {
 			return nil, err
 		}
 		data.Annotations = ociManifest.Annotations
@@ -186,7 +186,7 @@ func (i *Image) Inspect(ctx context.Context, options *InspectOptions) (*ImageDat
 			return nil, err
 		}
 		var dockerConfig manifest.Schema2V1Image
-		if err := json.Unmarshal(rawConfig, &dockerConfig); err != nil {
+		if err := jsonIT.Unmarshal(rawConfig, &dockerConfig); err != nil {
 			return nil, err
 		}
 		data.Comment = dockerConfig.Comment

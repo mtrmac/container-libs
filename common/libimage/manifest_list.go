@@ -183,7 +183,7 @@ func (i *Image) ConvertToManifestList(ctx context.Context) (*ManifestList, error
 			Size:      int64(len(listBytes)),
 		}},
 	}
-	indexBytes, err := json.Marshal(&index)
+	indexBytes, err := jsonIT.Marshal(&index)
 	if err != nil {
 		return nil, fmt.Errorf("encoding image index for OCI layout: %w", err)
 	}
@@ -196,7 +196,7 @@ func (i *Image) ConvertToManifestList(ctx context.Context) (*ManifestList, error
 
 	// Write the "why yes, this is an OCI layout" file.
 	layoutFile := filepath.Join(tmp, imgspecv1.ImageLayoutFile)
-	layoutBytes, err := json.Marshal(imgspecv1.ImageLayout{Version: imgspecv1.ImageLayoutVersion})
+	layoutBytes, err := jsonIT.Marshal(imgspecv1.ImageLayout{Version: imgspecv1.ImageLayoutVersion})
 	if err != nil {
 		return nil, fmt.Errorf("encoding image layout structure for OCI layout: %w", err)
 	}
@@ -433,7 +433,7 @@ func (m *ManifestList) Inspect() (*define.ManifestListData, error) {
 	var typed struct {
 		MediaType string `json:"mediaType,omitempty"`
 	}
-	if err := json.Unmarshal(serialized, &typed); err != nil {
+	if err := jsonIT.Unmarshal(serialized, &typed); err != nil {
 		return &inspectList, err
 	}
 	if typed.MediaType != "" {
@@ -733,7 +733,7 @@ func (m *ManifestList) AnnotateInstance(d digest.Digest, options *ManifestListAn
 		var subjectArtifactType string
 		if !manifest.MIMETypeIsMultiImage(subjectManifestType) {
 			var subjectManifest imgspecv1.Manifest
-			if json.Unmarshal(subjectManifestBytes, &subjectManifest) == nil {
+			if jsonIT.Unmarshal(subjectManifestBytes, &subjectManifest) == nil {
 				subjectArtifactType = subjectManifest.ArtifactType
 			}
 		}

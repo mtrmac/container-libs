@@ -47,7 +47,7 @@ func applyLayer() {
 		_, _ = system.Umask(oldMask) // Ignore err. This can only fail with ErrNotSupportedPlatform, in which case we would have failed above.
 	}()
 
-	if err := json.Unmarshal([]byte(os.Getenv("OPT")), &options); err != nil {
+	if err := jsonIT.Unmarshal([]byte(os.Getenv("OPT")), &options); err != nil {
 		fatal(err)
 	}
 
@@ -66,7 +66,7 @@ func applyLayer() {
 		fatal(err)
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
+	encoder := jsonIT.NewEncoder(os.Stdout)
 	if err := encoder.Encode(applyLayerResponse{size}); err != nil {
 		fatal(fmt.Errorf("unable to encode layerSize JSON: %w", err))
 	}
@@ -99,7 +99,7 @@ func applyLayerHandler(dest string, layer io.Reader, options *archive.TarOptions
 		}
 	}
 
-	data, err := json.Marshal(options)
+	data, err := jsonIT.Marshal(options)
 	if err != nil {
 		return 0, fmt.Errorf("ApplyLayer json encode: %w", err)
 	}
@@ -117,7 +117,7 @@ func applyLayerHandler(dest string, layer io.Reader, options *archive.TarOptions
 
 	// Stdout should be a valid JSON struct representing an applyLayerResponse.
 	response := applyLayerResponse{}
-	decoder := json.NewDecoder(outBuf)
+	decoder := jsonIT.NewDecoder(outBuf)
 	if err = decoder.Decode(&response); err != nil {
 		return 0, fmt.Errorf("unable to decode ApplyLayer JSON response: %w", err)
 	}

@@ -937,7 +937,7 @@ func (r *layerStore) load(lockedForWriting bool) (bool, error) {
 
 		locationLayers := []*Layer{}
 		if len(data) != 0 {
-			if err := json.Unmarshal(data, &locationLayers); err != nil {
+			if err := jsonIT.Unmarshal(data, &locationLayers); err != nil {
 				return false, fmt.Errorf("loading %q: %w", rpath, err)
 			}
 		}
@@ -1095,7 +1095,7 @@ func (r *layerStore) loadMounts() error {
 	}
 	layerMounts := []layerMountPoint{}
 	if len(data) != 0 {
-		if err := json.Unmarshal(data, &layerMounts); err != nil {
+		if err := jsonIT.Unmarshal(data, &layerMounts); err != nil {
 			return err
 		}
 	}
@@ -1188,7 +1188,7 @@ func (r *layerStore) saveLayers(saveLocations layerLocations, needsSyncfs bool) 
 			}
 		}
 
-		jldata, err := json.Marshal(&subsetLayers)
+		jldata, err := jsonIT.Marshal(&subsetLayers)
 		if err != nil {
 			return err
 		}
@@ -1240,7 +1240,7 @@ func (r *layerStore) saveMounts() error {
 			})
 		}
 	}
-	jmdata, err := json.Marshal(&mounts)
+	jmdata, err := jsonIT.Marshal(&mounts)
 	if err != nil {
 		return err
 	}
@@ -1450,7 +1450,7 @@ func (r *layerStore) PutAdditionalLayer(id string, parentLayer *Layer, names []s
 	}
 	defer info.Close()
 	layer = &Layer{}
-	if err := json.NewDecoder(info).Decode(layer); err != nil {
+	if err := jsonIT.NewDecoder(info).Decode(layer); err != nil {
 		return nil, err
 	}
 	layer.ID = id
@@ -2420,7 +2420,7 @@ func (r *layerStore) Diff(from, to string, options *DiffOptions) (io.ReadCloser,
 			}
 			defer info.Close()
 			layer := &Layer{}
-			if err := json.NewDecoder(info).Decode(layer); err != nil {
+			if err := jsonIT.NewDecoder(info).Decode(layer); err != nil {
 				aLayer.Release()
 				return nil, err
 			}

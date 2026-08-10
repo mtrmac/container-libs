@@ -3555,7 +3555,7 @@ func (s *store) LookupAdditionalLayer(tocDigest digest.Digest, imageref string) 
 	}
 	defer info.Close()
 	var layer Layer
-	if err := json.NewDecoder(info).Decode(&layer); err != nil {
+	if err := jsonIT.NewDecoder(info).Decode(&layer); err != nil {
 		return nil, err
 	}
 	succeeded = true

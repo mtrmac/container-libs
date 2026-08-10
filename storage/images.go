@@ -509,7 +509,7 @@ func (r *imageStore) load(lockedForWriting bool) (bool, error) {
 
 	images := []*Image{}
 	if len(data) != 0 {
-		if err := json.Unmarshal(data, &images); err != nil {
+		if err := jsonIT.Unmarshal(data, &images); err != nil {
 			return false, fmt.Errorf("loading %q: %w", rpath, err)
 		}
 	}
@@ -572,7 +572,7 @@ func (r *imageStore) Save() error {
 	if err := os.MkdirAll(filepath.Dir(rpath), 0o700); err != nil {
 		return err
 	}
-	jdata, err := json.Marshal(&r.images)
+	jdata, err := jsonIT.Marshal(&r.images)
 	if err != nil {
 		return err
 	}
