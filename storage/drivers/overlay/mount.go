@@ -4,6 +4,7 @@ package overlay
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"flag"
 	"fmt"
 	"os"
@@ -55,7 +56,7 @@ func mountOverlayFrom(dir, device, target, mType string, flags uintptr, label st
 		return fmt.Errorf("mountfrom error on re-exec cmd: %w", err)
 	}
 	// write the options to the pipe for the untar exec to read
-	if err := jsonIT.NewEncoder(w).Encode(options); err != nil {
+	if err := json.MarshalWrite(w, options); err != nil {
 		w.Close()
 		return fmt.Errorf("mountfrom json encode to pipe failed: %w", err)
 	}
@@ -74,7 +75,7 @@ func mountOverlayFromMain() {
 
 	var options *mountOptions
 
-	if err := jsonIT.NewDecoder(os.Stdin).Decode(&options); err != nil {
+	if err := json.UnmarshalRead(os.Stdin, &options); err != nil {
 		fatal(err)
 	}
 
