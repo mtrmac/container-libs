@@ -5,7 +5,7 @@
 package signature
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -69,13 +69,13 @@ func newUntrustedSignature(dockerManifestDigest digest.Digest, dockerReference s
 	}
 }
 
-// A compile-time check that untrustedSignature  and *untrustedSignature implements json.Marshaler
+// A compile-time check that untrustedSignature  and *untrustedSignature implements jsonv1.Marshaler
 var (
-	_ json.Marshaler = untrustedSignature{}
-	_ json.Marshaler = (*untrustedSignature)(nil)
+	_ jsonv1.Marshaler = untrustedSignature{}
+	_ jsonv1.Marshaler = (*untrustedSignature)(nil)
 )
 
-// MarshalJSON implements the json.Marshaler interface.
+// MarshalJSON implements the jsonv1.Marshaler interface.
 func (s untrustedSignature) MarshalJSON() ([]byte, error) {
 	if s.untrustedDockerManifestDigest == "" || s.untrustedDockerReference == "" {
 		return nil, errors.New("Unexpected empty signature content")
@@ -96,13 +96,13 @@ func (s untrustedSignature) MarshalJSON() ([]byte, error) {
 		"critical": critical,
 		"optional": optional,
 	}
-	return json.Marshal(signature)
+	return jsonv1.Marshal(signature)
 }
 
-// Compile-time check that untrustedSignature implements json.Unmarshaler
-var _ json.Unmarshaler = (*untrustedSignature)(nil)
+// Compile-time check that untrustedSignature implements jsonv1.Unmarshaler
+var _ jsonv1.Unmarshaler = (*untrustedSignature)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface
 func (s *untrustedSignature) UnmarshalJSON(data []byte) error {
 	return internal.JSONFormatToInvalidSignatureError(s.strictUnmarshalJSON(data))
 }
@@ -110,7 +110,7 @@ func (s *untrustedSignature) UnmarshalJSON(data []byte) error {
 // strictUnmarshalJSON is UnmarshalJSON, except that it may return the internal.JSONFormatError error type.
 // Splitting it into a separate function allows us to do the internal.JSONFormatError → InvalidSignatureError in a single place, the caller.
 func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
-	var critical, optional json.RawMessage
+	var critical, optional jsonv1.RawMessage
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"critical": &critical,
 		"optional": &optional,
@@ -148,7 +148,7 @@ func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
 	}
 
 	var t string
-	var image, identity json.RawMessage
+	var image, identity jsonv1.RawMessage
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(critical, map[string]any{
 		"type":     &t,
 		"image":    &image,
@@ -184,7 +184,7 @@ func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
 // on the system increases the likelihood of an a successful attack on that private key
 // on that particular system.)
 func (s untrustedSignature) sign(mech SigningMechanism, keyIdentity string, passphrase string) ([]byte, error) {
-	json, err := json.Marshal(s)
+	json, err := jsonv1.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func verifyAndExtractSignature(mech SigningMechanism, unverifiedSignature []byte
 	}
 
 	var unmatchedSignature untrustedSignature
-	if err := json.Unmarshal(signed, &unmatchedSignature); err != nil {
+	if err := jsonv1.Unmarshal(signed, &unmatchedSignature); err != nil {
 		return nil, "", internal.NewInvalidSignatureError(err.Error())
 	}
 	if err := rules.validateSignedDockerManifestDigest(unmatchedSignature.untrustedDockerManifestDigest); err != nil {
@@ -276,7 +276,7 @@ func GetUntrustedSignatureInformationWithoutVerifying(untrustedSignatureBytes []
 		return nil, err
 	}
 	var untrustedDecodedContents untrustedSignature
-	if err := json.Unmarshal(untrustedContents, &untrustedDecodedContents); err != nil {
+	if err := jsonv1.Unmarshal(untrustedContents, &untrustedDecodedContents); err != nil {
 		return nil, internal.NewInvalidSignatureError(err.Error())
 	}
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"encoding/base64"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -43,13 +43,13 @@ func NewUntrustedSigstorePayload(dockerManifestDigest digest.Digest, dockerRefer
 	}
 }
 
-// A compile-time check that UntrustedSigstorePayload and *UntrustedSigstorePayload implements json.Marshaler
+// A compile-time check that UntrustedSigstorePayload and *UntrustedSigstorePayload implements jsonv1.Marshaler
 var (
-	_ json.Marshaler = UntrustedSigstorePayload{}
-	_ json.Marshaler = (*UntrustedSigstorePayload)(nil)
+	_ jsonv1.Marshaler = UntrustedSigstorePayload{}
+	_ jsonv1.Marshaler = (*UntrustedSigstorePayload)(nil)
 )
 
-// MarshalJSON implements the json.Marshaler interface.
+// MarshalJSON implements the jsonv1.Marshaler interface.
 func (s UntrustedSigstorePayload) MarshalJSON() ([]byte, error) {
 	if s.untrustedDockerManifestDigest == "" || s.untrustedDockerReference == "" {
 		return nil, errors.New("Unexpected empty signature content")
@@ -70,13 +70,13 @@ func (s UntrustedSigstorePayload) MarshalJSON() ([]byte, error) {
 		"critical": critical,
 		"optional": optional,
 	}
-	return json.Marshal(signature)
+	return jsonv1.Marshal(signature)
 }
 
-// Compile-time check that UntrustedSigstorePayload implements json.Unmarshaler
-var _ json.Unmarshaler = (*UntrustedSigstorePayload)(nil)
+// Compile-time check that UntrustedSigstorePayload implements jsonv1.Unmarshaler
+var _ jsonv1.Unmarshaler = (*UntrustedSigstorePayload)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface
 func (s *UntrustedSigstorePayload) UnmarshalJSON(data []byte) error {
 	return JSONFormatToInvalidSignatureError(s.strictUnmarshalJSON(data))
 }
@@ -84,7 +84,7 @@ func (s *UntrustedSigstorePayload) UnmarshalJSON(data []byte) error {
 // strictUnmarshalJSON is UnmarshalJSON, except that it may return the internal JSONFormatError error type.
 // Splitting it into a separate function allows us to do the JSONFormatError → InvalidSignatureError in a single place, the caller.
 func (s *UntrustedSigstorePayload) strictUnmarshalJSON(data []byte) error {
-	var critical, optional json.RawMessage
+	var critical, optional jsonv1.RawMessage
 	if err := ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"critical": &critical,
 		"optional": &optional,
@@ -125,7 +125,7 @@ func (s *UntrustedSigstorePayload) strictUnmarshalJSON(data []byte) error {
 	}
 
 	var t string
-	var image, identity json.RawMessage
+	var image, identity jsonv1.RawMessage
 	if err := ParanoidUnmarshalJSONObjectExactFields(critical, map[string]any{
 		"type":     &t,
 		"image":    &image,
@@ -223,7 +223,7 @@ func VerifySigstorePayload(publicKeys []crypto.PublicKey, unverifiedPayload []by
 	}
 
 	var unmatchedPayload UntrustedSigstorePayload
-	if err := json.Unmarshal(unverifiedPayload, &unmatchedPayload); err != nil {
+	if err := jsonv1.Unmarshal(unverifiedPayload, &unmatchedPayload); err != nil {
 		return nil, NewInvalidSignatureError(err.Error())
 	}
 	if err := rules.ValidateSignedDockerManifestDigest(unmatchedPayload.untrustedDockerManifestDigest); err != nil {

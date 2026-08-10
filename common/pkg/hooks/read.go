@@ -2,7 +2,7 @@
 package hooks
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -44,7 +44,7 @@ func Read(path string, extensionStages []string) (*current.Hook, error) {
 
 func read(content []byte) (hook *current.Hook, err error) {
 	var ver version
-	if err := json.Unmarshal(content, &ver); err != nil {
+	if err := jsonv1.Unmarshal(content, &ver); err != nil {
 		return nil, fmt.Errorf("version check: %w", err)
 	}
 	reader, ok := Readers[ver.Version]

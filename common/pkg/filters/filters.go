@@ -1,7 +1,7 @@
 package filters
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -59,7 +59,7 @@ func FiltersFromRequest(r *http.Request) ([]string, error) {
 	}
 
 	// Backwards compat with older versions of Docker.
-	if err := json.Unmarshal(raw, &compatFilters); err == nil {
+	if err := jsonv1.Unmarshal(raw, &compatFilters); err == nil {
 		libpodFilters := make([]string, 0, len(compatFilters))
 		for filterKey, filterMap := range compatFilters {
 			for filterValue, toAdd := range filterMap {
@@ -71,7 +71,7 @@ func FiltersFromRequest(r *http.Request) ([]string, error) {
 		return libpodFilters, nil
 	}
 
-	if err := json.Unmarshal(raw, &filters); err != nil {
+	if err := jsonv1.Unmarshal(raw, &filters); err != nil {
 		return nil, err
 	}
 

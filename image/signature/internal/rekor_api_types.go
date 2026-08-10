@@ -2,7 +2,7 @@ package internal
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 )
 
@@ -10,7 +10,7 @@ const rekorHashedrekordKind = "hashedrekord"
 
 type RekorHashedrekord struct {
 	APIVersion *string         `json:"apiVersion"`
-	Spec       json.RawMessage `json:"spec"`
+	Spec       jsonv1.RawMessage `json:"spec"`
 }
 
 func (m *RekorHashedrekord) Kind() string {
@@ -24,7 +24,7 @@ func (m *RekorHashedrekord) UnmarshalJSON(raw []byte) error {
 	var base struct {
 		Kind string `json:"kind"`
 	}
-	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec := jsonv1.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	if err := dec.Decode(&base); err != nil {
 		return err
@@ -34,9 +34,9 @@ func (m *RekorHashedrekord) UnmarshalJSON(raw []byte) error {
 	case rekorHashedrekordKind:
 		var data struct { // We can’t use RekorHashedRekord directly, because that would be an infinite recursion.
 			APIVersion *string         `json:"apiVersion"`
-			Spec       json.RawMessage `json:"spec"`
+			Spec       jsonv1.RawMessage `json:"spec"`
 		}
-		dec = json.NewDecoder(bytes.NewReader(raw))
+		dec = jsonv1.NewDecoder(bytes.NewReader(raw))
 		dec.UseNumber()
 		if err := dec.Decode(&data); err != nil {
 			return err
@@ -54,10 +54,10 @@ func (m *RekorHashedrekord) UnmarshalJSON(raw []byte) error {
 }
 
 func (m RekorHashedrekord) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
+	return jsonv1.Marshal(struct {
 		Kind       string          `json:"kind"`
 		APIVersion *string         `json:"apiVersion"`
-		Spec       json.RawMessage `json:"spec"`
+		Spec       jsonv1.RawMessage `json:"spec"`
 	}{
 		Kind:       m.Kind(),
 		APIVersion: m.APIVersion,

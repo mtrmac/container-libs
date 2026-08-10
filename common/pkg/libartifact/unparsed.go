@@ -4,7 +4,7 @@ package libartifact
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.podman.io/image/v5/types"
@@ -22,7 +22,7 @@ func (u unparsedArtifactImage) Reference() types.ImageReference {
 }
 
 func (u unparsedArtifactImage) Manifest(_ context.Context) ([]byte, string, error) {
-	b, err := json.Marshal(u.mannyfest)
+	b, err := jsonv1.Marshal(u.mannyfest)
 	if err != nil {
 		return nil, "", err
 	}

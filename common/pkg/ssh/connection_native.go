@@ -2,7 +2,7 @@ package ssh
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -65,7 +65,7 @@ func nativeConnectionCreate(options ConnectionCreateOptions) error {
 	}
 
 	remoteInfo := &Info{}
-	if err := json.Unmarshal(output.Bytes(), &remoteInfo); err != nil {
+	if err := jsonv1.Unmarshal(output.Bytes(), &remoteInfo); err != nil {
 		return fmt.Errorf("failed to parse 'podman info' results: %w", err)
 	}
 

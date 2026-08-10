@@ -1,7 +1,7 @@
 package types
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"net"
 	"time"
 )
@@ -174,7 +174,7 @@ func (h *HardwareAddr) UnmarshalJSON(text []byte) error {
 	// unmarshal the string and parse the mac from this string
 	if string(text[0]) == `"` {
 		var macString string
-		err := json.Unmarshal(text, &macString)
+		err := jsonv1.Unmarshal(text, &macString)
 		if err == nil {
 			mac, err := net.ParseMAC(macString)
 			if err == nil {
@@ -186,7 +186,7 @@ func (h *HardwareAddr) UnmarshalJSON(text []byte) error {
 	// not a string or got an error fallback to the normal parsing
 	mac := make(net.HardwareAddr, 0, 6)
 	// use the standard json unmarshal for backwards compat
-	err := json.Unmarshal(text, &mac)
+	err := jsonv1.Unmarshal(text, &mac)
 	if err != nil {
 		return err
 	}

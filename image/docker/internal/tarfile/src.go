@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -94,7 +94,7 @@ func (s *Source) ensureCachedDataIsPresentPrivate() error {
 		return err
 	}
 	var parsedConfig manifest.Schema2Image // There's a lot of info there, but we only really care about layer DiffIDs.
-	if err := json.Unmarshal(configBytes, &parsedConfig); err != nil {
+	if err := jsonv1.Unmarshal(configBytes, &parsedConfig); err != nil {
 		return fmt.Errorf("decoding tar config %q: %w", tarManifest.Config, err)
 	}
 	if parsedConfig.RootFS == nil {
@@ -237,7 +237,7 @@ func (s *Source) GetManifest(ctx context.Context, instanceDigest *digest.Digest)
 				Size:      li.size,
 			})
 		}
-		manifestBytes, err := json.Marshal(&m)
+		manifestBytes, err := jsonv1.Marshal(&m)
 		if err != nil {
 			return nil, "", err
 		}

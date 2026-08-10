@@ -5,16 +5,16 @@
 
 // Do not invoke the internals of the JSON marshaling/unmarshaling directly.
 
-// We can't just blindly call json.Unmarshal because that would silently ignore
+// We can't just blindly call jsonv1.Unmarshal because that would silently ignore
 // typos, and that would just not do for security policy.
 
 // FIXME? This is by no means an user-friendly parser: No location information in error messages, no other context.
-// But at least it is not worse than blind json.Unmarshal()…
+// But at least it is not worse than blind jsonv1.Unmarshal()…
 
 package signature
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -97,19 +97,19 @@ func NewPolicyFromFile(fileName string) (*Policy, error) {
 }
 
 // NewPolicyFromBytes returns a policy parsed from the specified blob.
-// Use this function instead of calling json.Unmarshal directly.
+// Use this function instead of calling jsonv1.Unmarshal directly.
 func NewPolicyFromBytes(data []byte) (*Policy, error) {
 	p := Policy{}
-	if err := json.Unmarshal(data, &p); err != nil {
+	if err := jsonv1.Unmarshal(data, &p); err != nil {
 		return nil, InvalidPolicyFormatError(err.Error())
 	}
 	return &p, nil
 }
 
-// Compile-time check that Policy implements json.Unmarshaler.
-var _ json.Unmarshaler = (*Policy)(nil)
+// Compile-time check that Policy implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*Policy)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (p *Policy) UnmarshalJSON(data []byte) error {
 	*p = Policy{}
 	transports := policyTransportsMap{}
@@ -136,10 +136,10 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 // policyTransportsMap is a specialization of this map type for the strict JSON parsing semantics appropriate for the Policy.Transports member.
 type policyTransportsMap map[string]PolicyTransportScopes
 
-// Compile-time check that policyTransportsMap implements json.Unmarshaler.
-var _ json.Unmarshaler = (*policyTransportsMap)(nil)
+// Compile-time check that policyTransportsMap implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*policyTransportsMap)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (m *policyTransportsMap) UnmarshalJSON(data []byte) error {
 	// We can't unmarshal directly into map values because it is not possible to take an address of a map value.
 	// So, use a temporary map of pointers-to-slices and convert.
@@ -166,11 +166,11 @@ func (m *policyTransportsMap) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Compile-time check that PolicyTransportScopes "implements"" json.Unmarshaler.
+// Compile-time check that PolicyTransportScopes "implements"" jsonv1.Unmarshaler.
 // we want to only use policyTransportScopesWithTransport
-var _ json.Unmarshaler = (*PolicyTransportScopes)(nil)
+var _ jsonv1.Unmarshaler = (*PolicyTransportScopes)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (m *PolicyTransportScopes) UnmarshalJSON(data []byte) error {
 	return errors.New("Do not try to unmarshal PolicyTransportScopes directly")
 }
@@ -182,10 +182,10 @@ type policyTransportScopesWithTransport struct {
 	dest      *PolicyTransportScopes
 }
 
-// Compile-time check that policyTransportScopesWithTransport implements json.Unmarshaler.
-var _ json.Unmarshaler = (*policyTransportScopesWithTransport)(nil)
+// Compile-time check that policyTransportScopesWithTransport implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*policyTransportScopesWithTransport)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (m *policyTransportScopesWithTransport) UnmarshalJSON(data []byte) error {
 	// We can't unmarshal directly into map values because it is not possible to take an address of a map value.
 	// So, use a temporary map of pointers-to-slices and convert.
@@ -212,13 +212,13 @@ func (m *policyTransportScopesWithTransport) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Compile-time check that PolicyRequirements implements json.Unmarshaler.
-var _ json.Unmarshaler = (*PolicyRequirements)(nil)
+// Compile-time check that PolicyRequirements implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*PolicyRequirements)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (m *PolicyRequirements) UnmarshalJSON(data []byte) error {
-	reqJSONs := []json.RawMessage{}
-	if err := json.Unmarshal(data, &reqJSONs); err != nil {
+	reqJSONs := []jsonv1.RawMessage{}
+	if err := jsonv1.Unmarshal(data, &reqJSONs); err != nil {
 		return err
 	}
 	if len(reqJSONs) == 0 {
@@ -239,7 +239,7 @@ func (m *PolicyRequirements) UnmarshalJSON(data []byte) error {
 // newPolicyRequirementFromJSON parses JSON data into a PolicyRequirement implementation.
 func newPolicyRequirementFromJSON(data []byte) (PolicyRequirement, error) {
 	var typeField prCommon
-	if err := json.Unmarshal(data, &typeField); err != nil {
+	if err := jsonv1.Unmarshal(data, &typeField); err != nil {
 		return nil, err
 	}
 	var res PolicyRequirement
@@ -257,7 +257,7 @@ func newPolicyRequirementFromJSON(data []byte) (PolicyRequirement, error) {
 	default:
 		return nil, InvalidPolicyFormatError(fmt.Sprintf("Unknown policy requirement type %q", typeField.Type))
 	}
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := jsonv1.Unmarshal(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -273,10 +273,10 @@ func NewPRInsecureAcceptAnything() PolicyRequirement {
 	return newPRInsecureAcceptAnything()
 }
 
-// Compile-time check that prInsecureAcceptAnything implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prInsecureAcceptAnything)(nil)
+// Compile-time check that prInsecureAcceptAnything implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prInsecureAcceptAnything)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (pr *prInsecureAcceptAnything) UnmarshalJSON(data []byte) error {
 	*pr = prInsecureAcceptAnything{}
 	var tmp prInsecureAcceptAnything
@@ -303,10 +303,10 @@ func NewPRReject() PolicyRequirement {
 	return newPRReject()
 }
 
-// Compile-time check that prReject implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prReject)(nil)
+// Compile-time check that prReject implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prReject)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (pr *prReject) UnmarshalJSON(data []byte) error {
 	*pr = prReject{}
 	var tmp prReject
@@ -384,15 +384,15 @@ func NewPRSignedByKeyData(keyType sbKeyType, keyData []byte, signedIdentity Poli
 	return newPRSignedByKeyData(keyType, keyData, signedIdentity)
 }
 
-// Compile-time check that prSignedBy implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prSignedBy)(nil)
+// Compile-time check that prSignedBy implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prSignedBy)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (pr *prSignedBy) UnmarshalJSON(data []byte) error {
 	*pr = prSignedBy{}
 	var tmp prSignedBy
 	gotKeyPath, gotKeyPaths, gotKeyData := false, false, false
-	var signedIdentity json.RawMessage
+	var signedIdentity jsonv1.RawMessage
 	if err := internal.ParanoidUnmarshalJSONObject(data, func(key string) any {
 		switch key {
 		case "type":
@@ -463,14 +463,14 @@ func (kt sbKeyType) IsValid() bool {
 	}
 }
 
-// Compile-time check that sbKeyType implements json.Unmarshaler.
-var _ json.Unmarshaler = (*sbKeyType)(nil)
+// Compile-time check that sbKeyType implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*sbKeyType)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (kt *sbKeyType) UnmarshalJSON(data []byte) error {
 	*kt = sbKeyType("")
 	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err := jsonv1.Unmarshal(data, &s); err != nil {
 		return err
 	}
 	if !sbKeyType(s).IsValid() {
@@ -496,14 +496,14 @@ func NewPRSignedBaseLayer(baseLayerIdentity PolicyReferenceMatch) (PolicyRequire
 	return newPRSignedBaseLayer(baseLayerIdentity)
 }
 
-// Compile-time check that prSignedBaseLayer implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prSignedBaseLayer)(nil)
+// Compile-time check that prSignedBaseLayer implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prSignedBaseLayer)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (pr *prSignedBaseLayer) UnmarshalJSON(data []byte) error {
 	*pr = prSignedBaseLayer{}
 	var tmp prSignedBaseLayer
-	var baseLayerIdentity json.RawMessage
+	var baseLayerIdentity jsonv1.RawMessage
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"type":              &tmp.Type,
 		"baseLayerIdentity": &baseLayerIdentity,
@@ -530,7 +530,7 @@ func (pr *prSignedBaseLayer) UnmarshalJSON(data []byte) error {
 // newPolicyReferenceMatchFromJSON parses JSON data into a PolicyReferenceMatch implementation.
 func newPolicyReferenceMatchFromJSON(data []byte) (PolicyReferenceMatch, error) {
 	var typeField prmCommon
-	if err := json.Unmarshal(data, &typeField); err != nil {
+	if err := jsonv1.Unmarshal(data, &typeField); err != nil {
 		return nil, err
 	}
 	var res PolicyReferenceMatch
@@ -550,7 +550,7 @@ func newPolicyReferenceMatchFromJSON(data []byte) (PolicyReferenceMatch, error) 
 	default:
 		return nil, InvalidPolicyFormatError(fmt.Sprintf("Unknown policy reference match type %q", typeField.Type))
 	}
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := jsonv1.Unmarshal(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -566,10 +566,10 @@ func NewPRMMatchExact() PolicyReferenceMatch {
 	return newPRMMatchExact()
 }
 
-// Compile-time check that prmMatchExact implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmMatchExact)(nil)
+// Compile-time check that prmMatchExact implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmMatchExact)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmMatchExact) UnmarshalJSON(data []byte) error {
 	*prm = prmMatchExact{}
 	var tmp prmMatchExact
@@ -596,10 +596,10 @@ func NewPRMMatchRepoDigestOrExact() PolicyReferenceMatch {
 	return newPRMMatchRepoDigestOrExact()
 }
 
-// Compile-time check that prmMatchRepoDigestOrExact implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmMatchRepoDigestOrExact)(nil)
+// Compile-time check that prmMatchRepoDigestOrExact implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmMatchRepoDigestOrExact)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmMatchRepoDigestOrExact) UnmarshalJSON(data []byte) error {
 	*prm = prmMatchRepoDigestOrExact{}
 	var tmp prmMatchRepoDigestOrExact
@@ -626,10 +626,10 @@ func NewPRMMatchRepository() PolicyReferenceMatch {
 	return newPRMMatchRepository()
 }
 
-// Compile-time check that prmMatchRepository implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmMatchRepository)(nil)
+// Compile-time check that prmMatchRepository implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmMatchRepository)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmMatchRepository) UnmarshalJSON(data []byte) error {
 	*prm = prmMatchRepository{}
 	var tmp prmMatchRepository
@@ -666,10 +666,10 @@ func NewPRMExactReference(dockerReference string) (PolicyReferenceMatch, error) 
 	return newPRMExactReference(dockerReference)
 }
 
-// Compile-time check that prmExactReference implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmExactReference)(nil)
+// Compile-time check that prmExactReference implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmExactReference)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmExactReference) UnmarshalJSON(data []byte) error {
 	*prm = prmExactReference{}
 	var tmp prmExactReference
@@ -708,10 +708,10 @@ func NewPRMExactRepository(dockerRepository string) (PolicyReferenceMatch, error
 	return newPRMExactRepository(dockerRepository)
 }
 
-// Compile-time check that prmExactRepository implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmExactRepository)(nil)
+// Compile-time check that prmExactRepository implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmExactRepository)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmExactRepository) UnmarshalJSON(data []byte) error {
 	*prm = prmExactRepository{}
 	var tmp prmExactRepository
@@ -780,10 +780,10 @@ func NewPRMRemapIdentity(prefix, signedPrefix string) (PolicyReferenceMatch, err
 	return newPRMRemapIdentity(prefix, signedPrefix)
 }
 
-// Compile-time check that prmRemapIdentity implements json.Unmarshaler.
-var _ json.Unmarshaler = (*prmRemapIdentity)(nil)
+// Compile-time check that prmRemapIdentity implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*prmRemapIdentity)(nil)
 
-// UnmarshalJSON implements the json.Unmarshaler interface.
+// UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (prm *prmRemapIdentity) UnmarshalJSON(data []byte) error {
 	*prm = prmRemapIdentity{}
 	var tmp prmRemapIdentity

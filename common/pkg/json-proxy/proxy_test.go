@@ -3,7 +3,7 @@
 package jsonproxy_test
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -73,7 +73,7 @@ func (p *proxy) call(method string, args []any) (rval any, fd *pipefd, err error
 		Method: method,
 		Args:   args,
 	}
-	reqbuf, err := json.Marshal(&req)
+	reqbuf, err := jsonv1.Marshal(&req)
 	if err != nil {
 		return
 	}
@@ -93,7 +93,7 @@ func (p *proxy) call(method string, args []any) (rval any, fd *pipefd, err error
 		return
 	}
 	var reply reply
-	err = json.Unmarshal(replybuf[0:n], &reply)
+	err = jsonv1.Unmarshal(replybuf[0:n], &reply)
 	if err != nil {
 		err = fmt.Errorf("Failed to parse reply: %w", err)
 		return
@@ -240,7 +240,7 @@ func (p *proxy) callGetRawBlob(args []any) (buf []byte, err error) {
 		if len(buf) == 0 {
 			return
 		}
-		unmarshalErr := json.Unmarshal(buf, &proxyErr)
+		unmarshalErr := jsonv1.Unmarshal(buf, &proxyErr)
 		// Shouldn't happen
 		if unmarshalErr != nil {
 			panic(unmarshalErr)
@@ -368,7 +368,7 @@ func runTestMetadataAPIs(p *proxy, img string) error {
 		return err
 	}
 	var config imgspecv1.Image
-	err = json.Unmarshal(configBytes, &config)
+	err = jsonv1.Unmarshal(configBytes, &config)
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func runTestMetadataAPIs(p *proxy, img string) error {
 		return err
 	}
 	var layerInfoBytesData []any
-	err = json.Unmarshal(layerInfoBytes, &layerInfoBytesData)
+	err = jsonv1.Unmarshal(layerInfoBytes, &layerInfoBytesData)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func runTestMetadataAPIs(p *proxy, img string) error {
 		return err
 	}
 	var ctrconfig imgspecv1.ImageConfig
-	err = json.Unmarshal(ctrconfigBytes, &ctrconfig)
+	err = jsonv1.Unmarshal(ctrconfigBytes, &ctrconfig)
 	if err != nil {
 		return err
 	}

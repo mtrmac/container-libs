@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -59,7 +59,7 @@ type Schema1V1Compatibility struct {
 // layers with duplicate IDs are eliminated.)
 func Schema1FromManifest(manifestBlob []byte) (*Schema1, error) {
 	s1 := Schema1{}
-	if err := json.Unmarshal(manifestBlob, &s1); err != nil {
+	if err := jsonv1.Unmarshal(manifestBlob, &s1); err != nil {
 		return nil, err
 	}
 	if s1.SchemaVersion != 1 {
@@ -117,7 +117,7 @@ func (m *Schema1) initialize() error {
 	}
 	m.ExtractedV1Compatibility = make([]Schema1V1Compatibility, len(m.History))
 	for i, h := range m.History {
-		if err := json.Unmarshal([]byte(h.V1Compatibility), &m.ExtractedV1Compatibility[i]); err != nil {
+		if err := jsonv1.Unmarshal([]byte(h.V1Compatibility), &m.ExtractedV1Compatibility[i]); err != nil {
 			return fmt.Errorf("parsing v2s1 history entry %d: %w", i, err)
 		}
 	}
@@ -180,7 +180,7 @@ func (m *Schema1) UpdateLayerInfos(layerInfos []types.BlobInfo) error {
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *Schema1) Serialize() ([]byte, error) {
 	// docker/distribution requires a signature even if the incoming data uses the nominally unsigned DockerV2Schema1MediaType.
-	unsigned, err := json.Marshal(*m)
+	unsigned, err := jsonv1.Marshal(*m)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func validateV1ID(id string) error {
 // Inspect returns various information for (skopeo inspect) parsed from the manifest and configuration.
 func (m *Schema1) Inspect(_ func(types.BlobInfo) ([]byte, error)) (*types.ImageInspectInfo, error) {
 	s1 := &Schema2V1Image{}
-	if err := json.Unmarshal([]byte(m.History[0].V1Compatibility), s1); err != nil {
+	if err := jsonv1.Unmarshal([]byte(m.History[0].V1Compatibility), s1); err != nil {
 		return nil, err
 	}
 	layerInfos := m.LayerInfos()
@@ -270,14 +270,14 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 	}
 	s1 := Schema2V1Image{}
 	config := []byte(m.History[0].V1Compatibility)
-	err := json.Unmarshal(config, &s1)
+	err := jsonv1.Unmarshal(config, &s1)
 	if err != nil {
 		return nil, fmt.Errorf("decoding configuration: %w", err)
 	}
 	// Images created with versions prior to 1.8.3 require us to re-encode the encoded object,
 	// adding some fields that aren't "omitempty".
 	if s1.DockerVersion != "" && versions.LessThan(s1.DockerVersion, "1.8.3") {
-		config, err = json.Marshal(&s1)
+		config, err = jsonv1.Marshal(&s1)
 		if err != nil {
 			return nil, fmt.Errorf("re-encoding compat image config %#v: %w", s1, err)
 		}
@@ -303,8 +303,8 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 		DiffIDs: diffIDs,
 	}
 	// And now for some raw manipulation.
-	raw := make(map[string]*json.RawMessage)
-	err = json.Unmarshal(config, &raw)
+	raw := make(map[string]*jsonv1.RawMessage)
+	err = jsonv1.Unmarshal(config, &raw)
 	if err != nil {
 		return nil, fmt.Errorf("re-decoding compat image config %#v: %w", s1, err)
 	}
@@ -316,20 +316,20 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 	delete(raw, "throwaway")
 	delete(raw, "Size")
 	// Add the history and rootfs information.
-	rootfs, err := json.Marshal(rootFS)
+	rootfs, err := jsonv1.Marshal(rootFS)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding rootfs information %#v: %w", rootFS, err)
 	}
-	rawRootfs := json.RawMessage(rootfs)
+	rawRootfs := jsonv1.RawMessage(rootfs)
 	raw["rootfs"] = &rawRootfs
-	history, err := json.Marshal(convertedHistory)
+	history, err := jsonv1.Marshal(convertedHistory)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding history information %#v: %w", convertedHistory, err)
 	}
-	rawHistory := json.RawMessage(history)
+	rawHistory := jsonv1.RawMessage(history)
 	raw["history"] = &rawHistory
 	// Encode the result.
-	config, err = json.Marshal(raw)
+	config, err = jsonv1.Marshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("error re-encoding compat image config %#v: %w", s1, err)
 	}

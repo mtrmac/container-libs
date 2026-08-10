@@ -2,7 +2,7 @@ package exec
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"os"
 	"testing"
@@ -14,7 +14,7 @@ import (
 
 func TestRuntimeConfigFilter(t *testing.T) {
 	var discardedParsingDestination map[string]any
-	unexpectedEndOfJSONInput := json.Unmarshal([]byte("{\n"), &discardedParsingDestination) // this should force the error
+	unexpectedEndOfJSONInput := jsonv1.Unmarshal([]byte("{\n"), &discardedParsingDestination) // this should force the error
 	fileMode := os.FileMode(0o600)
 	rootUint32 := uint32(0)
 	for _, tt := range []struct {

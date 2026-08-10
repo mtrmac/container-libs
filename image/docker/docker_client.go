@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -412,7 +412,7 @@ func SearchRegistry(ctx context.Context, sys *types.SystemContext, registry, ima
 			if resp.StatusCode != http.StatusOK {
 				logrus.Debugf("error getting search results from v1 endpoint %q: %v", registry, httpResponseToError(resp, ""))
 			} else {
-				if err := json.NewDecoder(resp.Body).Decode(v1Res); err != nil {
+				if err := jsonv1.NewDecoder(resp.Body).Decode(v1Res); err != nil {
 					return nil, err
 				}
 				return v1Res.Results, nil
@@ -436,7 +436,7 @@ func SearchRegistry(ctx context.Context, sys *types.SystemContext, registry, ima
 			return nil, fmt.Errorf("couldn't search registry %q: %w", registry, err)
 		}
 		v2Res := &V2Results{}
-		if err := json.NewDecoder(resp.Body).Decode(v2Res); err != nil {
+		if err := jsonv1.NewDecoder(resp.Body).Decode(v2Res); err != nil {
 			return nil, err
 		}
 
@@ -949,7 +949,7 @@ func (bt *bearerToken) readFromHTTPResponseBody(res *http.Response) error {
 		IssuedAt       time.Time `json:"issued_at"`
 		expirationTime time.Time
 	}
-	if err := json.Unmarshal(blob, &token); err != nil {
+	if err := jsonv1.Unmarshal(blob, &token); err != nil {
 		const bodySampleLength = 50
 		bodySample := blob
 		if len(bodySample) > bodySampleLength {
@@ -1268,7 +1268,7 @@ func (c *dockerClient) getExtensionsSignatures(ctx context.Context, ref dockerRe
 	}
 
 	var parsedBody extensionSignatureList
-	if err := json.Unmarshal(body, &parsedBody); err != nil {
+	if err := jsonv1.Unmarshal(body, &parsedBody); err != nil {
 		return nil, fmt.Errorf("decoding signature list: %w", err)
 	}
 	return &parsedBody, nil

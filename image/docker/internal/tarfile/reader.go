@@ -2,7 +2,7 @@ package tarfile
 
 import (
 	"archive/tar"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -116,7 +116,7 @@ func newReader(path string, removeOnClose bool) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(bytes, &r.Manifest); err != nil {
+	if err := jsonv1.Unmarshal(bytes, &r.Manifest); err != nil {
 		return nil, fmt.Errorf("decoding tar manifest.json: %w", err)
 	}
 

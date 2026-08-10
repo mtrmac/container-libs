@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,12 +11,12 @@ import (
 type mSA map[string]any // To minimize typing the long name
 
 // implementsUnmarshalJSON is a minimalistic type used to detect that
-// paranoidUnmarshalJSONObject uses the json.Unmarshaler interface of resolved
+// paranoidUnmarshalJSONObject uses the jsonv1.Unmarshaler interface of resolved
 // pointers.
 type implementsUnmarshalJSON bool
 
-// Compile-time check that Policy implements json.Unmarshaler.
-var _ json.Unmarshaler = (*implementsUnmarshalJSON)(nil)
+// Compile-time check that Policy implements jsonv1.Unmarshaler.
+var _ jsonv1.Unmarshaler = (*implementsUnmarshalJSON)(nil)
 
 func (dest *implementsUnmarshalJSON) UnmarshalJSON(data []byte) error {
 	_ = data     // We don't care, not really.
@@ -56,7 +56,7 @@ func TestParanoidUnmarshalJSONObject(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, testStruct{A: "x", B: 2}, ts)
 
-	// json.Unmarshaler is used for decoding values
+	// jsonv1.Unmarshaler is used for decoding values
 	ts = testStruct{}
 	unmarshalJSONCalled = implementsUnmarshalJSON(false)
 	err = ParanoidUnmarshalJSONObject([]byte(`{"implementsUnmarshalJSON":true}`), tsResolver)
@@ -85,7 +85,7 @@ func TestParanoidUnmarshalJSONObject(t *testing.T) {
 func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 	var stringValue string
 	var float64Value float64
-	var rawValue json.RawMessage
+	var rawValue jsonv1.RawMessage
 	var unmarshallCalled implementsUnmarshalJSON
 	exactFields := map[string]any{
 		"string":       &stringValue,
@@ -103,7 +103,7 @@ func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "a", stringValue)
 	assert.Equal(t, 3.5, float64Value)
-	assert.Equal(t, json.RawMessage(`{"a":"b"}`), rawValue)
+	assert.Equal(t, jsonv1.RawMessage(`{"a":"b"}`), rawValue)
 	assert.Equal(t, implementsUnmarshalJSON(true), unmarshallCalled)
 
 	// Various kinds of invalid input
@@ -127,12 +127,12 @@ func TestParanoidUnmarshalJSONObjectExactFields(t *testing.T) {
 // Return the result of modifying validJSON with fn
 func modifiedJSON(t *testing.T, validJSON []byte, modifyFn func(mSA)) []byte {
 	var tmp mSA
-	err := json.Unmarshal(validJSON, &tmp)
+	err := jsonv1.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
 
-	modifiedJSON, err := json.Marshal(tmp)
+	modifiedJSON, err := jsonv1.Marshal(tmp)
 	require.NoError(t, err)
 	return modifiedJSON
 }

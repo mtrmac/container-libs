@@ -5,7 +5,7 @@
 package kernel
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -36,7 +36,7 @@ func getRelease() (string, error) {
 			KernelVersion string `json:"kernel_version"`
 		} `json:"SPSoftwareDataType"`
 	}
-	if err := json.Unmarshal(out, &result); err != nil {
+	if err := jsonv1.Unmarshal(out, &result); err != nil {
 		return "", fmt.Errorf("parsing system_profiler JSON: %w", err)
 	}
 	if len(result.SPSoftwareDataType) == 0 || result.SPSoftwareDataType[0].KernelVersion == "" {

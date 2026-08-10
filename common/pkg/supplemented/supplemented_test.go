@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"runtime"
@@ -109,10 +109,10 @@ func makeImage(t *testing.T, arch, osStr string) (ref types.ImageReference, laye
 
 	layerBytes := makeLayer(t)
 	cb := makeConfig(arch, osStr, layer)
-	configBytes, err := json.Marshal(&cb)
+	configBytes, err := jsonv1.Marshal(&cb)
 	assert.Nilf(t, err, "error encoding image configuration")
 	m := makeManifest(layerBytes, configBytes)
-	manifestBytes, err := json.Marshal(&m)
+	manifestBytes, err := jsonv1.Marshal(&m)
 	assert.Nilf(t, err, "error encoding image manifest")
 
 	ref, err = alltransports.ParseImageName(fmt.Sprintf("dir:%s", dir))
@@ -202,7 +202,7 @@ func TestSupplemented(t *testing.T) {
 			},
 		},
 	}
-	indexBytes, err := json.Marshal(&index)
+	indexBytes, err := jsonv1.Marshal(&index)
 	assert.Nilf(t, err, "error encoding image index")
 	indexDigest, err := manifest.Digest(indexBytes)
 	assert.Nilf(t, err, "error digesting image index")

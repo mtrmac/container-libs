@@ -2,7 +2,7 @@ package report
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"maps"
 	"reflect"
 	"strings"
@@ -39,7 +39,7 @@ var DefaultFuncs = FuncMap{
 	"join": strings.Join,
 	"json": func(v any) string {
 		buf := new(bytes.Buffer)
-		enc := json.NewEncoder(buf)
+		enc := jsonv1.NewEncoder(buf)
 		enc.SetEscapeHTML(false)
 		_ = enc.Encode(v)
 		// Remove the trailing new line added by the encoder

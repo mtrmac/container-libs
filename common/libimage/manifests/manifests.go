@@ -3,7 +3,7 @@ package manifests
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -169,7 +169,7 @@ func LoadFromImage(store storage.Store, image string) (string, List, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("locating image %q for loading instance list: %w", image, err)
 	}
-	if err := json.Unmarshal(instancesBytes, &list.instances); err != nil {
+	if err := jsonv1.Unmarshal(instancesBytes, &list.instances); err != nil {
 		return "", nil, fmt.Errorf("decoding instance list for image %q: %w", image, err)
 	}
 	artifactsBytes, err := store.ImageBigData(img.ID, artifactsData)
@@ -179,7 +179,7 @@ func LoadFromImage(store storage.Store, image string) (string, List, error) {
 		}
 		artifactsBytes = []byte("{}")
 	}
-	if err := json.Unmarshal(artifactsBytes, &list.artifacts); err != nil {
+	if err := jsonv1.Unmarshal(artifactsBytes, &list.artifacts); err != nil {
 		return "", nil, fmt.Errorf("decoding artifact list for image %q: %w", image, err)
 	}
 	list.instances[""] = img.ID
@@ -195,11 +195,11 @@ func (l *list) SaveToImage(store storage.Store, imageID string, names []string, 
 	if err != nil {
 		return "", err
 	}
-	instancesBytes, err := json.Marshal(&l.instances)
+	instancesBytes, err := jsonv1.Marshal(&l.instances)
 	if err != nil {
 		return "", err
 	}
-	artifactsBytes, err := json.Marshal(&l.artifacts)
+	artifactsBytes, err := jsonv1.Marshal(&l.artifacts)
 	if err != nil {
 		return "", err
 	}
@@ -354,7 +354,7 @@ func (l *list) Reference(store storage.Store, multiple cp.ImageListSelection, in
 					Size:      int64(len(contents)),
 				}},
 			}
-			indexBytes, err := json.Marshal(&index)
+			indexBytes, err := jsonv1.Marshal(&index)
 			if err != nil {
 				return nil, fmt.Errorf("encoding image index for OCI layout: %w", err)
 			}
@@ -363,7 +363,7 @@ func (l *list) Reference(store storage.Store, multiple cp.ImageListSelection, in
 			}
 			// write the layout file
 			layoutFile := filepath.Join(tmp, v1.ImageLayoutFile)
-			layoutBytes, err := json.Marshal(v1.ImageLayout{Version: v1.ImageLayoutVersion})
+			layoutBytes, err := jsonv1.Marshal(v1.ImageLayout{Version: v1.ImageLayoutVersion})
 			if err != nil {
 				return nil, fmt.Errorf("encoding image layout for OCI layout: %w", err)
 			}
@@ -730,7 +730,7 @@ func (l *list) AddArtifact(ctx context.Context, sys *types.SystemContext, option
 		var subjectArtifactType string
 		if !manifest.MIMETypeIsMultiImage(subjectManifestType) {
 			var subjectManifest v1.Manifest
-			if json.Unmarshal(subjectManifestBytes, &subjectManifest) == nil {
+			if jsonv1.Unmarshal(subjectManifestBytes, &subjectManifest) == nil {
 				subjectArtifactType = subjectManifest.ArtifactType
 			}
 		}
@@ -905,7 +905,7 @@ func (l *list) AddArtifact(ctx context.Context, sys *types.SystemContext, option
 	artifactManifest.Annotations = maps.Clone(options.Annotations)
 
 	// Encode and save the data we care about.
-	artifactManifestBytes, err := json.Marshal(artifactManifest)
+	artifactManifestBytes, err := jsonv1.Marshal(artifactManifest)
 	if err != nil {
 		return "", fmt.Errorf("marshalling the artifact manifest: %w", err)
 	}

@@ -3,7 +3,7 @@
 package seccomp
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 )
 
@@ -11,7 +11,7 @@ import (
 // string.
 func ValidateProfile(content string) error {
 	profile := &Seccomp{}
-	if err := json.Unmarshal([]byte(content), &profile); err != nil {
+	if err := jsonv1.Unmarshal([]byte(content), &profile); err != nil {
 		return fmt.Errorf("decoding seccomp profile: %w", err)
 	}
 

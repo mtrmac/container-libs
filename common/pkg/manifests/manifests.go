@@ -1,7 +1,7 @@
 package manifests
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -545,7 +545,7 @@ func FromBlob(manifestBytes []byte) (List, error) {
 	default:
 		return nil, fmt.Errorf("unable to load manifest list: unsupported format %q: %w", manifestType, ErrManifestTypeNotSupported)
 	case manifest.DockerV2ListMediaType:
-		if err := json.Unmarshal(manifestBytes, &list.docker); err != nil {
+		if err := jsonv1.Unmarshal(manifestBytes, &list.docker); err != nil {
 			return nil, fmt.Errorf("unable to parse Docker manifest list from image: %w", err)
 		}
 		for _, m := range list.docker.Manifests {
@@ -563,7 +563,7 @@ func FromBlob(manifestBytes []byte) (List, error) {
 			})
 		}
 	case v1.MediaTypeImageIndex:
-		if err := json.Unmarshal(manifestBytes, &list.oci); err != nil {
+		if err := jsonv1.Unmarshal(manifestBytes, &list.oci); err != nil {
 			return nil, fmt.Errorf("unable to parse OCIv1 manifest list: %w", err)
 		}
 		for _, m := range list.oci.Manifests {
@@ -642,23 +642,23 @@ func (l *list) Serialize(mimeType string) ([]byte, error) {
 	switch mimeType {
 	case "":
 		if l.preferOCI() {
-			res, err = json.Marshal(&l.oci)
+			res, err = jsonv1.Marshal(&l.oci)
 			if err != nil {
 				return nil, fmt.Errorf("marshalling OCI image index: %w", err)
 			}
 		} else {
-			res, err = json.Marshal(&l.docker)
+			res, err = jsonv1.Marshal(&l.docker)
 			if err != nil {
 				return nil, fmt.Errorf("marshalling Docker manifest list: %w", err)
 			}
 		}
 	case v1.MediaTypeImageIndex:
-		res, err = json.Marshal(&l.oci)
+		res, err = jsonv1.Marshal(&l.oci)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling OCI image index: %w", err)
 		}
 	case manifest.DockerV2ListMediaType:
-		res, err = json.Marshal(&l.docker)
+		res, err = jsonv1.Marshal(&l.docker)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling Docker manifest list: %w", err)
 		}

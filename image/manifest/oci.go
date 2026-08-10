@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -57,7 +57,7 @@ func SupportedOCI1MediaType(m string) error {
 // OCI1FromManifest creates an OCI1 manifest instance from a manifest blob.
 func OCI1FromManifest(manifestBlob []byte) (*OCI1, error) {
 	oci1 := OCI1{}
-	if err := json.Unmarshal(manifestBlob, &oci1); err != nil {
+	if err := jsonv1.Unmarshal(manifestBlob, &oci1); err != nil {
 		return nil, err
 	}
 	if err := manifest.ValidateUnambiguousManifestFormat(manifestBlob, imgspecv1.MediaTypeImageManifest,
@@ -194,7 +194,7 @@ func getDecryptedMediaType(mediatype string) (string, error) {
 // Serialize returns the manifest in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *OCI1) Serialize() ([]byte, error) {
-	return json.Marshal(*m)
+	return jsonv1.Marshal(*m)
 }
 
 // Inspect returns various information for (skopeo inspect) parsed from the manifest and configuration.
@@ -212,11 +212,11 @@ func (m *OCI1) Inspect(configGetter func(types.BlobInfo) ([]byte, error)) (*type
 		return nil, err
 	}
 	v1 := &imgspecv1.Image{}
-	if err := json.Unmarshal(config, v1); err != nil {
+	if err := jsonv1.Unmarshal(config, v1); err != nil {
 		return nil, err
 	}
 	d1 := &Schema2V1Image{}
-	if err := json.Unmarshal(config, d1); err != nil {
+	if err := jsonv1.Unmarshal(config, d1); err != nil {
 		return nil, err
 	}
 	layerInfos := m.LayerInfos()

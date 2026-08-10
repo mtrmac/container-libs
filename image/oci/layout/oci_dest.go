@@ -2,7 +2,7 @@ package layout
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -305,7 +305,7 @@ func (d *ociImageDestination) addManifest(desc *imgspecv1.Descriptor) {
 // - Uploaded data MAY be visible to others before CommitWithOptions() is called
 // - Uploaded data MAY be removed or MAY remain around if Close() is called without CommitWithOptions() (i.e. rollback is allowed but not guaranteed)
 func (d *ociImageDestination) CommitWithOptions(ctx context.Context, options private.CommitOptions) error {
-	layoutBytes, err := json.Marshal(imgspecv1.ImageLayout{
+	layoutBytes, err := jsonv1.Marshal(imgspecv1.ImageLayout{
 		Version: imgspecv1.ImageLayoutVersion,
 	})
 	if err != nil {
@@ -314,7 +314,7 @@ func (d *ociImageDestination) CommitWithOptions(ctx context.Context, options pri
 	if err := os.WriteFile(d.ref.ociLayoutPath(), layoutBytes, 0o644); err != nil {
 		return err
 	}
-	indexJSON, err := json.Marshal(d.index)
+	indexJSON, err := jsonv1.Marshal(d.index)
 	if err != nil {
 		return err
 	}

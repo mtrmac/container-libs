@@ -2,7 +2,7 @@ package ssh
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -398,7 +398,7 @@ func getUDS(uri *url.URL, iden string) (string, error) {
 	}
 
 	var info Info
-	if err := json.Unmarshal(infoJSON, &info); err != nil {
+	if err := jsonv1.Unmarshal(infoJSON, &info); err != nil {
 		return "", fmt.Errorf("failed to parse 'podman info' results: %w", err)
 	}
 

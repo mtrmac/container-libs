@@ -3,7 +3,7 @@ package image
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -209,7 +209,7 @@ func TestManifestOCI1OCIConfig(t *testing.T) {
 	configJSON, err := os.ReadFile("fixtures/oci1-config.json")
 	require.NoError(t, err)
 	expectedConfig := imgspecv1.Image{}
-	err = json.Unmarshal(configJSON, &expectedConfig)
+	err = jsonv1.Unmarshal(configJSON, &expectedConfig)
 	require.NoError(t, err)
 
 	originalSrc := newOCI1ImageSource(t, "oci1-config.json", "httpd:latest")

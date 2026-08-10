@@ -3,7 +3,7 @@
 package netavark
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -246,7 +246,7 @@ func (n *netavarkNetwork) loadNetworks() error {
 			continue
 		}
 		network := new(types.Network)
-		err = json.NewDecoder(file).Decode(network)
+		err = jsonv1.NewDecoder(file).Decode(network)
 		if err != nil {
 			logrus.Warnf("Error reading network config file %q: %v", path, err)
 			continue

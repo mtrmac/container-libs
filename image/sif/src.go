@@ -3,7 +3,7 @@ package sif
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -121,7 +121,7 @@ func newImageSource(ctx context.Context, sys *types.SystemContext, ref sifRefere
 			},
 		},
 	}
-	configBytes, err := json.Marshal(&config)
+	configBytes, err := jsonv1.Marshal(&config)
 	if err != nil {
 		return nil, fmt.Errorf("generating configuration blob for %q: %w", ref.resolvedFile, err)
 	}
@@ -141,7 +141,7 @@ func newImageSource(ctx context.Context, sys *types.SystemContext, ref sifRefere
 			MediaType: imgspecv1.MediaTypeImageLayer,
 		}},
 	}
-	manifestBytes, err := json.Marshal(&manifest)
+	manifestBytes, err := jsonv1.Marshal(&manifest)
 	if err != nil {
 		return nil, fmt.Errorf("generating manifest for %q: %w", ref.resolvedFile, err)
 	}

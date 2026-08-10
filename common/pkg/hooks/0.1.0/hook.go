@@ -2,7 +2,7 @@
 package hook
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"strings"
 
@@ -34,7 +34,7 @@ type Hook struct {
 func Read(content []byte) (hook *current.Hook, err error) {
 	var raw Hook
 
-	if err = json.Unmarshal(content, &raw); err != nil {
+	if err = jsonv1.Unmarshal(content, &raw); err != nil {
 		return nil, err
 	}
 

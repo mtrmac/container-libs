@@ -1,7 +1,7 @@
 package signature
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -408,7 +408,7 @@ func TestNewPRSigstoreSignedKeyData(t *testing.T) {
 // Return the result of modifying validJSON with fn and unmarshaling it into *pr
 func tryUnmarshalModifiedSigstoreSigned(t *testing.T, pr *prSigstoreSigned, validJSON []byte, modifyFn func(mSA)) error {
 	var tmp mSA
-	err := json.Unmarshal(validJSON, &tmp)
+	err := jsonv1.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
@@ -419,7 +419,7 @@ func tryUnmarshalModifiedSigstoreSigned(t *testing.T, pr *prSigstoreSigned, vali
 
 func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	keyDataTests := policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSignedKeyData([]byte("abc"), NewPRMMatchRepoDigestOrExact())
 		},
@@ -517,7 +517,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	keyDataTests.run(t)
 	// Test keyPath and keyPath-specific duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSignedKeyPath("/foo/bar", NewPRMMatchRepoDigestOrExact())
 		},
@@ -526,7 +526,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test keyPaths and keyPaths-specific duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithKeyPaths([]string{"/foo/bar", "/foo/baz"}),
@@ -538,7 +538,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test keyDatas and keyDatas-specific duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithKeyDatas([][]byte{[]byte("abc"), []byte("def")}),
@@ -556,7 +556,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	)
 	require.NoError(t, err)
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithFulcio(testFulcio),
@@ -569,7 +569,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test rekorPublicKeyPaths duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithKeyPath("/foo/bar"),
@@ -582,7 +582,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test rekorPublicKeyData duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithKeyPath("/foo/bar"),
@@ -595,7 +595,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test rekorPublicKeyDatas duplicate fields
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithKeyPath("/foo/bar"),
@@ -613,7 +613,7 @@ func TestPRSigstoreSignedUnmarshalJSON(t *testing.T) {
 	)
 	require.NoError(t, err)
 	policyJSONUmarshallerTests[PolicyRequirement]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSigned{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSigned{} },
 		newValidObject: func() (PolicyRequirement, error) {
 			return NewPRSigstoreSigned(
 				PRSigstoreSignedWithPKI(testPKI),
@@ -746,7 +746,7 @@ func TestNewPRSigstoreSignedFulcio(t *testing.T) {
 
 func TestPRSigstoreSignedFulcioUnmarshalJSON(t *testing.T) {
 	policyJSONUmarshallerTests[PRSigstoreSignedFulcio]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSignedFulcio{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSignedFulcio{} },
 		newValidObject: func() (PRSigstoreSignedFulcio, error) {
 			return NewPRSigstoreSignedFulcio(
 				PRSigstoreSignedFulcioWithCAPath("fixtures/fulcio_v1.crt.pem"),
@@ -777,7 +777,7 @@ func TestPRSigstoreSignedFulcioUnmarshalJSON(t *testing.T) {
 	}.run(t)
 	// Test caData specifics
 	policyJSONUmarshallerTests[PRSigstoreSignedFulcio]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSignedFulcio{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSignedFulcio{} },
 		newValidObject: func() (PRSigstoreSignedFulcio, error) {
 			return NewPRSigstoreSignedFulcio(
 				PRSigstoreSignedFulcioWithCAData([]byte("abc")),
@@ -1015,7 +1015,7 @@ func TestNewPRSigstoreSignedPKI(t *testing.T) {
 
 func TestPRSigstoreSignedPKIUnmarshalJSON(t *testing.T) {
 	policyJSONUmarshallerTests[PRSigstoreSignedPKI]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSignedPKI{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSignedPKI{} },
 		newValidObject: func() (PRSigstoreSignedPKI, error) {
 			return NewPRSigstoreSignedPKI(
 				PRSigstoreSignedPKIWithCARootsPath("fixtures/pki_root_crts.pem"),
@@ -1053,7 +1053,7 @@ func TestPRSigstoreSignedPKIUnmarshalJSON(t *testing.T) {
 
 	// Test caRootsData specifics
 	policyJSONUmarshallerTests[PRSigstoreSignedPKI]{
-		newDest: func() json.Unmarshaler { return &prSigstoreSignedPKI{} },
+		newDest: func() jsonv1.Unmarshaler { return &prSigstoreSignedPKI{} },
 		newValidObject: func() (PRSigstoreSignedPKI, error) {
 			return NewPRSigstoreSignedPKI(
 				PRSigstoreSignedPKIWithCARootsData([]byte("abc")),

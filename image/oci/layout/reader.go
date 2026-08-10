@@ -1,7 +1,7 @@
 package layout
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,7 +28,7 @@ func List(dir string) ([]ListResult, error) {
 		return nil, err
 	}
 	var index imgspecv1.Index
-	if err := json.Unmarshal(indexJSON, &index); err != nil {
+	if err := jsonv1.Unmarshal(indexJSON, &index); err != nil {
 		return nil, err
 	}
 

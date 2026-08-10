@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"fmt"
 	"os"
 
@@ -24,7 +24,7 @@ func storageLayers(flags *mflag.FlagSet, action string, m storage.Store, args []
 		return 1, err
 	}
 	if jsonOutput {
-		if err := json.NewEncoder(os.Stdout).Encode(layers); err != nil {
+		if err := jsonv1.NewEncoder(os.Stdout).Encode(layers); err != nil {
 			return 1, err
 		}
 		return 0, nil

@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -131,7 +131,7 @@ func (r *rekorClient) uploadEntry(ctx context.Context, proposedEntry rekorPropos
 // Given components of the created signature, it returns a SET that should be added to the signature.
 func (r *rekorClient) uploadKeyOrCert(ctx context.Context, keyOrCertBytes []byte, signatureBytes []byte, payloadBytes []byte) ([]byte, error) {
 	payloadHash := sha256.Sum256(payloadBytes) // Consistent with cosign.
-	hashedRekordSpec, err := json.Marshal(internal.RekorHashedrekordV001Schema{
+	hashedRekordSpec, err := jsonv1.Marshal(internal.RekorHashedrekordV001Schema{
 		Data: &internal.RekorHashedrekordV001SchemaData{
 			Hash: &internal.RekorHashedrekordV001SchemaDataHash{
 				Algorithm: new(internal.RekorHashedrekordV001SchemaDataHashAlgorithmSha256),
@@ -172,7 +172,7 @@ func (r *rekorClient) uploadKeyOrCert(ctx context.Context, keyOrCertBytes []byte
 	if err != nil {
 		return nil, err
 	}
-	rekorSETBytes, err := json.Marshal(rekorBundle)
+	rekorSETBytes, err := jsonv1.Marshal(rekorBundle)
 	if err != nil {
 		return nil, err
 	}

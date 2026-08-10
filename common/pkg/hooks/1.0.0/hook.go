@@ -2,7 +2,7 @@
 package hook
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -24,7 +24,7 @@ type Hook struct {
 
 // Read reads hook JSON bytes, verifies them, and returns the hook configuration.
 func Read(content []byte) (hook *Hook, err error) {
-	if err = json.Unmarshal(content, &hook); err != nil {
+	if err = jsonv1.Unmarshal(content, &hook); err != nil {
 		return nil, err
 	}
 	return hook, nil

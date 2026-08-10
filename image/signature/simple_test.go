@@ -2,7 +2,7 @@ package signature
 
 import (
 	"bytes"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -67,7 +67,7 @@ func TestMarshalJSON(t *testing.T) {
 		assert.Equal(t, []byte(c.expected), marshaled)
 
 		// Also call MarshalJSON through the JSON package.
-		marshaled, err = json.Marshal(c.input)
+		marshaled, err = jsonv1.Marshal(c.input)
 		assert.NoError(t, err)
 		assert.Equal(t, []byte(c.expected), marshaled)
 	}
@@ -76,12 +76,12 @@ func TestMarshalJSON(t *testing.T) {
 // Return the result of modifying validJSON with fn
 func modifiedJSON(t *testing.T, validJSON []byte, modifyFn func(mSA)) []byte {
 	var tmp mSA
-	err := json.Unmarshal(validJSON, &tmp)
+	err := jsonv1.Unmarshal(validJSON, &tmp)
 	require.NoError(t, err)
 
 	modifyFn(tmp)
 
-	modifiedJSON, err := json.Marshal(tmp)
+	modifiedJSON, err := jsonv1.Marshal(tmp)
 	require.NoError(t, err)
 	return modifiedJSON
 }
@@ -91,7 +91,7 @@ func successfullyUnmarshalUntrustedSignature(t *testing.T, schema *jsonschema.Sc
 	inputString := string(input)
 
 	var s untrustedSignature
-	err := json.Unmarshal(input, &s)
+	err := jsonv1.Unmarshal(input, &s)
 	require.NoError(t, err, inputString)
 
 	rawInput, err := jsonschema.UnmarshalJSON(bytes.NewReader(input))
@@ -107,7 +107,7 @@ func assertUnmarshalUntrustedSignatureFails(t *testing.T, schema *jsonschema.Sch
 	inputString := string(input)
 
 	var s untrustedSignature
-	err := json.Unmarshal(input, &s)
+	err := jsonv1.Unmarshal(input, &s)
 	assert.Error(t, err, inputString)
 
 	rawInput, err := jsonschema.UnmarshalJSON(bytes.NewReader(input))
@@ -129,7 +129,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	schema, err := jsonschema.NewCompiler().Compile("file://" + schemaPath)
 	require.NoError(t, err)
 
-	// Invalid input. Note that json.Unmarshal is guaranteed to validate input before calling our
+	// Invalid input. Note that jsonv1.Unmarshal is guaranteed to validate input before calling our
 	// UnmarshalJSON implementation; so test that first, then test our error handling for completeness.
 	assertUnmarshalUntrustedSignatureFails(t, schema, []byte("&"))
 	var s untrustedSignature

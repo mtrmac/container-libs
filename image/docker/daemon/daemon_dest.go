@@ -2,7 +2,7 @@ package daemon
 
 import (
 	"context"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -96,7 +96,7 @@ func imageLoad(ctx context.Context, c *client.Client, reader *io.PipeReader) err
 	}
 	defer res.Close()
 
-	dec := json.NewDecoder(res)
+	dec := jsonv1.NewDecoder(res)
 	for {
 		var msg jsonstream.Message
 		if err := dec.Decode(&msg); err != nil {

@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -604,13 +604,13 @@ func (path authPath) parse() (dockerConfigFile, error) {
 	}
 
 	if path.legacyFormat {
-		if err = json.Unmarshal(raw, &fileContents.AuthConfigs); err != nil {
+		if err = jsonv1.Unmarshal(raw, &fileContents.AuthConfigs); err != nil {
 			return dockerConfigFile{}, fmt.Errorf("unmarshaling JSON at %q: %w", path.path, err)
 		}
 		return fileContents, nil
 	}
 
-	if err = json.Unmarshal(raw, &fileContents); err != nil {
+	if err = jsonv1.Unmarshal(raw, &fileContents); err != nil {
 		return dockerConfigFile{}, fmt.Errorf("unmarshaling JSON at %q: %w", path.path, err)
 	}
 
@@ -654,7 +654,7 @@ func modifyJSON(sys *types.SystemContext, editor func(fileContents *dockerConfig
 		return "", fmt.Errorf("updating %q: %w", path.path, err)
 	}
 	if updated {
-		newData, err := json.MarshalIndent(fileContents, "", "\t")
+		newData, err := jsonv1.MarshalIndent(fileContents, "", "\t")
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path.path, err)
 		}
@@ -688,15 +688,15 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 	}
 
 	// Try hard not to clobber fields we don’t understand, even fields which may be added in future Docker versions.
-	var rawContents map[string]json.RawMessage
+	var rawContents map[string]jsonv1.RawMessage
 	originalBytes, err := os.ReadFile(path)
 	switch {
 	case err == nil:
-		if err := json.Unmarshal(originalBytes, &rawContents); err != nil {
+		if err := jsonv1.Unmarshal(originalBytes, &rawContents); err != nil {
 			return "", fmt.Errorf("unmarshaling JSON at %q: %w", path, err)
 		}
 	case errors.Is(err, fs.ErrNotExist):
-		rawContents = map[string]json.RawMessage{}
+		rawContents = map[string]jsonv1.RawMessage{}
 	default: // err != nil
 		return "", err
 	}
@@ -705,19 +705,19 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 		AuthConfigs: map[string]dockerAuthConfig{},
 		CredHelpers: map[string]string{},
 	}
-	// json.Unmarshal also falls back to case-insensitive field matching; this code does not do that. Presumably
+	// jsonv1.Unmarshal also falls back to case-insensitive field matching; this code does not do that. Presumably
 	// config.json is mostly maintained by machines doing `docker login`, so the files should, hopefully, not contain field names with
 	// unexpected case.
 	if rawAuths, ok := rawContents["auths"]; ok {
 		// This conversion will lose fields we don’t know about; when updating an entry, we can’t tell whether an unknown field
 		// should be preserved or discarded (because it is made obsolete/unwanted with the new credentials).
 		// It might make sense to track which entries of "auths" we actually modified, and to not touch any others.
-		if err := json.Unmarshal(rawAuths, &syntheticContents.AuthConfigs); err != nil {
+		if err := jsonv1.Unmarshal(rawAuths, &syntheticContents.AuthConfigs); err != nil {
 			return "", fmt.Errorf(`unmarshaling "auths" in JSON at %q: %w`, path, err)
 		}
 	}
 	if rawCH, ok := rawContents["credHelpers"]; ok {
-		if err := json.Unmarshal(rawCH, &syntheticContents.CredHelpers); err != nil {
+		if err := jsonv1.Unmarshal(rawCH, &syntheticContents.CredHelpers); err != nil {
 			return "", fmt.Errorf(`unmarshaling "credHelpers" in JSON at %q: %w`, path, err)
 		}
 	}
@@ -727,13 +727,13 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 		return "", fmt.Errorf("updating %q: %w", path, err)
 	}
 	if updated {
-		rawAuths, err := json.MarshalIndent(syntheticContents.AuthConfigs, "", "\t")
+		rawAuths, err := jsonv1.MarshalIndent(syntheticContents.AuthConfigs, "", "\t")
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path, err)
 		}
 		rawContents["auths"] = rawAuths
 		// We never modify syntheticContents.CredHelpers, so we don’t need to update it.
-		newData, err := json.MarshalIndent(rawContents, "", "\t")
+		newData, err := jsonv1.MarshalIndent(rawContents, "", "\t")
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path, err)
 		}
