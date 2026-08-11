@@ -3,7 +3,6 @@
 package netavark
 
 import (
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"io"
@@ -153,8 +152,6 @@ func (n *netavarkNetwork) execBinary(path string, args []string, stdin, result a
 		return newNetavarkError("failed to encode stdin data", err)
 	}
 
-	dec := jsonv1.NewDecoder(stdoutR)
-
 	err = cmd.Wait()
 	// we have to close stdoutW so we can decode the json without hanging forever
 	stdoutW.Close()
@@ -163,9 +160,8 @@ func (n *netavarkNetwork) execBinary(path string, args []string, stdin, result a
 		if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 			ne := &netavarkError{}
 			// lets disallow unknown fields to make sure we do not get some unexpected stuff
-			dec.DisallowUnknownFields()
 			// this will unmarshal the error message into the error struct
-			ne.err = dec.Decode(ne)
+			ne.err = json.UnmarshalRead(stdoutR, ne, json.RejectUnknownMembers(true))
 			ne.exitCode = exitError.ExitCode()
 			return ne
 		}
@@ -173,7 +169,7 @@ func (n *netavarkNetwork) execBinary(path string, args []string, stdin, result a
 	}
 
 	if result != nil {
-		err = dec.Decode(result)
+		err = json.UnmarshalRead(stdoutR, result)
 		if err != nil {
 			return newNetavarkError("failed to decode result", err)
 		}

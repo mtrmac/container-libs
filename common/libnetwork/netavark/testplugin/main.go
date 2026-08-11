@@ -1,7 +1,6 @@
 package main
 
 import (
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"fmt"
 	"os"
@@ -39,8 +38,7 @@ func main() {
 
 func create() error {
 	network := types.Network{}
-	d := jsonv1.NewDecoder(os.Stdin)
-	err := d.Decode(&network)
+	err := json.UnmarshalRead(os.Stdin, &network)
 	if err != nil {
 		return fmt.Errorf("failed to decode network input: %w", err)
 	}
