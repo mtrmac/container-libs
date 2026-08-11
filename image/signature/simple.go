@@ -6,6 +6,8 @@ package signature
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"slices"
@@ -110,7 +112,7 @@ func (s *untrustedSignature) UnmarshalJSON(data []byte) error {
 // strictUnmarshalJSON is UnmarshalJSON, except that it may return the internal.JSONFormatError error type.
 // Splitting it into a separate function allows us to do the internal.JSONFormatError → InvalidSignatureError in a single place, the caller.
 func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
-	var critical, optional jsonv1.RawMessage
+	var critical, optional jsontext.Value
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"critical": &critical,
 		"optional": &optional,
@@ -148,7 +150,7 @@ func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
 	}
 
 	var t string
-	var image, identity jsonv1.RawMessage
+	var image, identity jsontext.Value
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(critical, map[string]any{
 		"type":     &t,
 		"image":    &image,
@@ -184,7 +186,7 @@ func (s *untrustedSignature) strictUnmarshalJSON(data []byte) error {
 // on the system increases the likelihood of an a successful attack on that private key
 // on that particular system.)
 func (s untrustedSignature) sign(mech SigningMechanism, keyIdentity string, passphrase string) ([]byte, error) {
-	json, err := jsonv1.Marshal(s)
+	json, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}

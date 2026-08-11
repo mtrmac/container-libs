@@ -5,7 +5,8 @@
 package main
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 
@@ -22,7 +23,7 @@ func main() {
 	f := filepath.Join(wd, "seccomp.json")
 
 	// write the default profile to the file
-	b, err := jsonv1.MarshalIndent(seccomp.DefaultProfile(), "", "\t")
+	b, err := json.Marshal(seccomp.DefaultProfile(), jsontext.WithIndent("\t"))
 	if err != nil {
 		panic(err)
 	}

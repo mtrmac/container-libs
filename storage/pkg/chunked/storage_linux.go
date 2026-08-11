@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/base64"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"hash"
@@ -21,7 +22,6 @@ import (
 
 	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/cyphar/filepath-securejoin/pathrs-lite"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/compress/zstd"
 	"github.com/klauspost/pgzip"
 	digest "github.com/opencontainers/go-digest"
@@ -1534,8 +1534,7 @@ func (c *chunkedDiffer) ApplyDiff(dest string, options *archive.TarOptions, diff
 		Format: differOpts.Format,
 	}
 
-	jsonIT := jsoniter.ConfigCompatibleWithStandardLibrary
-	lcdBigData, err := jsonIT.Marshal(lcd)
+	lcdBigData, err := json.Marshal(&lcd)
 	if err != nil {
 		return graphdriver.DriverWithDifferOutput{}, err
 	}

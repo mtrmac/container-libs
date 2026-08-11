@@ -3,7 +3,8 @@
 package netavark
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net"
@@ -38,9 +39,7 @@ func (n *netavarkNetwork) commitNetwork(network *types.Network) error {
 		return err
 	}
 	defer f.Close()
-	enc := jsonv1.NewEncoder(f)
-	enc.SetIndent("", "     ")
-	err = enc.Encode(network)
+	err = json.MarshalWrite(f, network, jsontext.WithIndent("     "))
 	if err != nil {
 		return err
 	}

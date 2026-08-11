@@ -4,6 +4,7 @@ package boltdb
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -356,7 +357,7 @@ func (bdc *cache) RecordDigestCompressorData(anyDigest digest.Digest, data blobi
 					}
 				}
 			}
-			annotations, err := jsonv1.Marshal(data.SpecificVariantAnnotations)
+			annotations, err := json.Marshal(&data.SpecificVariantAnnotations)
 			if err != nil {
 				return err
 			}

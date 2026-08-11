@@ -2,7 +2,7 @@ package layout
 
 import (
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io/fs"
 	"os"
@@ -185,5 +185,5 @@ func saveJSON(path string, content any) (retErr error) {
 		}
 	}()
 
-	return jsonv1.NewEncoder(file).Encode(content)
+	return json.MarshalWrite(file, &content)
 }

@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -23,7 +25,7 @@ const RekorHashedRekordV001APIVersion = "0.0.1"
 // This corresponds to github.com/sigstore/cosign/bundle.RekorBundle, but we impose a stricter decoder.
 type UntrustedRekorSET struct {
 	UntrustedSignedEntryTimestamp []byte // A signature over some canonical JSON form of UntrustedPayload
-	UntrustedPayload              jsonv1.RawMessage
+	UntrustedPayload              jsontext.Value
 }
 
 type UntrustedRekorPayload struct {
@@ -91,7 +93,7 @@ var (
 
 // MarshalJSON implements the jsonv1.Marshaler interface.
 func (p UntrustedRekorPayload) MarshalJSON() ([]byte, error) {
-	return jsonv1.Marshal(map[string]any{
+	return json.Marshal(&map[string]any{
 		"body":           p.Body,
 		"integratedTime": p.IntegratedTime,
 		"logIndex":       p.LogIndex,

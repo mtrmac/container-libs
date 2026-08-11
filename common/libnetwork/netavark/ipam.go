@@ -4,6 +4,7 @@ package netavark
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net"
@@ -155,7 +156,7 @@ func (n *netavarkNetwork) allocIPs(opts *types.NetworkOptions) error {
 				return newIPAMError(err, "failed to create/get id bucket for network %s", namedNet.Name)
 			}
 
-			ipsBytes, err := jsonv1.Marshal(requestIPs)
+			ipsBytes, err := json.Marshal(&requestIPs)
 			if err != nil {
 				return newIPAMError(err, "failed to marshal ips")
 			}

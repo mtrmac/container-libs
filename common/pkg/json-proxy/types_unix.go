@@ -3,7 +3,7 @@
 package jsonproxy
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net"
 	"syscall"
@@ -32,7 +32,7 @@ func (buf replyBuf) send(conn *net.UnixConn, err error) error {
 		replyToSerialize.ErrorCode = mapProxyErrorCode(err)
 		replyToSerialize.Error = err.Error()
 	}
-	serializedReply, err := jsonv1.Marshal(&replyToSerialize)
+	serializedReply, err := json.Marshal(&replyToSerialize)
 	if err != nil {
 		return err
 	}

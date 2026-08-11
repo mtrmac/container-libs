@@ -1,7 +1,7 @@
 package main
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"os"
 	"time"
@@ -83,7 +83,7 @@ func check(flags *mflag.FlagSet, action string, m storage.Store, args []string) 
 	}
 
 	if jsonOutput {
-		if err := jsonv1.NewEncoder(os.Stdout).Encode(report); err != nil {
+		if err := json.MarshalWrite(os.Stdout, report); err != nil {
 			return 1, err
 		}
 	} else {
@@ -100,7 +100,7 @@ func check(flags *mflag.FlagSet, action string, m storage.Store, args []string) 
 		}
 		if errs := m.Repair(report, &options); len(errs) != 0 {
 			if jsonOutput {
-				if err := jsonv1.NewEncoder(os.Stdout).Encode(errs); err != nil {
+				if err := json.MarshalWrite(os.Stdout, errs); err != nil {
 					return 1, err
 				}
 			} else {

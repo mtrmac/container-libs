@@ -2,6 +2,7 @@ package manifests
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"maps"
@@ -642,23 +643,23 @@ func (l *list) Serialize(mimeType string) ([]byte, error) {
 	switch mimeType {
 	case "":
 		if l.preferOCI() {
-			res, err = jsonv1.Marshal(&l.oci)
+			res, err = json.Marshal(&l.oci)
 			if err != nil {
 				return nil, fmt.Errorf("marshalling OCI image index: %w", err)
 			}
 		} else {
-			res, err = jsonv1.Marshal(&l.docker)
+			res, err = json.Marshal(&l.docker)
 			if err != nil {
 				return nil, fmt.Errorf("marshalling Docker manifest list: %w", err)
 			}
 		}
 	case v1.MediaTypeImageIndex:
-		res, err = jsonv1.Marshal(&l.oci)
+		res, err = json.Marshal(&l.oci)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling OCI image index: %w", err)
 		}
 	case manifest.DockerV2ListMediaType:
-		res, err = jsonv1.Marshal(&l.docker)
+		res, err = json.Marshal(&l.docker)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling Docker manifest list: %w", err)
 		}

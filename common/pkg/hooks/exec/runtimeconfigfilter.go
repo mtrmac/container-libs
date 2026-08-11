@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"time"
@@ -51,7 +52,7 @@ func RuntimeConfigFilter(ctx context.Context, hooks []spec.Hook, config *spec.Sp
 // RuntimeConfigFilterWithOptions passes the proposed runtime configuration (and
 // reads back a possibly-altered form from their standard output).
 func RuntimeConfigFilterWithOptions(ctx context.Context, options RuntimeConfigFilterOptions) (hookErr, err error) {
-	data, err := jsonv1.Marshal(options.Config)
+	data, err := json.Marshal(options.Config)
 	if err != nil {
 		return nil, err
 	}

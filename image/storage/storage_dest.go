@@ -5,7 +5,7 @@ package storage
 import (
 	"bytes"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -1545,7 +1545,7 @@ func (s *storageImageDestination) CommitWithOptions(ctx context.Context, options
 	}
 
 	// Set up to save our metadata.
-	metadata, err := jsonv1.Marshal(s.metadata)
+	metadata, err := json.Marshal(&s.metadata)
 	if err != nil {
 		return fmt.Errorf("encoding metadata for image: %w", err)
 	}

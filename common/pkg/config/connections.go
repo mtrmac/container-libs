@@ -2,6 +2,7 @@ package config
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -98,7 +99,7 @@ func writeConnectionConf(path string, conf *ConnectionsFile) error {
 	}
 	defer configFile.Close()
 
-	err = jsonv1.NewEncoder(configFile).Encode(conf)
+	err = json.MarshalWrite(configFile, conf)
 	if err != nil {
 		return err
 	}

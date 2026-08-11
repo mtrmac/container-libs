@@ -2,6 +2,7 @@ package main
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"os"
 
@@ -26,7 +27,7 @@ func main() {
 	case "create":
 		if err := create(); err != nil {
 			out := Error{Msg: err.Error()}
-			_ = jsonv1.NewEncoder(os.Stdout).Encode(out)
+			_ = json.MarshalWrite(os.Stdout, &out)
 			os.Exit(1)
 		}
 	case "setup", "teardown":
@@ -64,6 +65,5 @@ func create() error {
 		network.Driver = driver
 	}
 
-	e := jsonv1.NewEncoder(os.Stdout)
-	return e.Encode(network)
+	return json.MarshalWrite(os.Stdout, &network)
 }

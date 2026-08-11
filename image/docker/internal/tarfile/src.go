@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -237,7 +238,7 @@ func (s *Source) GetManifest(ctx context.Context, instanceDigest *digest.Digest)
 				Size:      li.size,
 			})
 		}
-		manifestBytes, err := jsonv1.Marshal(&m)
+		manifestBytes, err := json.Marshal(&m)
 		if err != nil {
 			return nil, "", err
 		}

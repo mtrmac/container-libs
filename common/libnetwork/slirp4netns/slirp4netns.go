@@ -5,6 +5,7 @@ package slirp4netns
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -560,7 +561,7 @@ func SetupRootlessPortMappingViaRLK(opts *SetupOptions, slirpSubnet *net.IPNet, 
 		ContainerID: opts.ContainerID,
 		RootlessCNI: netStatus != nil,
 	}
-	cfgJSON, err := jsonv1.Marshal(cfg)
+	cfgJSON, err := json.Marshal(&cfg)
 	if err != nil {
 		return err
 	}
@@ -673,7 +674,7 @@ func openSlirp4netnsPort(apiSocket, proto, hostip string, hostport, guestport ui
 	}
 	// create the JSON payload and send it.  Mark the end of request shutting down writes
 	// to the socket, as requested by slirp4netns.
-	data, err := jsonv1.Marshal(&apiCmd)
+	data, err := json.Marshal(&apiCmd)
 	if err != nil {
 		return fmt.Errorf("cannot marshal JSON for slirp4netns: %w", err)
 	}

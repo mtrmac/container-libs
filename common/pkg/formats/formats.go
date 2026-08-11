@@ -2,9 +2,9 @@ package formats
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -57,24 +57,24 @@ type YAMLStruct struct {
 	Output any
 }
 
-func setJSONFormatEncoder(isTerminal bool, w io.Writer) *jsonv1.Encoder {
-	enc := jsonv1.NewEncoder(w)
-	enc.SetIndent("", "    ")
-	if isTerminal {
-		enc.SetEscapeHTML(false)
+func jsonFormatOptions(isTerminal bool) json.Options {
+	opts := jsontext.WithIndent("    ")
+	if !isTerminal {
+		opts = json.JoinOptions(opts, jsontext.EscapeForHTML(true))
 	}
-	return enc
+	return opts
 }
 
 // Out method for JSON Arrays.
 func (j JSONStructArray) Out() error {
 	buf := bytes.NewBuffer(nil)
-	enc := setJSONFormatEncoder(terminal.IsTerminal(int(os.Stdout.Fd())), buf)
-	if err := enc.Encode(j.Output); err != nil {
+	opts := jsonFormatOptions(terminal.IsTerminal(int(os.Stdout.Fd())))
+	if err := json.MarshalWrite(buf, &j.Output, opts); err != nil {
 		return err
 	}
 	data := buf.Bytes()
 
+	// FIXME: Can this be avoided with encoding/json/v2?
 	// JSON returns a byte array with a literal null [110 117 108 108] in it
 	// if it is passed empty data.  We used bytes.Compare to see if that is
 	// the case.
@@ -122,11 +122,9 @@ func (t StdoutTemplateArray) Out() error {
 
 // Out method for JSON struct.
 func (j JSONStruct) Out() error {
-	data, err := jsonv1.MarshalIndent(j.Output, "", "    ")
-	if err != nil {
+	if err := json.MarshalWrite(os.Stdout, j.Output, jsontext.WithIndent("    ")); err != nil {
 		return err
 	}
-	fmt.Printf("%s", data) //nolint:forbidigo
 	humanNewLine()
 	return nil
 }

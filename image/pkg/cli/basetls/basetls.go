@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"slices"
@@ -187,7 +188,7 @@ func (c Config) MarshalText() ([]byte, error) {
 		Version: marshaledSerializationVersion1,
 		Data:    c.text,
 	}
-	return jsonv1.Marshal(data)
+	return json.Marshal(&data)
 }
 
 // UnmarshalText parses the output of MarshalText.

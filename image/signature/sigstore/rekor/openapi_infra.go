@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"path"
@@ -36,9 +37,7 @@ func (r *rekorClient) makeRequest(ctx context.Context, method, requestPath strin
 		buf := bytes.NewBuffer(nil)
 		body = buf
 		headers.Set("Content-Type", "application/json")
-		enc := jsonv1.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		if err := enc.Encode(bodyContent); err != nil {
+		if err := json.MarshalWrite(buf, bodyContent); err != nil {
 			return nil, err
 		}
 	}

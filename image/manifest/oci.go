@@ -2,6 +2,7 @@ package manifest
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 	"strings"
@@ -194,7 +195,7 @@ func getDecryptedMediaType(mediatype string) (string, error) {
 // Serialize returns the manifest in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *OCI1) Serialize() ([]byte, error) {
-	return jsonv1.Marshal(*m)
+	return json.Marshal(m, json.Deterministic(true))
 }
 
 // Inspect returns various information for (skopeo inspect) parsed from the manifest and configuration.

@@ -15,6 +15,7 @@ package signature
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"io"
@@ -217,7 +218,7 @@ var _ jsonv1.Unmarshaler = (*PolicyRequirements)(nil)
 
 // UnmarshalJSON implements the jsonv1.Unmarshaler interface.
 func (m *PolicyRequirements) UnmarshalJSON(data []byte) error {
-	reqJSONs := []jsonv1.RawMessage{}
+	reqJSONs := []jsontext.Value{}
 	if err := jsonv1.Unmarshal(data, &reqJSONs); err != nil {
 		return err
 	}
@@ -392,7 +393,7 @@ func (pr *prSignedBy) UnmarshalJSON(data []byte) error {
 	*pr = prSignedBy{}
 	var tmp prSignedBy
 	gotKeyPath, gotKeyPaths, gotKeyData := false, false, false
-	var signedIdentity jsonv1.RawMessage
+	var signedIdentity jsontext.Value
 	if err := internal.ParanoidUnmarshalJSONObject(data, func(key string) any {
 		switch key {
 		case "type":
@@ -503,7 +504,7 @@ var _ jsonv1.Unmarshaler = (*prSignedBaseLayer)(nil)
 func (pr *prSignedBaseLayer) UnmarshalJSON(data []byte) error {
 	*pr = prSignedBaseLayer{}
 	var tmp prSignedBaseLayer
-	var baseLayerIdentity jsonv1.RawMessage
+	var baseLayerIdentity jsontext.Value
 	if err := internal.ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"type":              &tmp.Type,
 		"baseLayerIdentity": &baseLayerIdentity,

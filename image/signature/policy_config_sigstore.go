@@ -2,6 +2,7 @@ package signature
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 
 	"go.podman.io/image/v5/signature/internal"
@@ -239,7 +240,7 @@ func (pr *prSigstoreSigned) UnmarshalJSON(data []byte) error {
 	var gotRekorPublicKeyPath, gotRekorPublicKeyPaths, gotRekorPublicKeyData, gotRekorPublicKeyDatas bool
 	var fulcio prSigstoreSignedFulcio
 	var pki prSigstoreSignedPKI
-	var signedIdentity jsonv1.RawMessage
+	var signedIdentity jsontext.Value
 	if err := internal.ParanoidUnmarshalJSONObject(data, func(key string) any {
 		switch key {
 		case "type":

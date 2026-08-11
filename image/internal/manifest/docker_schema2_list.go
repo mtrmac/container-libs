@@ -2,6 +2,7 @@ package manifest
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 
@@ -178,7 +179,7 @@ func (list *Schema2ListPublic) ChooseInstance(ctx *types.SystemContext) (digest.
 // Serialize returns the list in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (list *Schema2ListPublic) Serialize() ([]byte, error) {
-	buf, err := jsonv1.Marshal(list)
+	buf, err := json.Marshal(list, json.Deterministic(true))
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Schema2List %#v: %w", list, err)
 	}

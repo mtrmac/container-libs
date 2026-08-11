@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -550,7 +551,7 @@ func (r *containerStore) save(saveLocations containerLocations) error {
 			}
 		}
 
-		jdata, err := jsonIT.Marshal(&subsetContainers)
+		jdata, err := json.Marshal(&subsetContainers)
 		if err != nil {
 			return err
 		}

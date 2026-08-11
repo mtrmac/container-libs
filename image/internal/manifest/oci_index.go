@@ -3,6 +3,7 @@ package manifest
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"maps"
 	"math"
@@ -287,7 +288,7 @@ func (index *OCI1IndexPublic) ChooseInstance(ctx *types.SystemContext) (digest.D
 // Serialize returns the index in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (index *OCI1IndexPublic) Serialize() ([]byte, error) {
-	buf, err := jsonv1.Marshal(index)
+	buf, err := json.Marshal(index, json.Deterministic(true))
 	if err != nil {
 		return nil, fmt.Errorf("marshaling OCI1Index %#v: %w", index, err)
 	}
