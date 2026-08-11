@@ -3,7 +3,6 @@ package boltdb
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -428,7 +427,7 @@ func (bdc *cache) appendReplacementCandidates(candidates []prioritize.CandidateW
 			if svcData := specificVariantCompresssionBucket.Get(digestKey); svcData != nil {
 				if compressorBytes, annotationBytes, ok := bytes.Cut(svcData, []byte{0}); ok {
 					compressionData.SpecificVariantCompressor = string(compressorBytes)
-					if err := jsonv1.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
+					if err := json.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
 						return candidates // FIXME? Log error (but throttle the log volume on repeated accesses)?
 					}
 				}

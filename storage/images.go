@@ -510,7 +510,7 @@ func (r *imageStore) load(lockedForWriting bool) (bool, error) {
 
 	images := []*Image{}
 	if len(data) != 0 {
-		if err := jsonIT.Unmarshal(data, &images); err != nil {
+		if err := json.Unmarshal(data, &images); err != nil {
 			return false, fmt.Errorf("loading %q: %w", rpath, err)
 		}
 	}

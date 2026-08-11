@@ -2,7 +2,6 @@ package signature
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"maps"
 )
@@ -53,7 +52,7 @@ func SigstoreFromComponents(untrustedMimeType string, untrustedPayload []byte, u
 // sigstoreFromBlobChunk converts a Sigstore signature, as returned by Sigstore.blobChunk, into a Sigstore object.
 func sigstoreFromBlobChunk(blobChunk []byte) (Sigstore, error) {
 	var v sigstoreJSONRepresentation
-	if err := jsonv1.Unmarshal(blobChunk, &v); err != nil {
+	if err := json.Unmarshal(blobChunk, &v); err != nil {
 		return Sigstore{}, err
 	}
 	return SigstoreFromComponents(v.UntrustedMIMEType,

@@ -5,7 +5,7 @@ package storage
 import (
 	"bytes"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -90,7 +90,7 @@ func newImageSource(sys *types.SystemContext, imageRef storageReference) (*stora
 	}
 	image.Compat = impl.AddCompat(image)
 	if img.Metadata != "" {
-		if err := jsonv1.Unmarshal([]byte(img.Metadata), &image.metadata); err != nil {
+		if err := json.Unmarshal([]byte(img.Metadata), &image.metadata); err != nil {
 			return nil, fmt.Errorf("decoding metadata for source image: %w", err)
 		}
 	}

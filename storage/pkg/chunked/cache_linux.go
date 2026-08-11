@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -226,9 +227,8 @@ func (c *layersCache) createCacheFileFromTOC(layerID string) (*layer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("open manifest file: %w", err)
 		}
-		jsonIT := jsoniter.ConfigCompatibleWithStandardLibrary
 
-		if err := jsonIT.Unmarshal(cl, &lcd); err != nil {
+		if err := json.Unmarshal(cl, &lcd); err != nil {
 			return nil, err
 		}
 	}

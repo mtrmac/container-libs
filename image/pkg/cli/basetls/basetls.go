@@ -6,11 +6,8 @@
 package basetls
 
 import (
-	"bytes"
 	"crypto/tls"
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
-	"errors"
 	"fmt"
 	"slices"
 )
@@ -197,15 +194,8 @@ func (c Config) MarshalText() ([]byte, error) {
 func (c *Config) UnmarshalText(text []byte) error {
 	var data marshaledSerialization
 
-	// In the future, this should be an even stricter parser, e.g. refusing duplicate fields
-	// and requiring a case-sensitive field name match.
-	decoder := jsonv1.NewDecoder(bytes.NewReader(text))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&data); err != nil {
+	if err := json.Unmarshal(text, &data); err != nil {
 		return err
-	}
-	if decoder.More() {
-		return errors.New("unexpected extra data after a JSON object")
 	}
 
 	if data.Version != marshaledSerializationVersion1 {

@@ -1,12 +1,10 @@
 package secrets
 
 import (
-	jsonv1 "encoding/json"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -52,12 +50,8 @@ func (s *SecretsManager) loadDB() error {
 	}
 	defer file.Close()
 
-	byteValue, err := io.ReadAll(file)
-	if err != nil {
-		return err
-	}
 	unmarshalled := new(db)
-	if err := jsonv1.Unmarshal(byteValue, unmarshalled); err != nil {
+	if err := json.UnmarshalRead(file, unmarshalled); err != nil {
 		return err
 	}
 	s.db = unmarshalled
