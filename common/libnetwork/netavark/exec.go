@@ -4,6 +4,7 @@ package netavark
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"io"
 	"os"
@@ -144,7 +145,7 @@ func (n *netavarkNetwork) execBinary(path string, args []string, stdin, result a
 	if err != nil {
 		return newNetavarkError("failed to start process", err)
 	}
-	err = jsonv1.NewEncoder(stdinW).Encode(stdin)
+	err = json.MarshalWrite(stdinW, &stdin)
 	// we have to close stdinW so netavark gets the EOF and does not hang forever
 	stdinW.Close()
 	stdinWClosed = true

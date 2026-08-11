@@ -2,7 +2,7 @@ package report
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"maps"
 	"reflect"
 	"strings"
@@ -39,11 +39,8 @@ var DefaultFuncs = FuncMap{
 	"join": strings.Join,
 	"json": func(v any) string {
 		buf := new(bytes.Buffer)
-		enc := jsonv1.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		_ = enc.Encode(v)
-		// Remove the trailing new line added by the encoder
-		return strings.TrimSpace(buf.String())
+		_ = json.MarshalWrite(buf, &v)
+		return buf.String()
 	},
 	"lower":    strings.ToLower,
 	"pad":      padWithSpace,

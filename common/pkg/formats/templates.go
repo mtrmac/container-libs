@@ -2,7 +2,7 @@ package formats
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"strings"
 	"text/template"
 )
@@ -12,11 +12,8 @@ import (
 var basicFunctions = template.FuncMap{
 	"json": func(v any) string {
 		buf := &bytes.Buffer{}
-		enc := jsonv1.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		_ = enc.Encode(v)
-		// Remove the trailing new line added by the encoder
-		return strings.TrimSpace(buf.String())
+		_ = json.MarshalWrite(buf, &v)
+		return buf.String()
 	},
 	"split":    strings.Split,
 	"join":     strings.Join,

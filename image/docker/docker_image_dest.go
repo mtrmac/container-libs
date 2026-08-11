@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -770,7 +771,7 @@ func (d *dockerImageDestination) putSignaturesToSigstoreAttachments(ctx context.
 		logrus.Debugf("Adding new signature, digest %s", sigDesc.Digest.String())
 	}
 
-	configBlob, err := jsonv1.Marshal(ociConfig)
+	configBlob, err := json.Marshal(&ociConfig)
 	if err != nil {
 		return err
 	}
@@ -908,7 +909,7 @@ func (d *dockerImageDestination) putSignaturesToAPIExtension(ctx context.Context
 			Type:    extensionSignatureTypeAtomic,
 			Content: newSig,
 		}
-		body, err := jsonv1.Marshal(sig)
+		body, err := json.Marshal(&sig)
 		if err != nil {
 			return err
 		}

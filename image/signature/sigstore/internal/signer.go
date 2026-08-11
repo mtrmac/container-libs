@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 
@@ -54,7 +54,7 @@ func (s *SigstoreSigner) SignImageManifest(ctx context.Context, m []byte, docker
 	// They record the repo (but NOT THE TAG) in the value; without the tag we can’t detect version rollbacks.
 	// So, just do what simple signing does, and cosign won’t mind.
 	payloadData := internal.NewUntrustedSigstorePayload(manifestDigest, dockerReference.String())
-	payloadBytes, err := jsonv1.Marshal(payloadData)
+	payloadBytes, err := json.Marshal(&payloadData)
 	if err != nil {
 		return nil, err
 	}

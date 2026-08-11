@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -232,7 +232,7 @@ func (d *openshiftImageDestination) PutSignaturesWithFormat(ctx context.Context,
 			Type:       imageSignatureTypeAtomic,
 			Content:    newSig,
 		}
-		body, err := jsonv1.Marshal(sig)
+		body, err := json.Marshal(&sig)
 		if err != nil {
 			return err
 		}

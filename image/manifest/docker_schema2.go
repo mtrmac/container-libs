@@ -2,6 +2,7 @@ package manifest
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"time"
 
@@ -142,7 +143,7 @@ type Schema2History struct {
 	// EmptyLayer is set to true if this history item did not generate a
 	// layer. Otherwise, the history item is associated with the next
 	// layer in the RootFS section.
-	EmptyLayer bool `json:"empty_layer,omitempty"`
+	EmptyLayer bool `json:"empty_layer,omitempty,omitzero"`
 }
 
 // Schema2Image is an Image in docker/docker/image.
@@ -258,7 +259,7 @@ func (m *Schema2) UpdateLayerInfos(layerInfos []types.BlobInfo) error {
 // Serialize returns the manifest in a blob format.
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *Schema2) Serialize() ([]byte, error) {
-	return jsonv1.Marshal(*m)
+	return json.Marshal(m, json.Deterministic(true))
 }
 
 // Inspect returns various information for (skopeo inspect) parsed from the manifest and configuration.

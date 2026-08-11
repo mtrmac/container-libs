@@ -4,6 +4,7 @@ package libimage
 
 import (
 	"context"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"maps"
@@ -183,7 +184,7 @@ func (i *Image) ConvertToManifestList(ctx context.Context) (*ManifestList, error
 			Size:      int64(len(listBytes)),
 		}},
 	}
-	indexBytes, err := jsonIT.Marshal(&index)
+	indexBytes, err := json.Marshal(&index)
 	if err != nil {
 		return nil, fmt.Errorf("encoding image index for OCI layout: %w", err)
 	}
@@ -196,7 +197,7 @@ func (i *Image) ConvertToManifestList(ctx context.Context) (*ManifestList, error
 
 	// Write the "why yes, this is an OCI layout" file.
 	layoutFile := filepath.Join(tmp, imgspecv1.ImageLayoutFile)
-	layoutBytes, err := jsonIT.Marshal(imgspecv1.ImageLayout{Version: imgspecv1.ImageLayoutVersion})
+	layoutBytes, err := json.Marshal(&imgspecv1.ImageLayout{Version: imgspecv1.ImageLayoutVersion})
 	if err != nil {
 		return nil, fmt.Errorf("encoding image layout structure for OCI layout: %w", err)
 	}

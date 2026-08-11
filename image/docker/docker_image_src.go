@@ -3,7 +3,7 @@ package docker
 import (
 	"bytes"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -195,7 +195,7 @@ func newImageSourceAttempt(ctx context.Context, sys *types.SystemContext, logica
 				IdentityToken: endpoint.client.auth.IdentityToken,
 			},
 		}
-		acfD, err := jsonv1.Marshal(acf)
+		acfD, err := json.Marshal(&acf)
 		if err != nil {
 			logrus.Warnf("failed to marshal auth config: %v", err)
 		} else {

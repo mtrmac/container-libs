@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -1188,7 +1189,7 @@ func (r *layerStore) saveLayers(saveLocations layerLocations, needsSyncfs bool) 
 			}
 		}
 
-		jldata, err := jsonIT.Marshal(&subsetLayers)
+		jldata, err := json.Marshal(&subsetLayers)
 		if err != nil {
 			return err
 		}
@@ -1240,7 +1241,7 @@ func (r *layerStore) saveMounts() error {
 			})
 		}
 	}
-	jmdata, err := jsonIT.Marshal(&mounts)
+	jmdata, err := json.Marshal(&mounts)
 	if err != nil {
 		return err
 	}

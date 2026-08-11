@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -572,7 +573,7 @@ func (r *imageStore) Save() error {
 	if err := os.MkdirAll(filepath.Dir(rpath), 0o700); err != nil {
 		return err
 	}
-	jdata, err := jsonIT.Marshal(&r.images)
+	jdata, err := json.Marshal(&r.images)
 	if err != nil {
 		return err
 	}

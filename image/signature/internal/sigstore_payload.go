@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"encoding/base64"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"strings"
@@ -84,7 +85,7 @@ func (s *UntrustedSigstorePayload) UnmarshalJSON(data []byte) error {
 // strictUnmarshalJSON is UnmarshalJSON, except that it may return the internal JSONFormatError error type.
 // Splitting it into a separate function allows us to do the JSONFormatError → InvalidSignatureError in a single place, the caller.
 func (s *UntrustedSigstorePayload) strictUnmarshalJSON(data []byte) error {
-	var critical, optional jsonv1.RawMessage
+	var critical, optional jsontext.Value
 	if err := ParanoidUnmarshalJSONObjectExactFields(data, map[string]any{
 		"critical": &critical,
 		"optional": &optional,
@@ -125,7 +126,7 @@ func (s *UntrustedSigstorePayload) strictUnmarshalJSON(data []byte) error {
 	}
 
 	var t string
-	var image, identity jsonv1.RawMessage
+	var image, identity jsontext.Value
 	if err := ParanoidUnmarshalJSONObjectExactFields(critical, map[string]any{
 		"type":     &t,
 		"image":    &image,

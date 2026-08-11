@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/compress/zstd"
 	"github.com/opencontainers/go-digest"
 	"github.com/vbatts/tar-split/archive/tar"
@@ -201,9 +201,8 @@ func WriteZstdChunkedManifest(dest io.Writer, outMetadata map[string]string, off
 		TarSplitDigest: tarSplitData.Digest,
 	}
 
-	jsonIT := jsoniter.ConfigCompatibleWithStandardLibrary
 	// Generate the manifest
-	manifest, err := jsonIT.Marshal(toc)
+	manifest, err := json.Marshal(&toc)
 	if err != nil {
 		return err
 	}

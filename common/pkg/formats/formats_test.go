@@ -2,6 +2,7 @@ package formats
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"strings"
 	"testing"
 )
@@ -33,8 +34,8 @@ func TestSetJSONFormatEncoder(t *testing.T) {
 
 	for _, tc := range tt {
 		buf := bytes.NewBuffer(nil)
-		enc := setJSONFormatEncoder(tc.isTerminal, buf)
-		if err := enc.Encode(tc.imageData); err != nil {
+		opts := jsonFormatOptions(tc.isTerminal)
+		if err := json.MarshalWrite(buf, tc.imageData, opts); err != nil {
 			t.Errorf("test %#v failed encoding: %s", tc.name, err)
 		}
 		if !strings.Contains(buf.String(), tc.expected) {

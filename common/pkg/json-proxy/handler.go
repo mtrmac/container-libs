@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -385,7 +386,7 @@ func (h *handler) GetFullConfig(ctx context.Context, args []any) (replyBuf, erro
 	if err != nil {
 		return ret, err
 	}
-	serialized, err := jsonv1.Marshal(&config)
+	serialized, err := json.Marshal(&config)
 	if err != nil {
 		return ret, err
 	}
@@ -416,7 +417,7 @@ func (h *handler) GetConfig(ctx context.Context, args []any) (replyBuf, error) {
 	if err != nil {
 		return ret, err
 	}
-	serialized, err := jsonv1.Marshal(&config.Config)
+	serialized, err := json.Marshal(&config.Config)
 	if err != nil {
 		return ret, err
 	}
@@ -553,7 +554,7 @@ func (h *handler) GetRawBlob(ctx context.Context, args []any) (replyBuf, error) 
 		if err != nil {
 			h.logger.Debugf("Sending error to client: %v", err)
 			serializedErr := newProxyError(err)
-			buf, marshalErr := jsonv1.Marshal(serializedErr)
+			buf, marshalErr := json.Marshal(&serializedErr)
 			if marshalErr != nil {
 				h.logger.Errorf("Failed to marshal error: %v", marshalErr)
 				return
@@ -653,7 +654,7 @@ func (h *handler) GetLayerInfoPiped(ctx context.Context, args []any) (replyBuf, 
 		layers = append(layers, convertedLayerInfo{layer.Digest, layer.Size, layer.MediaType})
 	}
 
-	serialized, err := jsonv1.Marshal(&layers)
+	serialized, err := json.Marshal(&layers)
 	if err != nil {
 		return ret, err
 	}

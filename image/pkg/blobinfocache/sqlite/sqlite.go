@@ -4,6 +4,7 @@ package sqlite
 import (
 	"database/sql"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"sync"
@@ -524,7 +525,7 @@ func (sqc *cache) RecordDigestCompressorData(anyDigest digest.Digest, data blobi
 					logrus.Warnf("Specific compressor for blob with digest %s previously recorded as %s, now %s", anyDigest, prevSVC, data.SpecificVariantCompressor)
 				}
 			}
-			annotations, err := jsonv1.Marshal(data.SpecificVariantAnnotations)
+			annotations, err := json.Marshal(&data.SpecificVariantAnnotations)
 			if err != nil {
 				return void{}, err
 			}

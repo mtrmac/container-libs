@@ -2,6 +2,7 @@ package rootlessnetns
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -698,7 +699,7 @@ func (n *Netns) serializeInfo() error {
 	if err != nil {
 		return err
 	}
-	return jsonv1.NewEncoder(f).Encode(n.info)
+	return json.MarshalWrite(f, n.info)
 }
 
 func (n *Netns) deserializeInfo() error {

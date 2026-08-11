@@ -2,6 +2,8 @@ package secrets
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -171,7 +173,7 @@ func (s *SecretsManager) store(entry *Secret) error {
 	s.db.NameToID[entry.Name] = entry.ID
 	s.db.IDToName[entry.ID] = entry.Name
 
-	marshalled, err := jsonv1.MarshalIndent(s.db, "", "  ")
+	marshalled, err := json.Marshal(s.db, jsontext.WithIndent("  "))
 	if err != nil {
 		return err
 	}
@@ -197,7 +199,7 @@ func (s *SecretsManager) delete(nameOrID string) error {
 	delete(s.db.Secrets, id)
 	delete(s.db.NameToID, name)
 	delete(s.db.IDToName, id)
-	marshalled, err := jsonv1.MarshalIndent(s.db, "", "  ")
+	marshalled, err := json.Marshal(s.db, jsontext.WithIndent("  "))
 	if err != nil {
 		return err
 	}

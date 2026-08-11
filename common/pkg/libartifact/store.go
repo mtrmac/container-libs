@@ -6,7 +6,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -460,7 +460,7 @@ func (as *ArtifactStore) Add(ctx context.Context, dest ArtifactReference, artifa
 	as.lock.Lock()
 	locked = true
 
-	rawData, err := jsonv1.Marshal(artifactManifest)
+	rawData, err := json.Marshal(&artifactManifest)
 	if err != nil {
 		return nil, err
 	}
@@ -849,7 +849,7 @@ func (as *ArtifactStore) createEmptyManifest() error {
 		MediaType: specV1.MediaTypeImageIndex,
 		Versioned: specs.Versioned{SchemaVersion: ManifestSchemaVersion},
 	}
-	rawData, err := jsonv1.Marshal(&index)
+	rawData, err := json.Marshal(&index)
 	if err != nil {
 		return err
 	}

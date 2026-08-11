@@ -6,7 +6,7 @@
 package opts
 
 import (
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"regexp"
 	"strings"
@@ -76,7 +76,7 @@ func (args Args) MarshalJSON() ([]byte, error) {
 	if len(args.fields) == 0 {
 		return []byte{}, nil
 	}
-	return jsonv1.Marshal(args.fields)
+	return json.Marshal(&args.fields)
 }
 
 // ToJSON returns the Args as a JSON encoded string
@@ -84,7 +84,7 @@ func ToJSON(a Args) (string, error) {
 	if a.Len() == 0 {
 		return "", nil
 	}
-	buf, err := jsonv1.Marshal(a)
+	buf, err := json.Marshal(&a)
 	return string(buf), err
 }
 

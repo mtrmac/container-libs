@@ -3,6 +3,8 @@ package config
 import (
 	"encoding/base64"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -654,7 +656,7 @@ func modifyJSON(sys *types.SystemContext, editor func(fileContents *dockerConfig
 		return "", fmt.Errorf("updating %q: %w", path.path, err)
 	}
 	if updated {
-		newData, err := jsonv1.MarshalIndent(fileContents, "", "\t")
+		newData, err := json.Marshal(&fileContents, jsontext.WithIndent("\t"))
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path.path, err)
 		}
@@ -688,7 +690,7 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 	}
 
 	// Try hard not to clobber fields we don’t understand, even fields which may be added in future Docker versions.
-	var rawContents map[string]jsonv1.RawMessage
+	var rawContents map[string]jsontext.Value
 	originalBytes, err := os.ReadFile(path)
 	switch {
 	case err == nil:
@@ -696,7 +698,7 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 			return "", fmt.Errorf("unmarshaling JSON at %q: %w", path, err)
 		}
 	case errors.Is(err, fs.ErrNotExist):
-		rawContents = map[string]jsonv1.RawMessage{}
+		rawContents = map[string]jsontext.Value{}
 	default: // err != nil
 		return "", err
 	}
@@ -727,13 +729,13 @@ func modifyDockerConfigJSON(sys *types.SystemContext, editor func(fileContents *
 		return "", fmt.Errorf("updating %q: %w", path, err)
 	}
 	if updated {
-		rawAuths, err := jsonv1.MarshalIndent(syntheticContents.AuthConfigs, "", "\t")
+		rawAuths, err := json.Marshal(&syntheticContents.AuthConfigs, jsontext.WithIndent("\t"))
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path, err)
 		}
 		rawContents["auths"] = rawAuths
 		// We never modify syntheticContents.CredHelpers, so we don’t need to update it.
-		newData, err := jsonv1.MarshalIndent(rawContents, "", "\t")
+		newData, err := json.Marshal(&rawContents, jsontext.WithIndent("\t"))
 		if err != nil {
 			return "", fmt.Errorf("marshaling JSON %q: %w", path, err)
 		}

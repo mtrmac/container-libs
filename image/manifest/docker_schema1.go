@@ -2,6 +2,8 @@ package manifest
 
 import (
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"slices"
@@ -51,7 +53,7 @@ type Schema1V1Compatibility struct {
 	Created         time.Time                             `json:"created"`
 	ContainerConfig schema1V1CompatibilityContainerConfig `json:"container_config"`
 	Author          string                                `json:"author,omitempty"`
-	ThrowAway       bool                                  `json:"throwaway,omitempty"`
+	ThrowAway       bool                                  `json:"throwaway,omitempty,omitzero"`
 }
 
 // Schema1FromManifest creates a Schema1 manifest instance from a manifest blob.
@@ -180,7 +182,7 @@ func (m *Schema1) UpdateLayerInfos(layerInfos []types.BlobInfo) error {
 // NOTE: Serialize() does not in general reproduce the original blob if this object was loaded from one, even if no modifications were made!
 func (m *Schema1) Serialize() ([]byte, error) {
 	// docker/distribution requires a signature even if the incoming data uses the nominally unsigned DockerV2Schema1MediaType.
-	unsigned, err := jsonv1.Marshal(*m)
+	unsigned, err := json.Marshal(m, json.Deterministic(true))
 	if err != nil {
 		return nil, err
 	}
@@ -277,11 +279,18 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 	// Images created with versions prior to 1.8.3 require us to re-encode the encoded object,
 	// adding some fields that aren't "omitempty".
 	if s1.DockerVersion != "" && versions.LessThan(s1.DockerVersion, "1.8.3") {
-		config, err = jsonv1.Marshal(&s1)
+		config, err = json.Marshal(&s1)
 		if err != nil {
 			return nil, fmt.Errorf("re-encoding compat image config %#v: %w", s1, err)
 		}
 	}
+	// Try to preserve the same formatting (and IDs) as the jsonv1 implementation used to generate.
+	// This is not guaranteed (e.g. json.Deterministic() does not have a stable behavior promise), just a best effort
+	// to maximize on-registry data reuse.
+	// FIXME: a similar note about json.Deterministic() everywhere
+	// FIXME: be consistent for all image format combinations.
+	// FIXME: Do we want to hold on to the v1 semantics, break for cleaner data now?
+	jsonOpts := json.JoinOptions(json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	// Build the history.
 	convertedHistory := []Schema2History{}
 	for _, compat := range slices.Backward(m.ExtractedV1Compatibility) {
@@ -303,7 +312,7 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 		DiffIDs: diffIDs,
 	}
 	// And now for some raw manipulation.
-	raw := make(map[string]*jsonv1.RawMessage)
+	raw := make(map[string]*jsontext.Value)
 	err = jsonv1.Unmarshal(config, &raw)
 	if err != nil {
 		return nil, fmt.Errorf("re-decoding compat image config %#v: %w", s1, err)
@@ -316,20 +325,20 @@ func (m *Schema1) ToSchema2Config(diffIDs []digest.Digest) ([]byte, error) {
 	delete(raw, "throwaway")
 	delete(raw, "Size")
 	// Add the history and rootfs information.
-	rootfs, err := jsonv1.Marshal(rootFS)
+	rootfs, err := json.Marshal(rootFS, jsonOpts)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding rootfs information %#v: %w", rootFS, err)
 	}
-	rawRootfs := jsonv1.RawMessage(rootfs)
+	rawRootfs := jsontext.Value(rootfs)
 	raw["rootfs"] = &rawRootfs
-	history, err := jsonv1.Marshal(convertedHistory)
+	history, err := json.Marshal(&convertedHistory, jsonOpts)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding history information %#v: %w", convertedHistory, err)
 	}
-	rawHistory := jsonv1.RawMessage(history)
+	rawHistory := jsontext.Value(history)
 	raw["history"] = &rawHistory
 	// Encode the result.
-	config, err = jsonv1.Marshal(raw)
+	config, err = json.Marshal(&raw, jsonOpts)
 	if err != nil {
 		return nil, fmt.Errorf("error re-encoding compat image config %#v: %w", s1, err)
 	}

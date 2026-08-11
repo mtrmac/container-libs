@@ -3,7 +3,7 @@ package tarball
 import (
 	"bytes"
 	"context"
-	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"maps"
@@ -167,7 +167,7 @@ func (r *tarballReference) NewImageSource(ctx context.Context, sys *types.System
 	config.History = history
 
 	// Encode and digest the image configuration blob.
-	configBytes, err := jsonv1.Marshal(&config)
+	configBytes, err := json.Marshal(&config)
 	if err != nil {
 		return nil, fmt.Errorf("error generating configuration blob for %q: %w", strings.Join(r.filenames, separator), err)
 	}
@@ -191,7 +191,7 @@ func (r *tarballReference) NewImageSource(ctx context.Context, sys *types.System
 	}
 
 	// Encode the manifest.
-	manifestBytes, err := jsonv1.Marshal(&manifest)
+	manifestBytes, err := json.Marshal(&manifest)
 	if err != nil {
 		return nil, fmt.Errorf("error generating manifest for %q: %w", strings.Join(r.filenames, separator), err)
 	}

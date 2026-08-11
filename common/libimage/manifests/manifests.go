@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -195,11 +196,11 @@ func (l *list) SaveToImage(store storage.Store, imageID string, names []string, 
 	if err != nil {
 		return "", err
 	}
-	instancesBytes, err := jsonv1.Marshal(&l.instances)
+	instancesBytes, err := json.Marshal(&l.instances)
 	if err != nil {
 		return "", err
 	}
-	artifactsBytes, err := jsonv1.Marshal(&l.artifacts)
+	artifactsBytes, err := json.Marshal(&l.artifacts)
 	if err != nil {
 		return "", err
 	}
@@ -354,7 +355,7 @@ func (l *list) Reference(store storage.Store, multiple cp.ImageListSelection, in
 					Size:      int64(len(contents)),
 				}},
 			}
-			indexBytes, err := jsonv1.Marshal(&index)
+			indexBytes, err := json.Marshal(&index)
 			if err != nil {
 				return nil, fmt.Errorf("encoding image index for OCI layout: %w", err)
 			}
@@ -363,7 +364,7 @@ func (l *list) Reference(store storage.Store, multiple cp.ImageListSelection, in
 			}
 			// write the layout file
 			layoutFile := filepath.Join(tmp, v1.ImageLayoutFile)
-			layoutBytes, err := jsonv1.Marshal(v1.ImageLayout{Version: v1.ImageLayoutVersion})
+			layoutBytes, err := json.Marshal(&v1.ImageLayout{Version: v1.ImageLayoutVersion})
 			if err != nil {
 				return nil, fmt.Errorf("encoding image layout for OCI layout: %w", err)
 			}
@@ -905,7 +906,7 @@ func (l *list) AddArtifact(ctx context.Context, sys *types.SystemContext, option
 	artifactManifest.Annotations = maps.Clone(options.Annotations)
 
 	// Encode and save the data we care about.
-	artifactManifestBytes, err := jsonv1.Marshal(artifactManifest)
+	artifactManifestBytes, err := json.Marshal(&artifactManifest)
 	if err != nil {
 		return "", fmt.Errorf("marshalling the artifact manifest: %w", err)
 	}

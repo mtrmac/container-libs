@@ -3,6 +3,7 @@ package signature
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"maps"
 )
 
@@ -67,7 +68,7 @@ func (s Sigstore) FormatID() FormatID {
 // blobChunk returns a representation of signature as a []byte, suitable for long-term storage.
 // Almost everyone should use signature.Blob() instead.
 func (s Sigstore) blobChunk() ([]byte, error) {
-	return jsonv1.Marshal(sigstoreJSONRepresentation{
+	return json.Marshal(&sigstoreJSONRepresentation{
 		UntrustedMIMEType:    s.UntrustedMIMEType(),
 		UntrustedPayload:     s.UntrustedPayload(),
 		UntrustedAnnotations: s.UntrustedAnnotations(),
