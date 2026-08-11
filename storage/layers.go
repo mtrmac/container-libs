@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -1451,7 +1452,7 @@ func (r *layerStore) PutAdditionalLayer(id string, parentLayer *Layer, names []s
 	}
 	defer info.Close()
 	layer = &Layer{}
-	if err := jsonIT.NewDecoder(info).Decode(layer); err != nil {
+	if err := json.UnmarshalRead(info, layer, jsonv1.DefaultOptionsV1()); err != nil {
 		return nil, err
 	}
 	layer.ID = id
@@ -2421,7 +2422,7 @@ func (r *layerStore) Diff(from, to string, options *DiffOptions) (io.ReadCloser,
 			}
 			defer info.Close()
 			layer := &Layer{}
-			if err := jsonIT.NewDecoder(info).Decode(layer); err != nil {
+			if err := json.UnmarshalRead(info, layer, jsonv1.DefaultOptionsV1()); err != nil {
 				aLayer.Release()
 				return nil, err
 			}

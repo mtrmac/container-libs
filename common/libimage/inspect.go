@@ -4,6 +4,8 @@ package libimage
 
 import (
 	"context"
+	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"time"
 
 	"github.com/opencontainers/go-digest"
@@ -171,7 +173,7 @@ func (i *Image) Inspect(ctx context.Context, options *InspectOptions) (*ImageDat
 	// OCI image
 	case ociv1.MediaTypeImageManifest:
 		var ociManifest ociv1.Manifest
-		if err := jsonIT.Unmarshal(manifestRaw, &ociManifest); err != nil {
+		if err := json.Unmarshal(manifestRaw, &ociManifest, jsonv1.DefaultOptionsV1()); err != nil {
 			return nil, err
 		}
 		data.Annotations = ociManifest.Annotations
@@ -186,7 +188,7 @@ func (i *Image) Inspect(ctx context.Context, options *InspectOptions) (*ImageDat
 			return nil, err
 		}
 		var dockerConfig manifest.Schema2V1Image
-		if err := jsonIT.Unmarshal(rawConfig, &dockerConfig); err != nil {
+		if err := json.Unmarshal(rawConfig, &dockerConfig, jsonv1.DefaultOptionsV1()); err != nil {
 			return nil, err
 		}
 		data.Comment = dockerConfig.Comment

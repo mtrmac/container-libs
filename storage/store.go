@@ -3,6 +3,8 @@ package storage
 import (
 	_ "embed"
 	"encoding/base64"
+	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -3555,7 +3557,7 @@ func (s *store) LookupAdditionalLayer(tocDigest digest.Digest, imageref string) 
 	}
 	defer info.Close()
 	var layer Layer
-	if err := jsonIT.NewDecoder(info).Decode(&layer); err != nil {
+	if err := json.UnmarshalRead(info, &layer, jsonv1.DefaultOptionsV1()); err != nil {
 		return nil, err
 	}
 	succeeded = true

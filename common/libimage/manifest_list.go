@@ -4,6 +4,7 @@ package libimage
 
 import (
 	"context"
+	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -734,7 +735,7 @@ func (m *ManifestList) AnnotateInstance(d digest.Digest, options *ManifestListAn
 		var subjectArtifactType string
 		if !manifest.MIMETypeIsMultiImage(subjectManifestType) {
 			var subjectManifest imgspecv1.Manifest
-			if jsonIT.Unmarshal(subjectManifestBytes, &subjectManifest) == nil {
+			if json.Unmarshal(subjectManifestBytes, &subjectManifest, jsonv1.DefaultOptionsV1()) == nil {
 				subjectArtifactType = subjectManifest.ArtifactType
 			}
 		}

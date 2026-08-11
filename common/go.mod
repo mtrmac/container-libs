@@ -19,7 +19,6 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jinzhu/copier v0.4.0
-	github.com/json-iterator/go v1.1.12
 	github.com/moby/sys/capability v0.4.0
 	github.com/moby/sys/devices v0.1.0
 	github.com/onsi/ginkgo/v2 v2.32.0
@@ -87,6 +86,7 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/fs v0.1.0 // indirect
