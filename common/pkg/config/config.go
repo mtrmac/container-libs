@@ -300,9 +300,12 @@ type EngineConfig struct {
 	// host when they are forwarded to containers. When enabled, when ports are
 	// forwarded to containers, they are held open by conmon as long as the
 	// container is running, ensuring that they cannot be reused by other
-	// programs on the host. However, this can cause significant memory usage if
-	// a container has many ports forwarded to it. Disabling this can save
-	// memory.
+	// programs on the host. However, this can cause increased memory usage
+	// if a container has many ports forwarded to it. Disabling this can save
+	// memory but is not recommended as port conflicts are not noticed.
+	// Note this option is only used for rootful container when ports are
+	// forwarded via firewall rules. Rootless containers using pasta(1)
+	// always have to bind each port.
 	EnablePortReservation bool `toml:"enable_port_reservation,omitempty"`
 
 	// Environment variables to be used when running the container engine (e.g., Podman, Buildah). For example "http_proxy=internal.proxy.company.com"
