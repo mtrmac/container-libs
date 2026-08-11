@@ -663,6 +663,19 @@ Valid values are: `file`, `journald`, and `none`.
 Creates a more verbose container-create event which includes a JSON payload
 with detailed information about the container.  Set to false by default.
 
+**force_port_listen**=false
+
+For rootful containers when reserving the ports Podman will not use listen()
+on TCP ports by default as connections are forwarded via firewall rules.
+This is done to ensure if the firewall rule is bypassed, i.e. a connection
+to "::1", the connection will be correctly refused and not hang forever as we
+never accept() them.
+For applications which only monitor the listening state of a socket it means they
+will not see the bound port then. In that case this option can be set to true in
+order to force Podman to also call listen() on the ports.
+Also see the **enable_port_reservation** option.
+
+
 **healthcheck_events**=true|false
 
 Whenever Podman should log healthcheck events.
