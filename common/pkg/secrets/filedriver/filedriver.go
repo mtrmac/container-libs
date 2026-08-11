@@ -1,12 +1,10 @@
 package filedriver
 
 import (
-	jsonv1 "encoding/json"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -139,12 +137,8 @@ func (d *Driver) getAllData() (map[string][]byte, error) {
 	}
 	defer file.Close()
 
-	byteValue, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
 	secretData := new(map[string][]byte)
-	err = jsonv1.Unmarshal(byteValue, secretData)
+	err = json.UnmarshalRead(file, secretData)
 	if err != nil {
 		return nil, err
 	}

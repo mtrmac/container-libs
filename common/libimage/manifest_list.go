@@ -434,7 +434,7 @@ func (m *ManifestList) Inspect() (*define.ManifestListData, error) {
 	var typed struct {
 		MediaType string `json:"mediaType,omitempty"`
 	}
-	if err := jsonIT.Unmarshal(serialized, &typed); err != nil {
+	if err := json.Unmarshal(serialized, &typed); err != nil {
 		return &inspectList, err
 	}
 	if typed.MediaType != "" {

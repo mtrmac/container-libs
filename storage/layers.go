@@ -938,7 +938,7 @@ func (r *layerStore) load(lockedForWriting bool) (bool, error) {
 
 		locationLayers := []*Layer{}
 		if len(data) != 0 {
-			if err := jsonIT.Unmarshal(data, &locationLayers); err != nil {
+			if err := json.Unmarshal(data, &locationLayers); err != nil {
 				return false, fmt.Errorf("loading %q: %w", rpath, err)
 			}
 		}
@@ -1096,7 +1096,7 @@ func (r *layerStore) loadMounts() error {
 	}
 	layerMounts := []layerMountPoint{}
 	if len(data) != 0 {
-		if err := jsonIT.Unmarshal(data, &layerMounts); err != nil {
+		if err := json.Unmarshal(data, &layerMounts); err != nil {
 			return err
 		}
 	}

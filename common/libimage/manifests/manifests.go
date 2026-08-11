@@ -170,7 +170,7 @@ func LoadFromImage(store storage.Store, image string) (string, List, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("locating image %q for loading instance list: %w", image, err)
 	}
-	if err := jsonv1.Unmarshal(instancesBytes, &list.instances); err != nil {
+	if err := json.Unmarshal(instancesBytes, &list.instances); err != nil {
 		return "", nil, fmt.Errorf("decoding instance list for image %q: %w", image, err)
 	}
 	artifactsBytes, err := store.ImageBigData(img.ID, artifactsData)
@@ -180,7 +180,7 @@ func LoadFromImage(store storage.Store, image string) (string, List, error) {
 		}
 		artifactsBytes = []byte("{}")
 	}
-	if err := jsonv1.Unmarshal(artifactsBytes, &list.artifacts); err != nil {
+	if err := json.Unmarshal(artifactsBytes, &list.artifacts); err != nil {
 		return "", nil, fmt.Errorf("decoding artifact list for image %q: %w", image, err)
 	}
 	list.instances[""] = img.ID

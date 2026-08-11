@@ -3,7 +3,6 @@
 package netavark
 
 import (
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -285,7 +284,7 @@ func (n *netavarkNetwork) getAssignedIPs(opts *types.NetworkOptions) error {
 			// assignedIPs is the list of ips which should be used for this container
 			assignedIPs := make([]net.IP, 0, len(network.Subnets))
 
-			err = jsonv1.Unmarshal(ipJSON, &assignedIPs)
+			err = json.Unmarshal(ipJSON, &assignedIPs)
 			if err != nil {
 				return newIPAMError(err, "failed to unmarshal ips from database")
 			}

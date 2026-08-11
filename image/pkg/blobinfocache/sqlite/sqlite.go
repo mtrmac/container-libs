@@ -3,7 +3,6 @@ package sqlite
 
 import (
 	"database/sql"
-	jsonv1 "encoding/json"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -564,7 +563,7 @@ func (sqc *cache) appendReplacementCandidates(candidates []prioritize.CandidateW
 			compressionData.BaseVariantCompressor = baseVariantCompressor
 			if specificVariantCompressor.Valid && annotationBytes != nil {
 				compressionData.SpecificVariantCompressor = specificVariantCompressor.String
-				if err := jsonv1.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
+				if err := json.Unmarshal(annotationBytes, &compressionData.SpecificVariantAnnotations); err != nil {
 					return nil, err
 				}
 			}
