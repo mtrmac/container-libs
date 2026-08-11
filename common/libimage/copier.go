@@ -4,6 +4,8 @@ package libimage
 
 import (
 	"context"
+	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -526,7 +528,7 @@ func checkRegistrySourcesAllows(dest types.ImageReference) (insecure *bool, err 
 		BlockedRegistries  []string `json:"blockedRegistries,omitempty"`
 		AllowedRegistries  []string `json:"allowedRegistries,omitempty"`
 	}
-	if err := jsonIT.Unmarshal([]byte(registrySources), &sources); err != nil {
+	if err := json.Unmarshal([]byte(registrySources), &sources, jsonv1.DefaultOptionsV1()); err != nil {
 		return nil, fmt.Errorf("parsing $BUILD_REGISTRY_SOURCES (%q) as JSON: %w", registrySources, err)
 	}
 	blocked := false

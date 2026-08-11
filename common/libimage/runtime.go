@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	deepcopy "github.com/jinzhu/copier"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 	"go.podman.io/common/libimage/define"
@@ -23,9 +22,6 @@ import (
 	"go.podman.io/image/v5/types"
 	"go.podman.io/storage"
 )
-
-// Faster than the standard library, see https://github.com/json-iterator/go.
-var jsonIT = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // tmpdir returns a path to a temporary directory.
 func tmpdir() (string, error) {
