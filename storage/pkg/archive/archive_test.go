@@ -745,6 +745,41 @@ func TestTarWithOptions(t *testing.T) {
 	}
 }
 
+func TestTarWithOptionsWildcardNegation(t *testing.T) {
+	if runtime.GOOS == windows {
+		t.Skip("Failing on Windows")
+	}
+
+	tmpDirPath := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDirPath, "cmd", "app"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDirPath, "cmd", "main.go"), []byte("package main"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDirPath, "cmd", "app", "app.go"), []byte("package app"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDirPath, "cmd", "main.txt"), []byte("text"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDirPath, "README.md"), []byte("readme"), 0o644))
+
+	archive, err := TarWithOptions(tmpDirPath, &TarOptions{
+		ExcludePatterns: []string{"*", "!**/*.go"},
+	})
+	require.NoError(t, err)
+	defer archive.Close()
+
+	found := make(map[string]bool)
+	tr := tar.NewReader(archive)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		found[hdr.Name] = true
+	}
+
+	assert.True(t, found["cmd/main.go"], "cmd/main.go should be included by !**/*.go")
+	assert.True(t, found["cmd/app/app.go"], "cmd/app/app.go should be included by !**/*.go")
+	assert.False(t, found["cmd/main.txt"], "cmd/main.txt should remain excluded")
+	assert.False(t, found["README.md"], "README.md should remain excluded")
+}
+
 // Some tar archives such as http://haproxy.1wt.eu/download/1.5/src/devel/haproxy-1.5-dev21.tar.gz
 // use PAX Global Extended Headers.
 // Failing prevents the archives from being uncompressed during ADD
