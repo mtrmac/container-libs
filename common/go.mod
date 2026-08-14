@@ -5,7 +5,7 @@ module go.podman.io/common
 go 1.25.7
 
 require (
-	github.com/checkpoint-restore/checkpointctl v1.5.0
+	github.com/checkpoint-restore/checkpointctl v1.6.0
 	github.com/checkpoint-restore/go-criu/v8 v8.4.0
 	github.com/containerd/platforms v1.0.0-rc.4
 	github.com/containers/ocicrypt v1.3.2
