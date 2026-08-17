@@ -11,7 +11,6 @@ require (
 	github.com/containers/ocicrypt v1.3.2
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/cyphar/filepath-securejoin v0.7.0
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/disiqueira/gotree/v3 v3.0.2
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/go-units v0.5.0
@@ -31,7 +30,6 @@ require (
 	github.com/opencontainers/runtime-tools v0.9.1-0.20260316125833-8a4db579f5c8
 	github.com/opencontainers/selinux v1.15.1
 	github.com/pkg/sftp v1.13.11
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/seccomp/libseccomp-golang v0.11.1
 	github.com/sirupsen/logrus v1.10.0
 	github.com/skeema/knownhosts v1.3.2

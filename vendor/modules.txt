@@ -144,9 +144,6 @@ github.com/cyphar/filepath-securejoin/pathrs-lite/internal/kernelversion
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/linux
 github.com/cyphar/filepath-securejoin/pathrs-lite/internal/procfs
 github.com/cyphar/filepath-securejoin/pathrs-lite/procfs
-# github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-## explicit
-github.com/davecgh/go-spew/spew
 # github.com/disiqueira/gotree/v3 v3.0.2
 ## explicit; go 1.13
 github.com/disiqueira/gotree/v3
@@ -410,9 +407,6 @@ github.com/pkg/browser
 github.com/pkg/sftp
 github.com/pkg/sftp/internal/encoding/ssh/filexfer
 github.com/pkg/sftp/internal/encoding/ssh/filexfer/openssh
-# github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/proglottis/gpgme v0.1.6
 ## explicit; go 1.17
 github.com/proglottis/gpgme

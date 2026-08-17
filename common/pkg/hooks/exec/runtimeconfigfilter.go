@@ -8,18 +8,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pmezard/go-difflib/difflib"
 	"github.com/sirupsen/logrus"
 )
-
-var spewConfig = spew.ConfigState{
-	Indent:                  " ",
-	DisablePointerAddresses: true,
-	DisableCapacities:       true,
-	SortKeys:                true,
-}
 
 type RuntimeConfigFilterOptions struct {
 	// The hooks to run
@@ -62,34 +53,20 @@ func RuntimeConfigFilterWithOptions(ctx context.Context, options RuntimeConfigFi
 			return hookErr, err
 		}
 
-		data = stdout.Bytes()
+		newData := stdout.Bytes()
 		var newConfig spec.Spec
-		err = json.Unmarshal(data, &newConfig)
+		err = json.Unmarshal(newData, &newConfig)
 		if err != nil {
-			logrus.Debugf("invalid JSON from config-filter hook %d:\n%s", i, string(data))
+			logrus.Debugf("invalid JSON from config-filter hook %d:\n%s", i, string(newData))
 			return nil, fmt.Errorf("unmarshal output from config-filter hook %d: %w", i, err)
 		}
 
 		if !reflect.DeepEqual(options.Config, &newConfig) {
-			oldConfig := spewConfig.Sdump(options.Config)
-			newConfig := spewConfig.Sdump(&newConfig)
-			diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-				A:        difflib.SplitLines(oldConfig),
-				B:        difflib.SplitLines(newConfig),
-				FromFile: "Old",
-				FromDate: "",
-				ToFile:   "New",
-				ToDate:   "",
-				Context:  1,
-			})
-			if err == nil {
-				logrus.Debugf("precreate hook %d made configuration changes:\n%s", i, diff)
-			} else {
-				logrus.Warnf("Precreate hook %d made configuration changes, but we could not compute a diff: %v", i, err)
-			}
+			logrus.Debugf("precreate hook %d made configuration changes from %s to %s", i, data, newData)
 		}
 
 		*options.Config = newConfig
+		data = newData
 	}
 
 	return nil, nil
