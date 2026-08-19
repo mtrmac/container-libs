@@ -69,6 +69,8 @@ Requires: %{name} = %{epoch}:%{version}-%{release}
 Requires: container-network-stack
 Requires: oci-runtime
 Requires: passt >= 0:0^20260716.g090d739
+# go's mime.TypeByExtension needs a local mime database present
+Recommends: shared-mime-info
 %if %{defined fedora}
 Recommends: composefs
 Recommends: crun
