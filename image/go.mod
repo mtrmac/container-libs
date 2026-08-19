@@ -33,7 +33,7 @@ require (
 	github.com/sigstore/fulcio v1.8.7
 	github.com/sigstore/sigstore v1.10.9
 	github.com/sirupsen/logrus v1.10.1
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/sylabs/sif/v2 v2.24.1
 	github.com/ulikunitz/xz v0.5.16
 	github.com/vbauerster/mpb/v8 v8.15.2
@@ -104,5 +104,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720155508-bb71a54f79dc // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
