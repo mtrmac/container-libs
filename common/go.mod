@@ -33,7 +33,7 @@ require (
 	github.com/pkg/sftp v1.13.11
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/seccomp/libseccomp-golang v0.11.1
-	github.com/sirupsen/logrus v1.10.0
+	github.com/sirupsen/logrus v1.10.1
 	github.com/skeema/knownhosts v1.3.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10

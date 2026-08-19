@@ -21,7 +21,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/opencontainers/selinux v1.15.1
-	github.com/sirupsen/logrus v1.10.0
+	github.com/sirupsen/logrus v1.10.1
 	github.com/stretchr/testify v1.12.0
 	github.com/tchap/go-patricia/v2 v2.3.3
 	github.com/ulikunitz/xz v0.5.16
