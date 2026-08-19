@@ -69,12 +69,13 @@ Requires: %{name} = %{epoch}:%{version}-%{release}
 Requires: container-network-stack
 Requires: oci-runtime
 Requires: passt >= 0:0^20260716.g090d739
+# go's mime.TypeByExtension needs a local mime database present
+Recommends: shared-mime-info
 %if %{defined fedora}
 Recommends: composefs
 Recommends: crun
 Requires: (crun if fedora-release-identity-server)
 Requires: netavark >= %{netavark_epoch}:2
-Suggests: slirp4netns
 Recommends: qemu-user-static
 Requires: (qemu-user-static-aarch64 if fedora-release-identity-server)
 Requires: (qemu-user-static-arm if fedora-release-identity-server)
