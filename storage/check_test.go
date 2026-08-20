@@ -104,7 +104,7 @@ func TestCheckDetectWriteable(t *testing.T) {
 	require.NoError(t, err, "unexpected error initializing test store")
 	s, ok := stoar.(*store)
 	require.True(t, ok, "unexpected error making type assertion")
-	_, done, err := readAllLayerStores(s, func(store roLayerStore) (struct{}, bool, error) {
+	_, done, err := s.readAllLayerStores(func(store roLayerStore) (struct{}, bool, error) {
 		if roLayerStoreIsReallyReadWrite(store) { // implicitly checking that the type assertion in this function doesn't panic
 			sawRWlayers = true
 		}
@@ -113,7 +113,7 @@ func TestCheckDetectWriteable(t *testing.T) {
 	assert.False(t, done, "unexpected error from readAllLayerStores")
 	assert.NoError(t, err, "unexpected error from readAllLayerStores")
 	assert.True(t, sawRWlayers, "unexpected error detecting which layer store is writeable")
-	_, done, err = readAllImageStores(s, func(store roImageStore) (struct{}, bool, error) {
+	_, done, err = s.readAllImageStores(func(store roImageStore) (struct{}, bool, error) {
 		if roImageStoreIsReallyReadWrite(store) { // implicitly checking that the type assertion in this function doesn't panic
 			sawRWimages = true
 		}

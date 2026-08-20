@@ -153,7 +153,7 @@ func (sqc *cache) Close() {
 type void struct{} // So that we don’t have to write struct{}{} all over the place
 
 // transaction calls fn within a read-write transaction in sqc.
-func transaction[T any](sqc *cache, fn func(tx *sql.Tx) (T, error)) (_ T, retErr error) {
+func (sqc *cache) transaction[T any](fn func(tx *sql.Tx) (T, error)) (_ T, retErr error) {
 	db, closeDB, err := func() (*sql.DB, func() error, error) { // A scope for defer
 		sqc.lock.Lock()
 		defer sqc.lock.Unlock()
@@ -378,7 +378,7 @@ func (sqc *cache) uncompressedDigest(tx *sql.Tx, anyDigest digest.Digest) (diges
 // May return anyDigest if it is known to be uncompressed.
 // Returns "" if nothing is known about the digest (it may be compressed or uncompressed).
 func (sqc *cache) UncompressedDigest(anyDigest digest.Digest) digest.Digest {
-	res, err := transaction(sqc, func(tx *sql.Tx) (digest.Digest, error) {
+	res, err := sqc.transaction(func(tx *sql.Tx) (digest.Digest, error) {
 		return sqc.uncompressedDigest(tx, anyDigest)
 	})
 	if err != nil {
@@ -393,7 +393,7 @@ func (sqc *cache) UncompressedDigest(anyDigest digest.Digest) digest.Digest {
 // because a manifest/config pair exists); otherwise the cache could be poisoned and allow substituting unexpected blobs.
 // (Eventually, the DiffIDs in image config could detect the substitution, but that may be too late, and not all image formats contain that data.)
 func (sqc *cache) RecordDigestUncompressedPair(anyDigest digest.Digest, uncompressed digest.Digest) {
-	_, _ = transaction(sqc, func(tx *sql.Tx) (void, error) {
+	_, _ = sqc.transaction(func(tx *sql.Tx) (void, error) {
 		previousString, gotPrevious, err := querySingleValue[string](tx, "SELECT uncompressedDigest FROM DigestUncompressedPairs WHERE anyDigest = ?", anyDigest.String())
 		if err != nil {
 			return void{}, fmt.Errorf("looking for uncompressed digest for %q", anyDigest)
@@ -418,7 +418,7 @@ func (sqc *cache) RecordDigestUncompressedPair(anyDigest digest.Digest, uncompre
 // UncompressedDigestForTOC returns an uncompressed digest corresponding to anyDigest.
 // Returns "" if the uncompressed digest is unknown.
 func (sqc *cache) UncompressedDigestForTOC(tocDigest digest.Digest) digest.Digest {
-	res, err := transaction(sqc, func(tx *sql.Tx) (digest.Digest, error) {
+	res, err := sqc.transaction(func(tx *sql.Tx) (digest.Digest, error) {
 		uncompressedString, found, err := querySingleValue[string](tx, "SELECT uncompressedDigest FROM DigestTOCUncompressedPairs WHERE tocDigest = ?", tocDigest.String())
 		if err != nil {
 			return "", err
@@ -444,7 +444,7 @@ func (sqc *cache) UncompressedDigestForTOC(tocDigest digest.Digest) digest.Diges
 // because a manifest/config pair exists); otherwise the cache could be poisoned and allow substituting unexpected blobs.
 // (Eventually, the DiffIDs in image config could detect the substitution, but that may be too late, and not all image formats contain that data.)
 func (sqc *cache) RecordTOCUncompressedPair(tocDigest digest.Digest, uncompressed digest.Digest) {
-	_, _ = transaction(sqc, func(tx *sql.Tx) (void, error) {
+	_, _ = sqc.transaction(func(tx *sql.Tx) (void, error) {
 		previousString, gotPrevious, err := querySingleValue[string](tx, "SELECT uncompressedDigest FROM DigestTOCUncompressedPairs WHERE tocDigest = ?", tocDigest.String())
 		if err != nil {
 			return void{}, fmt.Errorf("looking for uncompressed digest for blob with TOC %q", tocDigest)
@@ -469,7 +469,7 @@ func (sqc *cache) RecordTOCUncompressedPair(tocDigest digest.Digest, uncompresse
 // RecordKnownLocation records that a blob with the specified digest exists within the specified (transport, scope) scope,
 // and can be reused given the opaque location data.
 func (sqc *cache) RecordKnownLocation(transport types.ImageTransport, scope types.BICTransportScope, digest digest.Digest, location types.BICLocationReference) {
-	_, _ = transaction(sqc, func(tx *sql.Tx) (void, error) {
+	_, _ = sqc.transaction(func(tx *sql.Tx) (void, error) {
 		if _, err := tx.Exec("INSERT OR REPLACE INTO KnownLocations(transport, scope, digest, location, time) VALUES (?, ?, ?, ?, ?)",
 			transport.Name(), scope.Opaque, digest.String(), location.Opaque, time.Now()); err != nil { // Possibly overwriting an older entry.
 			return void{}, fmt.Errorf("recording known location %q for (%q, %q, %q): %w",
@@ -490,7 +490,7 @@ func (sqc *cache) RecordKnownLocation(transport types.ImageTransport, scope type
 // otherwise the cache could be poisoned and cause us to make incorrect edits to type
 // information in a manifest.
 func (sqc *cache) RecordDigestCompressorData(anyDigest digest.Digest, data blobinfocache.DigestCompressorData) {
-	_, _ = transaction(sqc, func(tx *sql.Tx) (void, error) {
+	_, _ = sqc.transaction(func(tx *sql.Tx) (void, error) {
 		previous, gotPrevious, err := querySingleValue[string](tx, "SELECT compressor FROM DigestCompressors WHERE digest = ?", anyDigest.String())
 		if err != nil {
 			return void{}, fmt.Errorf("looking for compressor of %q", anyDigest)
@@ -615,7 +615,7 @@ func (sqc *cache) candidateLocations(transport types.ImageTransport, scope types
 	v2Options *blobinfocache.CandidateLocations2Options,
 ) []blobinfocache.BICReplacementCandidate2 {
 	var uncompressedDigest digest.Digest // = ""
-	res, err := transaction(sqc, func(tx *sql.Tx) ([]prioritize.CandidateWithTime, error) {
+	res, err := sqc.transaction(func(tx *sql.Tx) ([]prioritize.CandidateWithTime, error) {
 		res := []prioritize.CandidateWithTime{}
 		res, err := sqc.appendReplacementCandidates(res, tx, transport, scope, primaryDigest, v2Options)
 		if err != nil {
