@@ -201,7 +201,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 
 	// Walk the list of layer stores, looking at each layer that we didn't see in a
 	// previously-visited store.
-	if _, _, err := readOrWriteAllLayerStores(s, func(store roLayerStore) (struct{}, bool, error) {
+	if _, _, err := s.readOrWriteAllLayerStores(func(store roLayerStore) (struct{}, bool, error) {
 		layers, err := store.Layers()
 		if err != nil {
 			return struct{}{}, true, err
@@ -448,7 +448,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 
 	// Walk the list of image stores, looking at each image that we didn't see in a
 	// previously-visited store.
-	if _, _, err := readAllImageStores(s, func(store roImageStore) (struct{}, bool, error) {
+	if _, _, err := s.readAllImageStores(func(store roImageStore) (struct{}, bool, error) {
 		images, err := store.Images()
 		if err != nil {
 			return struct{}{}, true, err
@@ -554,7 +554,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 	}
 
 	// Iterate over each container in turn.
-	if _, _, err := readContainerStore(s, func() (struct{}, bool, error) {
+	if _, _, err := s.readContainerStore(func() (struct{}, bool, error) {
 		containers, err := s.containerStore.Containers()
 		if err != nil {
 			return struct{}{}, true, err
@@ -617,7 +617,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 	// Now go back through all of the layer stores, and flag any layers which don't belong
 	// to an image or a container, and has been around longer than we can reasonably expect
 	// such a layer to be present before a corresponding image record is added.
-	if _, _, err := readAllLayerStores(s, func(store roLayerStore) (struct{}, bool, error) {
+	if _, _, err := s.readAllLayerStores(func(store roLayerStore) (struct{}, bool, error) {
 		if isReadWrite := roLayerStoreIsReallyReadWrite(store); !isReadWrite {
 			return struct{}{}, false, nil
 		}
@@ -646,7 +646,7 @@ func (s *store) Check(options *CheckOptions) (CheckReport, error) {
 		return CheckReport{}, err
 	}
 
-	if _, err := readPrimaryLayerStore(s, func(store rwLayerStore) (struct{}, error) {
+	if _, err := s.readPrimaryLayerStore(func(store rwLayerStore) (struct{}, error) {
 		// If the driver can tell us about which layers it knows about, we should have
 		// corresponding metadata records.
 		// Any layers without them are probably just wasted space.
