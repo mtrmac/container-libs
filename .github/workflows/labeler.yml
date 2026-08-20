@@ -1,5 +1,9 @@
 # https://github.com/actions/labeler
 name: "Pull Request Labeler"
+
+# The triage job below sets the permissions it actually needs.
+permissions: {}
+
 on:
 - pull_request_target
 
