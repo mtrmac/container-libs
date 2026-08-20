@@ -176,8 +176,8 @@ func applyDiffUsingStagingDirectory(flags *mflag.FlagSet, action string, m stora
 		file: tar,
 	}
 
-	differ, err := chunked.NewDiffer(context.Background(), m, digesterCompressed.Digest(), size, metadata, &fetcher)
-	if err != nil {
+	differ, err := chunked.NewDiffer(context.Background(), m, digesterCompressed.Digest(), size, metadata, &fetcher) //nolint:staticcheck,nolintlint // SA4023: golangci-lint reports this line as the origin of the value below.
+	if err != nil {                                                                                                  //nolint:staticcheck,nolintlint // SA4023: on non-Linux, this is always true.
 		return 1, err
 	}
 
