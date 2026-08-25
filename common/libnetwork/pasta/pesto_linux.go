@@ -40,6 +40,9 @@ func (p *PestoClient) AddPorts(ports []types.PortMapping, containerIPv4, contain
 // containerIPv4 and containerIPv6 are the container's addresses inside the
 // network namespace; they are embedded in the target side of each mapping.
 func (p *PestoClient) DeletePorts(ports []types.PortMapping, containerIPv4, containerIPv6 string) error {
+	if p.SocketPath == "" {
+		return nil
+	}
 	logrus.Debugf("pesto: deleting %d port mappings", len(ports))
 	return p.modifyPorts(ports, "--delete", containerIPv4, containerIPv6)
 }

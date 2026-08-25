@@ -37,6 +37,7 @@ type netavarkNetwork struct {
 	// aardvarkBinary is the path to the aardvark binary.
 	aardvarkBinary string
 	// pestoBinary is the path to the pesto binary for dynamic port forwarding.
+	// Valid if rootlessNetns != nil; can be "" and then pestoBinaryErr is set.
 	pestoBinary    string
 	pestoBinaryErr error
 

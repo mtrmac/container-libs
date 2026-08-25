@@ -10,7 +10,8 @@ const (
 // PestoClient wraps the pesto binary path and control socket path,
 // providing methods to add and remove port forwarding rules.
 type PestoClient struct {
-	Binary     string
+	Binary string
+	// BinaryErr is the original error from FindHelperBinary if Binary is "".
 	BinaryErr  error
 	SocketPath string
 }
