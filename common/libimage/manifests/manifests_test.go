@@ -52,12 +52,12 @@ type listPtr = *list
 const (
 	listImageName = "foo"
 
-	otherListImage          = "docker://registry.k8s.io/pause:3.1"
-	otherListDigest         = "sha256:f78411e19d84a252e53bff71a4407a5686c46983a2c2eeed83929b888179acea"
-	otherListAmd64Digest    = "sha256:59eec8837a4d942cc19a52b8c09ea75121acc38114a2c68b98983ce9356b8610"
-	otherListArm64Digest    = "sha256:f365626a556e58189fc21d099fc64603db0f440bff07f77c740989515c544a39"
-	otherListPpc64Digest    = "sha256:bcf9771c0b505e68c65440474179592ffdfa98790eb54ffbf129969c5e429990"
-	otherListInstanceDigest = "docker://registry.k8s.io/pause@sha256:f365626a556e58189fc21d099fc64603db0f440bff07f77c740989515c544a39"
+	otherListImage          = "docker://quay.io/libpod/k8s-pause:3.5"
+	otherListDigest         = "sha256:1ff6c18fbef2045af6b9c16bf034cc421a29027b800e4f9b68ae9b1cb3e9ae07"
+	otherListAmd64Digest    = "sha256:369201a612f7b2b585a8e6ca99f77a36bcdbd032463d815388a96800b63ef2c8"
+	otherListArm64Digest    = "sha256:76ca2030ac3433ab5bbcfdea286b0876b129fc276e0f9d2811674141ea7bab6b"
+	otherListPpc64Digest    = "sha256:95e406e45b39993dc89f964ab1ab42db30369bd3406c1b11ef2129ab18d9c7bb"
+	otherListInstanceDigest = "docker://quay.io/libpod/k8s-pause@sha256:76ca2030ac3433ab5bbcfdea286b0876b129fc276e0f9d2811674141ea7bab6b"
 )
 
 func TestSaveLoad(t *testing.T) {
@@ -131,7 +131,7 @@ func TestAddRemove(t *testing.T) {
 	l, err := manifests.FromBlob(m)
 	assert.NoError(t, err, "manifests.FromBlob()")
 	assert.NotNilf(t, l, "manifests.FromBlob()")
-	assert.Equalf(t, len(l.Instances()), 5, "image %q had an arch added?", otherListImage)
+	assert.Equalf(t, len(l.Instances()), 10, "image %q had an arch added?", otherListImage)
 
 	list := Create()
 	instanceDigest, err := list.Add(ctx, amd64sys, ref, false)
@@ -153,12 +153,12 @@ func TestAddRemove(t *testing.T) {
 
 	_, err = list.Add(ctx, sys, ref, true)
 	assert.NoError(t, err, "list.Add(all=true)")
-	assert.Equalf(t, len(list.Instances()), 5, "too many instances added")
+	assert.Equalf(t, len(list.Instances()), 10, "too many instances added")
 
 	list = Create()
 	_, err = list.Add(ctx, sys, ref, true)
 	assert.NoError(t, err, "list.Add(all=true)")
-	assert.Equalf(t, len(list.Instances()), 5, "too many instances added", otherListImage)
+	assert.Equalf(t, len(list.Instances()), 10, "too many instances added", otherListImage)
 
 	for _, instance := range list.Instances() {
 		assert.NoErrorf(t, list.Remove(instance), "error removing instance %q", instance)
