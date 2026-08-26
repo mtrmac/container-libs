@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/selinux v1.15.1
 	github.com/pkg/sftp v1.13.11
 	github.com/seccomp/libseccomp-golang v0.11.1
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	github.com/skeema/knownhosts v1.3.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
