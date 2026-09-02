@@ -1377,8 +1377,9 @@ func TestNormalizeCapabilityRootID(t *testing.T) {
 		[]idtools.IDMap{{ContainerID: 0, HostID: 1000000, Size: 65536}},
 	)
 
-	t.Run("v3 owned by host root is downgraded to v2 and keeps its flags", func(t *testing.T) {
-		out := normalizeCapabilityRootID(mappings, makeVfsCap(1000000))
+	t.Run("v3 owned by container root (host id 1000000) is downgraded to v2 and keeps its flags", func(t *testing.T) {
+		out, err := normalizeCapabilityRootID(mappings, makeVfsCap(1000000))
+		require.NoError(t, err)
 		require.Len(t, out, vfsCapDataSizeV2)
 		magic := binary.LittleEndian.Uint32(out[0:4])
 		assert.Equal(t, uint32(vfsCapRevision2), magic&vfsCapRevisionMask)
@@ -1387,35 +1388,40 @@ func TestNormalizeCapabilityRootID(t *testing.T) {
 		assert.Equal(t, uint32(0x000001ff), binary.LittleEndian.Uint32(out[12:16]), "inheritable set preserved")
 	})
 
-	t.Run("v3 owned by a non-root host id keeps v3 with the container rootid", func(t *testing.T) {
-		out := normalizeCapabilityRootID(mappings, makeVfsCap(1000123))
+	t.Run("v3 owned by a non-root container id keeps v3 with the container rootid", func(t *testing.T) {
+		out, err := normalizeCapabilityRootID(mappings, makeVfsCap(1000123))
+		require.NoError(t, err)
 		require.Len(t, out, vfsCapDataSizeV3)
 		assert.Equal(t, uint32(vfsCapRevision3), binary.LittleEndian.Uint32(out[0:4])&vfsCapRevisionMask)
 		assert.Equal(t, uint32(123), binary.LittleEndian.Uint32(out[vfsCapRootIDOffset:]))
 	})
 
-	t.Run("v3 with an unmapped rootid is left unchanged", func(t *testing.T) {
-		in := makeVfsCap(5)
-		out := normalizeCapabilityRootID(mappings, in)
-		assert.Equal(t, in, out)
+	t.Run("v3 with an unmapped rootid is an error", func(t *testing.T) {
+		_, err := normalizeCapabilityRootID(mappings, makeVfsCap(5))
+		assert.Error(t, err)
 	})
 
 	t.Run("v2 value is returned unchanged", func(t *testing.T) {
 		in := makeVfsCap(-1)
-		out := normalizeCapabilityRootID(mappings, in)
+		out, err := normalizeCapabilityRootID(mappings, in)
+		require.NoError(t, err)
 		assert.Equal(t, in, out)
 	})
 
 	t.Run("empty mappings return the value unchanged", func(t *testing.T) {
 		in := makeVfsCap(1000000)
-		out := normalizeCapabilityRootID(&idtools.IDMappings{}, in)
+		out, err := normalizeCapabilityRootID(&idtools.IDMappings{}, in)
+		require.NoError(t, err)
 		assert.Equal(t, in, out)
-		assert.Equal(t, in, normalizeCapabilityRootID(nil, in))
+		out, err = normalizeCapabilityRootID(nil, in)
+		require.NoError(t, err)
+		assert.Equal(t, in, out)
 	})
 
 	t.Run("malformed value is returned unchanged", func(t *testing.T) {
 		in := []byte{0x00, 0x01, 0x02}
-		out := normalizeCapabilityRootID(mappings, in)
+		out, err := normalizeCapabilityRootID(mappings, in)
+		require.NoError(t, err)
 		assert.Equal(t, in, out)
 	})
 }
