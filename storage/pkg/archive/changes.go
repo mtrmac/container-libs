@@ -514,7 +514,7 @@ func ExportChanges(dir string, changes []Change, uidMaps, gidMaps []idtools.IDMa
 	// concurrently modified.
 
 	reader, writer := io.Pipe()
-	go func() {
+	producer := func() error {
 		ta := newTarWriter(idtools.NewIDMappingsFromMaps(uidMaps, gidMaps), writer, nil, nil, false)
 
 		// this buffer is needed for the duration of this piped stream
@@ -524,8 +524,7 @@ func ExportChanges(dir string, changes []Change, uidMaps, gidMaps []idtools.IDMa
 
 		root, err := os.OpenRoot(dir)
 		if err != nil {
-			writer.CloseWithError(err)
-			return
+			return err
 		}
 		defer root.Close()
 
@@ -556,8 +555,7 @@ func ExportChanges(dir string, changes []Change, uidMaps, gidMaps []idtools.IDMa
 					logrus.Debugf("Can't add file %q in %q to tar: %s", change.Path, root.Name(), err)
 				} else if headers != nil {
 					if err := ta.addFile(root, headers); err != nil {
-						writer.CloseWithError(err)
-						return
+						return err
 					}
 				}
 			}
@@ -566,6 +564,13 @@ func ExportChanges(dir string, changes []Change, uidMaps, gidMaps []idtools.IDMa
 		// Make sure to check the error on Close.
 		if err := ta.TarWriter.Close(); err != nil {
 			logrus.Debugf("Can't close layer: %s", err)
+		}
+		return nil
+	}
+	go func() {
+		if err := producer(); err != nil {
+			writer.CloseWithError(err)
+			return
 		}
 		if err := writer.Close(); err != nil {
 			logrus.Debugf("failed close Changes writer: %s", err)
