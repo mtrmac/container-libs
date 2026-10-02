@@ -12,7 +12,7 @@ require (
 	github.com/google/go-intervals v0.0.2
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.20.1
-	github.com/klauspost/pgzip v1.2.6
+	github.com/klauspost/pgzip v1.2.7
 	github.com/mattn/go-shellwords v1.0.16
 	github.com/mistifyio/go-zfs/v4 v4.0.0
 	github.com/moby/sys/capability v0.4.0
