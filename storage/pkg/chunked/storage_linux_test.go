@@ -53,6 +53,67 @@ func (f *testDestinationFile) Close() error {
 	return nil
 }
 
+// TestDrainBlobAtChannels checks that abandoning a GetBlobAt result closes the
+// streams that were never consumed and lets the producer goroutine finish,
+// instead of leaking both along with the response bodies they hold.
+func TestDrainBlobAtChannels(t *testing.T) {
+	pending := []*mockReadCloser{
+		mockReadCloserFromContent("stream1"),
+		mockReadCloserFromContent("stream2"),
+		mockReadCloserFromContent("stream3"),
+	}
+
+	// An unbuffered producer, like seekableFile.GetBlobAt: it only returns
+	// once every stream has been handed over.
+	streams := make(chan io.ReadCloser)
+	errs := make(chan error)
+	producerDone := make(chan struct{})
+	go func() {
+		defer close(producerDone)
+		for _, p := range pending {
+			streams <- p
+		}
+		close(streams)
+		close(errs)
+	}()
+
+	// Consume one stream, then abandon the rest the way an error path does.
+	consumed := <-streams
+	require.NotNil(t, consumed)
+
+	assert.NoError(t, drainBlobAtChannels(streams, errs))
+
+	select {
+	case <-producerDone:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the GetBlobAt producer goroutine was left blocked")
+	}
+	assert.False(t, pending[0].closed, "the consumed stream is owned by the caller")
+	for _, p := range pending[1:] {
+		assert.True(t, p.closed, "an abandoned stream was not closed")
+	}
+}
+
+// TestDrainBlobAtChannelsReportsLateErrors checks that an error the producer
+// reports only after every requested stream was consumed still surfaces, the
+// way handle206Response signals a response with more parts than chunks.
+func TestDrainBlobAtChannelsReportsLateErrors(t *testing.T) {
+	extra := mockReadCloserFromContent("unrequested part")
+	streams := make(chan io.ReadCloser)
+	errs := make(chan error)
+	go func() {
+		streams <- extra
+		errs <- errors.New("invalid number of chunks returned by the server")
+		close(streams)
+		close(errs)
+	}()
+
+	err := drainBlobAtChannels(streams, errs)
+
+	assert.ErrorContains(t, err, "invalid number of chunks")
+	assert.True(t, extra.closed, "the unrequested stream was not closed")
+}
+
 // TestDestinationFileCloserDoesNotBlockFork reproduces the interleaving that
 // used to deadlock: the producer is blocked handing over a destination file
 // because the queue is full, so it consumes no close result, while a

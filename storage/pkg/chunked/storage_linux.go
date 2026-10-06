@@ -985,8 +985,52 @@ func (c *chunkedDiffer) recordFsVerity(path string, roFile *os.File) error {
 	return nil
 }
 
+// drainBlobAtChannels consumes and closes everything left in the channels
+// returned by ImageSourceSeekable.GetBlobAt.  A caller must consume every item
+// from both of them: the producer blocks until the last one is handed over, so
+// abandoning the channels leaks its goroutine as well as the streams still
+// queued in it, and with them the response bodies they hold.  Both channels are
+// closed once the producer is done.
+//
+// It returns the first error the producer reported.  The producer sends its
+// errors after the streams, so an invalid response — more parts than chunks
+// requested, or a body that ends early — is only reported here, once the main
+// loop has already consumed everything it asked for.
+func drainBlobAtChannels(streams chan io.ReadCloser, errs chan error) error {
+	var retErr error
+	for streams != nil || errs != nil {
+		select {
+		case p, ok := <-streams:
+			if !ok {
+				streams = nil
+				continue
+			}
+			if p != nil {
+				p.Close()
+			}
+		case err, ok := <-errs:
+			if !ok {
+				errs = nil
+				continue
+			}
+			if err != nil && retErr == nil {
+				retErr = err
+			}
+		}
+	}
+	return retErr
+}
+
 func (c *chunkedDiffer) storeMissingFiles(streams chan io.ReadCloser, errs chan error, dirfd int, missingParts []missingPart, options *archive.TarOptions) (Err error) {
 	var destFile *destinationFile
+
+	// Registered first so that it runs last: no destination file may still
+	// hold syscall.ForkLock.RLock() while the drain waits for the server.
+	defer func() {
+		if e := drainBlobAtChannels(streams, errs); e != nil && Err == nil {
+			Err = e
+		}
+	}()
 
 	filesToClose := newDestinationFileCloser()
 	// Close destFile here as well: the error paths below can return with a
