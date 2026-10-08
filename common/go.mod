@@ -71,7 +71,7 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v29.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.9 // indirect
-	github.com/docker/go-connections v0.8.1 // indirect
+	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
