@@ -6,22 +6,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type loopInfo64 struct {
-	loDevice         uint64 /* ioctl r/o */
-	loInode          uint64 /* ioctl r/o */
-	loRdevice        uint64 /* ioctl r/o */
-	loOffset         uint64
-	loSizelimit      uint64 /* bytes, 0 == max available */
-	loNumber         uint32 /* ioctl r/o */
-	loEncryptType    uint32
-	loEncryptKeySize uint32 /* ioctl w/o */
-	loFlags          uint32 /* ioctl r/o */
-	loFileName       [LoNameSize]uint8
-	loCryptName      [LoNameSize]uint8
-	loEncryptKey     [LoKeySize]uint8 /* ioctl w/o */
-	loInit           [2]uint64
-}
-
 // IOCTL consts
 const (
 	LoopSetFd       = unix.LOOP_SET_FD
