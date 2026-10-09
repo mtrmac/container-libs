@@ -42,15 +42,6 @@ func ExtattrGetLink(path string, attrnamespace int, attrname string) ([]byte, er
 	})
 }
 
-// extattrGetFd retrieves the value of the extended attribute identified by attrname
-// in the given namespace and associated with the given file descriptor.
-// Returns a []byte slice if the extattr is set and nil otherwise.
-func extattrGetFd(fd int, pathInError func() string, attrnamespace int, attrname string) ([]byte, error) {
-	return extattrGet("extattr_get_fd", pathInError, func(dest uintptr, nbytes int) (int, error) {
-		return unix.ExtattrGetFd(fd, attrnamespace, attrname, dest, nbytes)
-	})
-}
-
 // ExtattrSetLink sets the value of extended attribute identified by attrname
 // in the given namespace and associated with the given path in the file system.
 // If the path is a symbolic link, the extended attribute is set on the link itself.
@@ -103,13 +94,5 @@ func extattrList(syscallName string, pathInError func() string, listSyscall func
 func ExtattrListLink(path string, attrnamespace int) ([]string, error) {
 	return extattrList("extattr_list_link", func() string { return path }, func(dest uintptr, nbytes int) (int, error) {
 		return unix.ExtattrListLink(path, attrnamespace, dest, nbytes)
-	})
-}
-
-// extattrListFd lists extended attributes associated with fd
-// in the specified namespace.
-func extattrListFd(fd int, pathInError func() string, attrnamespace int) ([]string, error) {
-	return extattrList("extattr_list_fd", pathInError, func(dest uintptr, nbytes int) (int, error) {
-		return unix.ExtattrListFd(fd, attrnamespace, dest, nbytes)
 	})
 }
