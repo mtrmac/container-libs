@@ -108,6 +108,13 @@ func TestSaveLoad(t *testing.T) {
 
 	//nolint:errcheck
 	assert.Equal(t, list.(listPtr).artifacts.Detached[otherListDigest], "relative-path-names-are-messy") // check that this data is loaded
+
+	// Saving a new list over an existing image record must leave the list usable.
+	freshList := Create()
+	_, err = freshList.SaveToImage(store, image, nil, manifest.DockerV2ListMediaType)
+	assert.NoError(t, err, "SaveToImage(3)")
+	_, err = freshList.Reference(store, cp.CopyAllImages, nil)
+	assert.NoError(t, err, "Reference() after SaveToImage(3)")
 }
 
 func TestAddRemove(t *testing.T) {

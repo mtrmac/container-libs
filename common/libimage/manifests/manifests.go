@@ -229,6 +229,7 @@ func (l *list) SaveToImage(store storage.Store, imageID string, names []string, 
 					return "", fmt.Errorf("saving manifest list to image %q: %w", imageID, err)
 				}
 			}
+			l.instances[""] = imageID
 			return imageID, nil
 		}
 		return "", err
