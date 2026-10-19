@@ -43,6 +43,7 @@ import (
 var (
 	// ErrBlobDigestMismatch could potentially be returned when PutBlob() is given a blob
 	// with a digest-based name that doesn't match its contents.
+	//
 	// Deprecated: PutBlob() doesn't do this any more (it just accepts the caller’s value),
 	// and there is no known user of this error.
 	ErrBlobDigestMismatch = errors.New("blob digest mismatch")
