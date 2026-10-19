@@ -45,6 +45,7 @@ linters:
     - misspell
     - modernize
     - nilnesserr
+    - nolintlint
     - nosprintfhostport
     - perfsprint
     - prealloc
