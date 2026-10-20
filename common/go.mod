@@ -38,7 +38,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.5.0
-	go.podman.io/image/v5 v5.41.2
+	go.podman.io/image/v5 v5.42.0
 	go.podman.io/storage v1.65.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sync v0.24.0
@@ -69,7 +69,6 @@ require (
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.9.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.10 // indirect
 	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
@@ -102,7 +101,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/proglottis/gpgme v0.1.6 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1 // indirect
 	github.com/sigstore/fulcio v1.8.8 // indirect
 	github.com/sigstore/protobuf-specs v0.5.2 // indirect
