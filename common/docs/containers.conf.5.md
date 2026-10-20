@@ -851,7 +851,7 @@ The list of the OCI runtimes that support `--format=json`.
 
 The list of OCI runtimes that support running containers with KVM separation.
 
-**runtime_supports_nocgroups**=["crun", "crun-vm", "krun"]
+**runtime_supports_nocgroup**=["crun", "crun-vm", "krun"]
 
 The list of OCI runtimes that support running containers without CGroups.
 
