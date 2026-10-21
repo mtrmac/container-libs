@@ -13,7 +13,7 @@ require (
 	github.com/containers/ocicrypt v1.3.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.9.0+incompatible
+	github.com/docker/cli v29.9.2+incompatible
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker-credential-helpers v0.9.10
 	github.com/docker/go-connections v0.8.2
@@ -47,7 +47,7 @@ require (
 
 require (
 	cyphar.com/go-pathrs v0.2.5 // indirect
-	github.com/Microsoft/go-winio v0.6.3-0.20260930231756-f19d9717deb0 // indirect
+	github.com/Microsoft/go-winio v0.6.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
