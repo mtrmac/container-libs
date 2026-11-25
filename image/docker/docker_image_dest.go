@@ -137,7 +137,8 @@ func (c *sizeCounter) Write(p []byte) (n int, err error) {
 // to any other readers for download using the supplied digest.
 // If stream.Read() at any time, ESPECIALLY at end of input, returns an error, PutBlobWithOptions MUST 1) fail, and 2) delete any data stored so far.
 func (d *dockerImageDestination) PutBlobWithOptions(ctx context.Context, stream io.Reader, inputInfo types.BlobInfo, options private.PutBlobOptions) (private.UploadedBlob, error) {
-	if _, err := options.Digests.Choose(digests.Situation{Preexisting: digest.Canonical.FromBytes(nil), CannotChangeAlgorithmReason: "transport does not implement PutBlobWithOptions.Digests yet"}); err != nil {
+	digestAlgorithm, err := options.Digests.Choose(digests.Situation{Preexisting: inputInfo.Digest, CannotChangeAlgorithmReason: options.CannotChangeDigestReason})
+	if err != nil {
 		return private.UploadedBlob{}, err
 	}
 
@@ -146,7 +147,7 @@ func (d *dockerImageDestination) PutBlobWithOptions(ctx context.Context, stream 
 	// the source blob is uncompressed, and the destination blob is being compressed "on the fly".
 	if inputInfo.Digest == "" && d.c.sys != nil && d.c.sys.DockerRegistryPushPrecomputeDigests {
 		logrus.Debugf("Precomputing digest layer for %s", reference.Path(d.ref.ref))
-		streamCopy, cleanup, err := streamdigest.ComputeBlobInfo(d.c.sys, stream, &inputInfo)
+		streamCopy, cleanup, err := streamdigest.ComputeBlobInfo(d.c.sys, stream, &inputInfo) // FIXME: options.digests
 		if err != nil {
 			return private.UploadedBlob{}, err
 		}
@@ -167,23 +168,32 @@ func (d *dockerImageDestination) PutBlobWithOptions(ctx context.Context, stream 
 	}
 
 	// FIXME? Chunked upload, progress reporting, etc.
-	uploadPath := fmt.Sprintf(blobUploadPath, reference.Path(d.ref.ref))
-	logrus.Debugf("Uploading %s", uploadPath)
-	res, err := d.c.makeRequest(ctx, http.MethodPost, uploadPath, nil, nil, v2Auth, nil)
+
+	uploadQuery := url.Values{}
+	if digestAlgorithm != digest.Canonical {
+		uploadQuery.Set("digest-algorithm", digestAlgorithm.String())
+	}
+	uploadURL := url.URL{
+		Path:     fmt.Sprintf(blobUploadPath, reference.Path(d.ref.ref)),
+		RawQuery: uploadQuery.Encode(),
+	}
+	logrus.Debugf("Uploading %s", uploadURL.Redacted())
+	res, err := d.c.makeRequest(ctx, http.MethodPost, uploadURL.String(), nil, nil, v2Auth, nil)
 	if err != nil {
 		return private.UploadedBlob{}, err
 	}
 	defer res.Body.Close()
+	// FIXME: if the digest is rejected, try falling back.
 	if res.StatusCode != http.StatusAccepted {
 		logrus.Debugf("Error initiating layer upload, response %#v", *res)
-		return private.UploadedBlob{}, fmt.Errorf("initiating layer upload to %s in %s: %w", uploadPath, d.c.registry, registryHTTPResponseToError(res))
+		return private.UploadedBlob{}, fmt.Errorf("initiating layer upload to %s in %s: %w", uploadURL.Redacted(), d.c.registry, registryHTTPResponseToError(res))
 	}
 	uploadLocation, err := res.Location()
 	if err != nil {
 		return private.UploadedBlob{}, fmt.Errorf("determining upload URL: %w", err)
 	}
 
-	digester, stream := putblobdigest.DigestIfCanonicalUnknown(stream, inputInfo)
+	digester, stream := putblobdigest.DigestIfAlgorithmUnknown(stream, inputInfo, digestAlgorithm)
 	sizeCounter := &sizeCounter{}
 	stream = io.TeeReader(stream, sizeCounter)
 
